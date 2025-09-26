@@ -12,22 +12,22 @@ import { type PropsWithChildren } from 'react';
 
 const sidebarNavItems: NavItem[] = [
     {
-        title: 'Profile',
+        title: '個人資料',
         href: edit(),
         icon: null,
     },
     {
-        title: 'Password',
+        title: '密碼',
         href: editPassword(),
         icon: null,
     },
     {
-        title: 'Two-Factor Auth',
+        title: '雙重驗證',
         href: show(),
         icon: null,
     },
     {
-        title: 'Appearance',
+        title: '外觀',
         href: editAppearance(),
         icon: null,
     },
@@ -44,8 +44,8 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
     return (
         <div className="px-4 py-6">
             <Heading
-                title="Settings"
-                description="Manage your profile and account settings"
+                title="設定"
+                description="管理您的個人資料和帳戶設定"
             />
 
             <div className="flex flex-col lg:flex-row lg:space-x-12">

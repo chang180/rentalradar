@@ -11,6 +11,7 @@ import { edit } from '@/routes/profile';
 import { type User } from '@/types';
 import { Link, router } from '@inertiajs/react';
 import { LogOut, Settings } from 'lucide-react';
+import AppearanceToggleDropdown from './appearance-dropdown';
 
 interface UserMenuContentProps {
     user: User;
@@ -42,9 +43,12 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
                         onClick={cleanup}
                     >
                         <Settings className="mr-2" />
-                        Settings
+                        設定
                     </Link>
                 </DropdownMenuItem>
+                <div className="px-2 py-1">
+                    <AppearanceToggleDropdown className="w-full" />
+                </div>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
@@ -56,7 +60,7 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
                     data-test="logout-button"
                 >
                     <LogOut className="mr-2" />
-                    Log out
+                    登出
                 </Link>
             </DropdownMenuItem>
         </>
