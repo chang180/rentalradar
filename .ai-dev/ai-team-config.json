@@ -1,0 +1,95 @@
+{
+  "team": {
+    "name": "RentalRadar AI Development Team",
+    "description": "AI-Powered Rental Market Analytics Platform Development Team"
+  },
+  "members": [
+    {
+      "name": "Claude",
+      "role": "專案架構師",
+      "responsibilities": [
+        "專案規劃和架構設計",
+        "代碼審查和品質控制",
+        "系統整合和部署",
+        "Linear Issues 管理"
+      ],
+      "tech_stack": ["Laravel", "React", "AI Algorithms", "System Architecture"],
+      "access_level": "full"
+    },
+    {
+      "name": "Claude Code",
+      "role": "代碼專家",
+      "responsibilities": [
+        "具體功能實作",
+        "API 開發和優化",
+        "前端組件開發",
+        "資料庫設計和優化"
+      ],
+      "tech_stack": ["PHP/Laravel", "JavaScript/React", "Database", "API Development"],
+      "access_level": "development"
+    },
+    {
+      "name": "Codex",
+      "role": "AI 演算法專家",
+      "responsibilities": [
+        "AI 資料清理演算法",
+        "機器學習模型開發",
+        "資料科學分析",
+        "效能優化"
+      ],
+      "tech_stack": ["Machine Learning", "Data Science", "AI Algorithms", "Performance Optimization"],
+      "access_level": "ai_specialist"
+    }
+  ],
+  "workflow": {
+    "planning": {
+      "tool": "project-manager.cjs",
+      "description": "使用本地專案管理工具規劃任務"
+    },
+    "tracking": {
+      "tool": "linear-issues.cjs",
+      "description": "使用 Linear Issues 追蹤進度"
+    },
+    "completion": {
+      "tool": "complete-linear-tasks.cjs",
+      "description": "批量完成和更新任務狀態"
+    }
+  },
+  "linear": {
+    "team_id": "40b1bdfd-2caa-4306-9fc4-8c4f2d646cec",
+    "project_id": "d7bd332e-2166-4d2f-ba5c-bfd4f01422c5",
+    "oauth": {
+      "client_id": "7a8573c37786a73a9affd9c04ab46202",
+      "redirect_uri": "http://localhost:8000/callback"
+    }
+  },
+  "development_phases": [
+    {
+      "id": "phase-1",
+      "name": "專案初始化",
+      "status": "completed",
+      "assignee": "Claude"
+    },
+    {
+      "id": "phase-2",
+      "name": "AI 資料處理",
+      "status": "in-progress",
+      "assignee": "Codex",
+      "collaborators": ["Claude", "Claude Code"]
+    },
+    {
+      "id": "phase-3",
+      "name": "AI 地圖系統",
+      "status": "pending",
+      "assignee": "Claude Code",
+      "collaborators": ["Claude"]
+    },
+    {
+      "id": "phase-4",
+      "name": "AI 統計分析",
+      "status": "pending",
+      "assignee": "Codex",
+      "collaborators": ["Claude", "Claude Code"]
+    }
+  ]
+}

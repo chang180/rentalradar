@@ -26,3 +26,6 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+
+# AI Development Tools - Sensitive Files
+.ai-dev/linear-integration/linear-token.json

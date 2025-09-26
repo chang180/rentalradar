@@ -1,0 +1,81 @@
+{
+  "name": "RentalRadar",
+  "description": "AI-Powered Rental Market Analytics Platform",
+  "phases": [
+    {
+      "id": "phase-1",
+      "name": "專案初始化",
+      "status": "completed",
+      "issues": [
+        {
+          "id": "issue-1-1",
+          "title": "Laravel 12 + React 專案建立",
+          "status": "completed",
+          "description": "建立基礎專案結構"
+        },
+        {
+          "id": "issue-1-2",
+          "title": "開發環境設定 (Herd)",
+          "status": "completed",
+          "description": "設定 Laravel Herd 開發環境"
+        },
+        {
+          "id": "issue-1-3",
+          "title": "使用者認證系統 (Fortify)",
+          "status": "completed",
+          "description": "整合 Laravel Fortify 認證系統"
+        }
+      ]
+    },
+    {
+      "id": "phase-2",
+      "name": "AI 資料處理",
+      "status": "in-progress",
+      "issues": [
+        {
+          "id": "issue-2-1",
+          "title": "AI 資料清理演算法",
+          "status": "in-progress",
+          "description": "開發智慧資料清理功能，處理政府開放資料的格式不一致問題",
+          "acceptanceCriteria": [
+            "能處理 CSV 和 XML 格式",
+            "自動檢測和修復資料格式錯誤",
+            "準確率 > 95%",
+            "處理速度 < 30秒 (10萬筆資料)"
+          ]
+        },
+        {
+          "id": "issue-2-2",
+          "title": "政府資料下載機制",
+          "status": "pending",
+          "description": "自動下載政府開放資料平台的租賃實價登錄資料",
+          "acceptanceCriteria": [
+            "自動下載每月1、11、21日的資料",
+            "支援 CSV 和 XML 格式",
+            "錯誤重試機制",
+            "資料完整性驗證"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "phase-3",
+      "name": "AI 地圖系統",
+      "status": "pending",
+      "issues": [
+        {
+          "id": "issue-3-1",
+          "title": "Leaflet.js 地圖整合",
+          "status": "pending",
+          "description": "建立基於 Leaflet.js 的地圖系統，支援租屋資料視覺化",
+          "acceptanceCriteria": [
+            "地圖載入速度 < 2秒",
+            "支援標記點顯示",
+            "響應式設計",
+            "支援縮放和平移"
+          ]
+        }
+      ]
+    }
+  ]
+}
