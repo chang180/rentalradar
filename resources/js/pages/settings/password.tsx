@@ -15,7 +15,7 @@ import { edit } from '@/routes/password';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Password settings',
+        title: '密碼設定',
         href: edit().url,
     },
 ];
@@ -26,13 +26,13 @@ export default function Password() {
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Password settings" />
+            <Head title="密碼設定" />
 
             <SettingsLayout>
                 <div className="space-y-6">
                     <HeadingSmall
-                        title="Update password"
-                        description="Ensure your account is using a long, random password to stay secure"
+                        title="更新密碼"
+                        description="確保您的帳戶使用長且隨機的密碼以保持安全"
                     />
 
                     <Form
@@ -61,7 +61,7 @@ export default function Password() {
                             <>
                                 <div className="grid gap-2">
                                     <Label htmlFor="current_password">
-                                        Current password
+                                        目前密碼
                                     </Label>
 
                                     <Input
@@ -71,7 +71,7 @@ export default function Password() {
                                         type="password"
                                         className="mt-1 block w-full"
                                         autoComplete="current-password"
-                                        placeholder="Current password"
+                                        placeholder="請輸入目前密碼"
                                     />
 
                                     <InputError
@@ -81,7 +81,7 @@ export default function Password() {
 
                                 <div className="grid gap-2">
                                     <Label htmlFor="password">
-                                        New password
+                                        新密碼
                                     </Label>
 
                                     <Input
@@ -91,7 +91,7 @@ export default function Password() {
                                         type="password"
                                         className="mt-1 block w-full"
                                         autoComplete="new-password"
-                                        placeholder="New password"
+                                        placeholder="請輸入新密碼"
                                     />
 
                                     <InputError message={errors.password} />
@@ -99,7 +99,7 @@ export default function Password() {
 
                                 <div className="grid gap-2">
                                     <Label htmlFor="password_confirmation">
-                                        Confirm password
+                                        確認密碼
                                     </Label>
 
                                     <Input
@@ -108,7 +108,7 @@ export default function Password() {
                                         type="password"
                                         className="mt-1 block w-full"
                                         autoComplete="new-password"
-                                        placeholder="Confirm password"
+                                        placeholder="請確認新密碼"
                                     />
 
                                     <InputError
@@ -121,7 +121,7 @@ export default function Password() {
                                         disabled={processing}
                                         data-test="update-password-button"
                                     >
-                                        Save password
+                                        儲存密碼
                                     </Button>
 
                                     <Transition
@@ -132,7 +132,7 @@ export default function Password() {
                                         leaveTo="opacity-0"
                                     >
                                         <p className="text-sm text-neutral-600">
-                                            Saved
+                                            已儲存
                                         </p>
                                     </Transition>
                                 </div>
