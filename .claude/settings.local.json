@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(php artisan:*)",
+      "Bash(php artisan config:clear:*)",
+      "Bash(php artisan view:clear:*)",
+      "Bash(npm run build:*)",
+      "mcp__laravel-boost__search-docs",
+      "mcp__laravel-boost__tinker",
+      "Bash(find:*)",
+      "mcp__laravel-boost__last-error",
+      "mcp__laravel-boost__get-config",
+      "mcp__laravel-boost__list-routes",
+      "mcp__laravel-boost__read-log-entries",
+      "mcp__laravel-boost__database-query",
+      "Bash(git add:*)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "laravel-boost",
+    "herd"
+  ]
+}

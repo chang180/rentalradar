@@ -53,7 +53,7 @@ export default function Welcome() {
                                             href={dashboard()}
                                             className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
                                         >
-                                            進入儀表板
+                                            開始分析
                                         </Link>
                                     ) : (
                                         <div className="flex items-center space-x-3">
