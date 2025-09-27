@@ -228,6 +228,29 @@ async function updateIssueStatus(issueId, stateId) {
   return await makeApiRequest(query, variables);
 }
 
+async function updateIssueContent(issueId, title, description) {
+  const query = `
+    mutation UpdateIssue($id: String!, $input: IssueUpdateInput!) {
+      issueUpdate(id: $id, input: $input) {
+        success
+        issue {
+          id
+          title
+          description
+        }
+      }
+    }
+  `;
+  const variables = {
+    id: issueId,
+    input: {
+      title: title,
+      description: description
+    }
+  };
+  return await makeApiRequest(query, variables);
+}
+
 // 建立 Issue
 async function createIssue(title, description, teamId) {
   const query = `
@@ -394,6 +417,24 @@ async function main() {
         }
         break;
 
+      case 'edit':
+        if (args.length < 3) {
+          console.log('❌ 請提供完整參數');
+          console.log('用法: node linear-oauth-integration.cjs edit <issue-id> <title> <description>');
+          return;
+        }
+
+        console.log(`🔄 正在更新 Issue ${args[0]} 內容...`);
+        const editResult = await updateIssueContent(args[0], args[1], args.slice(2).join(' '));
+        
+        if (editResult.data && editResult.data.issueUpdate.success) {
+          console.log('✅ Issue 內容更新成功！');
+          console.log(`📋 ${editResult.data.issueUpdate.issue.title}`);
+        } else {
+          console.log('❌ Issue 內容更新失敗:', editResult);
+        }
+        break;
+
       case 'create':
         if (args.length < 3) {
           console.log('❌ 請提供完整參數');
@@ -421,6 +462,7 @@ async function main() {
         console.log('  list                    - 列出所有 Issues');
         console.log('  states                  - 列出可用狀態');
         console.log('  update <issue-id> <state-id> - 更新 Issue 狀態');
+        console.log('  edit <issue-id> <title> <description> - 更新 Issue 內容');
         console.log('  create <team-id> <title> <description> - 建立 Issue');
         console.log('\n使用流程:');
         console.log('1. node linear-oauth-integration.cjs auth');
