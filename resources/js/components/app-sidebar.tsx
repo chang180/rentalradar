@@ -8,11 +8,12 @@ import {
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
+    useSidebar,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { LayoutGrid, BarChart3, Map, Home } from 'lucide-react';
+import { LayoutGrid, BarChart3, Map, Home, ChevronLeft, ChevronRight } from 'lucide-react';
 import AppLogo from './app-logo';
 
 const mainNavItems: NavItem[] = [
@@ -26,36 +27,47 @@ const mainNavItems: NavItem[] = [
         href: '/map',
         icon: Map,
     },
-    {
-        title: '效能監控',
-        href: '/performance',
-        icon: BarChart3,
-        external: true,
-    },
 ];
 
 export function AppSidebar() {
+    const { state, toggleSidebar } = useSidebar();
+    const isCollapsed = state === 'collapsed';
+
     return (
-        <Sidebar collapsible="icon" variant="inset">
-            <SidebarHeader>
-                <SidebarMenu>
-                    <SidebarMenuItem>
-                        <SidebarMenuButton size="lg" asChild>
-                            <Link href={dashboard()} prefetch>
-                                <AppLogo />
-                            </Link>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                </SidebarMenu>
-            </SidebarHeader>
+        <div className="relative">
+            <Sidebar collapsible="icon" variant="inset">
+                <SidebarHeader>
+                    <SidebarMenu>
+                        <SidebarMenuItem>
+                            <SidebarMenuButton size="lg" asChild>
+                                <Link href={dashboard()} prefetch>
+                                    <AppLogo />
+                                </Link>
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
+                    </SidebarMenu>
+                </SidebarHeader>
 
-            <SidebarContent>
-                <NavMain items={mainNavItems} />
-            </SidebarContent>
+                <SidebarContent>
+                    <NavMain items={mainNavItems} />
+                </SidebarContent>
 
-            <SidebarFooter>
-                <NavUser />
-            </SidebarFooter>
-        </Sidebar>
+                <SidebarFooter>
+                    <NavUser />
+                </SidebarFooter>
+            </Sidebar>
+            
+            {/* 側邊欄切換按鈕 - 位於側邊欄和內容區域的邊線上 */}
+            <button
+                onClick={toggleSidebar}
+                className="absolute -right-3 top-6 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            >
+                {isCollapsed ? (
+                    <ChevronRight className="h-3 w-3 text-gray-600 dark:text-gray-400" />
+                ) : (
+                    <ChevronLeft className="h-3 w-3 text-gray-600 dark:text-gray-400" />
+                )}
+            </button>
+        </div>
     );
 }
