@@ -3,6 +3,7 @@ import { dashboard } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
 import { MapPin, BarChart3, Home, TrendingUp, Users, Building } from 'lucide-react';
+import { PerformanceMonitor } from '@/components/PerformanceMonitor';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -123,6 +124,29 @@ export default function Dashboard() {
                             <Users className="w-8 h-8 text-purple-600 dark:text-purple-400" />
                         </div>
                     </div>
+                </div>
+
+                {/* 效能監控區塊 */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+                                <BarChart3 className="w-5 h-5 text-green-600 dark:text-green-400" />
+                            </div>
+                            <div>
+                                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">系統效能監控</h2>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">即時系統效能指標</p>
+                            </div>
+                        </div>
+                        <Link
+                            href="/performance"
+                            className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium"
+                        >
+                            查看詳細 →
+                        </Link>
+                    </div>
+                    
+                    <PerformanceMonitor showDetails={false} refreshInterval={10000} />
                 </div>
             </div>
         </AppLayout>
