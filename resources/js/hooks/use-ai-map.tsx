@@ -85,7 +85,7 @@ export function useAIMap(options: UseAIMapOptions = {}) {
                 const params = new URLSearchParams();
 
                 // 如果選擇了特定行政區，不傳送視口範圍參數，讓後端返回該行政區的所有資料
-                if (district) {
+                if (district && district.trim() !== '') {
                     params.append('district', district);
                     params.append('zoom', viewport.zoom.toString());
                 } else {
@@ -146,8 +146,15 @@ export function useAIMap(options: UseAIMapOptions = {}) {
             currentViewportRef.current = newViewport;
 
             if (autoOptimize) {
+                // 將 properties 轉換為 MapPoint 格式
+                const mapPoints: MapPoint[] = properties.map(prop => ({
+                    lat: prop.location.lat,
+                    lng: prop.location.lng,
+                    price: prop.price,
+                }));
+                
                 const optimization = AIMapService.optimizeViewportUpdate(
-                    properties,
+                    mapPoints,
                     newViewport,
                     previousViewportRef.current,
                 );

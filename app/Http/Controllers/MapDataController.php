@@ -140,7 +140,7 @@ class MapDataController extends Controller
 
             $responseData = [
                 'rentals' => $this->mapDataService->transformAggregatedToRentals($properties),
-                'statistics' => $this->mapDataService->calculateStatistics($properties),
+                'statistics' => $this->mapDataService->calculateStatistics($aggregatedData), // 使用所有聚合資料計算統計
             ];
 
             // 快取結果

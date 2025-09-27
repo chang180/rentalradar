@@ -332,7 +332,7 @@ const RentalMap = memo(() => {
                     west: 121.3,
                     zoom: defaultZoom,
                 },
-                selectedDistrict,
+                selectedDistrict && selectedDistrict.trim() !== '' ? selectedDistrict : undefined,
             );
             setIsInitialLoad(false);
         }, 100);
@@ -793,9 +793,10 @@ const RentalMap = memo(() => {
                                                 <div className="flex justify-between">
                                                     <span>平均面積：</span>
                                                     <span className="font-medium">
-                                                        {property.area.toFixed(
-                                                            1,
-                                                        )}{' '}
+                                                        {typeof property.area === 'number' 
+                                                            ? property.area.toFixed(1)
+                                                            : property.area || 'N/A'
+                                                        }{' '}
                                                         坪
                                                     </span>
                                                 </div>
@@ -1079,7 +1080,7 @@ const RentalMap = memo(() => {
                                                     </span>
                                                     <span className="font-medium">
                                                         {(
-                                                            point.weight * 100
+                                                            (point.weight || 0) * 100
                                                         ).toFixed(1)}
                                                         %
                                                     </span>
@@ -1123,7 +1124,7 @@ const RentalMap = memo(() => {
                                                         </span>
                                                         <span className="font-medium">
                                                             {(
-                                                                point.intensity *
+                                                                (point.intensity || 0) *
                                                                 100
                                                             ).toFixed(1)}
                                                             %
