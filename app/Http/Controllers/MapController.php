@@ -3,23 +3,18 @@
 namespace App\Http\Controllers;
 
 use App\Events\MapDataUpdated;
-use App\Events\RealTimeNotification;
-use App\Models\Property;
-use App\Services\AIMapOptimizationService;
 use App\Services\GeoAggregationService;
-use App\Support\AdvancedPricePredictor;
+use App\Services\MapDataService;
 use App\Support\PerformanceMonitor;
-use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Validator;
 
 class MapController extends Controller
 {
     public function __construct(
-        private AIMapOptimizationService $aiMapService,
-        private GeoAggregationService $geoAggregationService
+        private GeoAggregationService $geoAggregationService,
+        private MapDataService $mapDataService
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -30,7 +25,7 @@ class MapController extends Controller
         $connection->enableQueryLog();
 
         // 使用聚合服務取得地理中心點資料
-        $filters = $this->buildFilters($request);
+        $filters = $this->mapDataService->buildFilters($request->all());
         $aggregatedData = $this->geoAggregationService->getAggregatedProperties($filters);
 
         // 只回傳有座標的資料
@@ -84,56 +79,5 @@ class MapController extends Controller
                 'aggregation_type' => 'geo_center',
             ],
         ]);
-    }
-
-    public function optimizedData(Request $request): JsonResponse
-    {
-        return $this->index($request);
-    }
-
-    public function cities(): JsonResponse
-    {
-        $cities = $this->geoAggregationService->getCities();
-
-        return response()->json([
-            'success' => true,
-            'data' => $cities,
-        ]);
-    }
-
-    public function districts(Request $request): JsonResponse
-    {
-        $city = $request->get('city');
-        if (!$city) {
-            return response()->json([
-                'success' => false,
-                'message' => '請指定縣市',
-            ], 400);
-        }
-
-        $districts = $this->geoAggregationService->getDistrictsByCity($city);
-
-        return response()->json([
-            'success' => true,
-            'data' => $districts,
-        ]);
-    }
-
-    /**
-     * 建立篩選條件
-     */
-    private function buildFilters(Request $request): array
-    {
-        $filters = [];
-
-        if ($request->has('city')) {
-            $filters['city'] = $request->city;
-        }
-
-        if ($request->has('district')) {
-            $filters['district'] = $request->district;
-        }
-
-        return $filters;
     }
 }

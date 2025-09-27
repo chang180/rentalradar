@@ -4,7 +4,9 @@ use App\Http\Controllers\AIController;
 use App\Http\Controllers\AIPredictionController;
 use App\Http\Controllers\AnomalyDetectionController;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\MapController;
+use App\Http\Controllers\MapAIController;
+use App\Http\Controllers\MapDataController;
+use App\Http\Controllers\MapNotificationController;
 use App\Http\Controllers\MarketAnalysisController;
 use App\Http\Controllers\PerformanceDashboardController;
 use App\Http\Controllers\PublicMapController;
@@ -44,17 +46,24 @@ Route::prefix('ai')->group(function () {
 
 // Map data API
 Route::prefix('map')->group(function () {
-    Route::get('/rentals', [MapController::class, 'index']);
-    Route::get('/heatmap', [MapController::class, 'heatmapData']);
-    Route::get('/clusters', [MapController::class, 'clusters']);
-    Route::get('/statistics', [MapController::class, 'statistics']);
-    Route::get('/cities', [MapController::class, 'cities']);
-    Route::get('/districts', [MapController::class, 'districts']);
-    Route::get('/district-bounds', [MapController::class, 'districtBounds']);
-    Route::get('/ai-heatmap', [MapController::class, 'aiHeatmap']);
-    Route::get('/predict-prices', [MapController::class, 'predictPrices']);
-    Route::get('/optimized-data', [MapController::class, 'optimizedData']);
-    Route::post('/notify', [MapController::class, 'sendNotification']);
+    // 基本地圖資料路由 - 使用 MapDataController (帶快取)
+    Route::get('/rentals', [MapDataController::class, 'index']);
+    Route::get('/statistics', [MapDataController::class, 'statistics']);
+    Route::get('/cities', [MapDataController::class, 'cities']);
+    Route::get('/districts', [MapDataController::class, 'districts']);
+    Route::get('/district-bounds', [MapDataController::class, 'districtBounds']);
+
+    // 基本資料路由 - 使用 MapDataController
+    Route::get('/heatmap', [MapDataController::class, 'heatmapData']);
+
+    // AI 相關路由 - 使用 MapAIController
+    Route::get('/clusters', [MapAIController::class, 'clusters']);
+    Route::get('/ai-heatmap', [MapAIController::class, 'aiHeatmap']);
+    Route::get('/predict-prices', [MapAIController::class, 'predictPrices']);
+    Route::get('/optimized-data', [MapAIController::class, 'optimizedData']);
+
+    // 通知相關路由 - 使用 MapNotificationController
+    Route::post('/notify', [MapNotificationController::class, 'sendNotification']);
 });
 
 // Performance dashboard API

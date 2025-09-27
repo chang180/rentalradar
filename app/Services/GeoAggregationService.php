@@ -67,7 +67,7 @@ class GeoAggregationService
 
         // 為每個聚合結果添加地理中心點
         return $results->map(function ($item) {
-            $center = TaiwanGeoCenterService::getCenter($item->city, $item->district);
+            $center = TaiwanGeoCenterService::getGeoCenter($item->city, $item->district);
 
             return [
                 'city' => $item->city,
@@ -116,9 +116,9 @@ class GeoAggregationService
 
         // 為每個縣市添加地理中心點（使用第一個行政區的中心點）
         return $results->map(function ($item) {
-            $districts = TaiwanGeoCenterService::getDistricts($item->city);
+            $districts = TaiwanGeoCenterService::getDistrictsByCity($item->city);
             $firstDistrict = $districts[0] ?? null;
-            $center = $firstDistrict ? TaiwanGeoCenterService::getCenter($item->city, $firstDistrict) : null;
+            $center = $firstDistrict ? TaiwanGeoCenterService::getGeoCenter($item->city, $firstDistrict) : null;
 
             return [
                 'city' => $item->city,
@@ -247,5 +247,13 @@ class GeoAggregationService
             })
             ->sortByDesc('property_count')
             ->values();
+    }
+
+    /**
+     * 取得指定行政區的邊界資訊
+     */
+    public function getDistrictBounds(string $district): ?array
+    {
+        return TaiwanGeoCenterService::getDistrictBounds($district);
     }
 }

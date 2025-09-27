@@ -278,9 +278,9 @@ export function useAIMap(options: UseAIMapOptions = {}) {
 
             const viewport = currentViewportRef.current;
             const points: MapPoint[] = properties.map((prop) => ({
-                lat: prop.position.lat,
-                lng: prop.position.lng,
-                price: prop.info.total_rent,
+                lat: prop.location.lat,
+                lng: prop.location.lng,
+                price: prop.price,
             }));
 
             const filtered = AIMapService.smartFilter(points, zoom, viewport);
@@ -289,8 +289,8 @@ export function useAIMap(options: UseAIMapOptions = {}) {
             return properties.filter((prop) =>
                 filtered.some(
                     (point) =>
-                        point.lat === prop.position.lat &&
-                        point.lng === prop.position.lng,
+                        point.lat === prop.location.lat &&
+                        point.lng === prop.location.lng,
                 ),
             );
         },

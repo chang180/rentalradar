@@ -143,7 +143,7 @@ class AdvancedPricePredictionTest extends TestCase
     public function test_rentals_api_returns_price_predictions(): void
     {
         $response = $this->actingAs($this->user)
-            ->getJson('/api/map/rentals', [
+            ->getJson('/api/map/rentals?'.http_build_query([
                 'bounds' => [
                     'north' => 25.1,
                     'south' => 25.0,
@@ -151,7 +151,7 @@ class AdvancedPricePredictionTest extends TestCase
                     'west' => 121.5,
                 ],
                 'zoom' => 12,
-            ]);
+            ]));
 
         $response->assertSuccessful()
             ->assertJsonStructure([
@@ -199,7 +199,7 @@ class AdvancedPricePredictionTest extends TestCase
     public function test_clusters_api_returns_price_predictions(): void
     {
         $response = $this->actingAs($this->user)
-            ->getJson('/api/map/clusters', [
+            ->getJson('/api/map/clusters?'.http_build_query([
                 'bounds' => [
                     'north' => 25.1,
                     'south' => 25.0,
@@ -207,7 +207,7 @@ class AdvancedPricePredictionTest extends TestCase
                     'west' => 121.5,
                 ],
                 'zoom' => 12,
-            ]);
+            ]));
 
         $response->assertSuccessful()
             ->assertJsonStructure([
@@ -225,7 +225,7 @@ class AdvancedPricePredictionTest extends TestCase
                     ],
                     'algorithm_info',
                     'price_summary' => [
-                        'count',
+                        'total_predictions',
                         'average_price',
                         'median_price',
                         'price_std_dev',
@@ -254,7 +254,7 @@ class AdvancedPricePredictionTest extends TestCase
     public function test_optimized_data_api_returns_price_predictions(): void
     {
         $response = $this->actingAs($this->user)
-            ->getJson('/api/map/optimized-data', [
+            ->getJson('/api/map/optimized-data?'.http_build_query([
                 'bounds' => [
                     'north' => 25.1,
                     'south' => 25.0,
@@ -262,7 +262,7 @@ class AdvancedPricePredictionTest extends TestCase
                     'west' => 121.5,
                 ],
                 'zoom' => 12,
-            ]);
+            ]));
 
         $response->assertSuccessful()
             ->assertJsonStructure([
@@ -279,7 +279,7 @@ class AdvancedPricePredictionTest extends TestCase
                         ],
                     ],
                     'price_summary' => [
-                        'count',
+                        'total_predictions',
                         'average_price',
                         'median_price',
                         'price_std_dev',
@@ -313,7 +313,7 @@ class AdvancedPricePredictionTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->user)
-            ->getJson('/api/map/optimized-data', [
+            ->getJson('/api/map/optimized-data?'.http_build_query([
                 'bounds' => [
                     'north' => 25.2,
                     'south' => 25.0,
@@ -321,7 +321,7 @@ class AdvancedPricePredictionTest extends TestCase
                     'west' => 121.4,
                 ],
                 'zoom' => 12,
-            ]);
+            ]));
 
         $response->assertSuccessful()
             ->assertJsonPath('data.type', 'clusters')
@@ -345,7 +345,7 @@ class AdvancedPricePredictionTest extends TestCase
                         'reduction_ratio',
                     ],
                     'price_summary' => [
-                        'count',
+                        'total_predictions',
                         'average_price',
                         'median_price',
                         'price_std_dev',

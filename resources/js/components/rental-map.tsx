@@ -392,11 +392,29 @@ const RentalMap = memo(() => {
     };
 
     // 處理縣市選擇變更
-    const handleCityChange = useCallback((city: string) => {
+    const handleCityChange = useCallback(async (city: string) => {
         setSelectedCity(city);
         setSelectedDistrict(''); // 清空行政區選擇
-        fetchDistricts(city);
-    }, []);
+        await fetchDistricts(city);
+        
+        // 如果有選擇縣市，自動選擇第一個行政區
+        if (city) {
+            try {
+                const response = await fetch(
+                    `/api/map/districts?city=${encodeURIComponent(city)}`,
+                );
+                const data = await response.json();
+                if (data.success && data.data.length > 0) {
+                    const firstDistrict = data.data[0].district;
+                    setSelectedDistrict(firstDistrict);
+                    // 移動地圖到第一個行政區
+                    await navigateToDistrict(firstDistrict);
+                }
+            } catch (err) {
+                console.error('Failed to auto-select first district:', err);
+            }
+        }
+    }, [navigateToDistrict]);
 
     // 處理行政區選擇變更
     const handleDistrictChange = useCallback(
@@ -479,7 +497,22 @@ const RentalMap = memo(() => {
                 <div className="text-center">
                     <p className="text-red-600 dark:text-red-400">{error}</p>
                     <button
-                        onClick={() => fetchProperties(selectedDistrict)}
+                        onClick={() => {
+                            if (mapRef.current) {
+                                const bounds = mapRef.current.getBounds();
+                                const zoom = mapRef.current.getZoom();
+                                updateViewport(
+                                    {
+                                        north: bounds.getNorth(),
+                                        south: bounds.getSouth(),
+                                        east: bounds.getEast(),
+                                        west: bounds.getWest(),
+                                        zoom,
+                                    },
+                                    selectedDistrict,
+                                );
+                            }
+                        }}
                         className="mt-2 rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
                     >
                         重新載入
