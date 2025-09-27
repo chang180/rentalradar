@@ -122,6 +122,77 @@ php artisan serve
 npm run dev
 ```
 
+## 📥 資料下載與處理
+
+### 下載政府租賃資料
+```bash
+# 下載並處理最新的租賃資料
+php artisan rental:process
+
+# 下載並處理資料（包含清理舊檔案）
+php artisan rental:process --cleanup
+
+# 下載並處理資料（包含驗證）
+php artisan rental:process --validate
+
+# 下載並處理資料（包含地理編碼）
+php artisan rental:process --geocode
+
+# 下載並處理資料（包含通知）
+php artisan rental:process --notify
+
+# 完整處理流程（所有選項）
+php artisan rental:process --cleanup --validate --geocode --notify
+```
+
+### 資料處理說明
+- **資料來源**: 政府不動產租賃實價登錄資料
+- **更新頻率**: 每10日 (每月1、11、21日)
+- **資料格式**: ZIP 檔案包含 CSV 和 XML 檔案
+- **處理內容**:
+  - 解析 CSV 檔案（不動產租賃、建物不動產租賃）
+  - 縣市對應（透過 manifest.csv）
+  - 時間格式轉換（民國年轉西元年）
+  - 面積單位轉換（平方公尺轉坪）
+  - 租金重新計算（每坪租金）
+  - 資料驗證和清理
+  - 批次儲存到資料庫
+
+### 資料庫結構
+```sql
+-- 主要欄位
+city                    -- 縣市
+district               -- 行政區
+latitude               -- 緯度（預留給地理編碼）
+longitude              -- 經度（預留給地理編碼）
+is_geocoded            -- 是否已地理編碼
+rental_type            -- 租賃類型
+total_rent             -- 總租金
+rent_per_ping          -- 每坪租金
+rent_date              -- 租賃日期
+building_type          -- 建物類型
+area_ping              -- 面積(坪)
+building_age           -- 建物年齡
+bedrooms               -- 臥室數
+living_rooms           -- 客廳數
+bathrooms              -- 衛浴數
+has_elevator           -- 是否有電梯
+has_management_organization -- 是否有管理組織
+has_furniture          -- 是否有傢俱
+```
+
+### 檢查資料狀態
+```bash
+# 檢查資料庫中的記錄數
+php artisan tinker --execute="echo 'Properties count: ' . App\Models\Property::count();"
+
+# 檢查縣市和行政區數量
+php artisan tinker --execute="echo 'Cities: ' . App\Models\Property::distinct('city')->count(); echo 'Districts: ' . App\Models\Property::distinct('district')->count();"
+
+# 檢查座標資料
+php artisan tinker --execute="echo 'Has coordinates: ' . App\Models\Property::whereNotNull('latitude')->whereNotNull('longitude')->count();"
+```
+
 ## 📝 開發日誌
 
 ### 2025-09-27
