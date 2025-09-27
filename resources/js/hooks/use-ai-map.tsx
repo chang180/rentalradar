@@ -93,12 +93,12 @@ export function useAIMap(options: UseAIMapOptions = {}) {
                     setClusters(data.data);
                     setDisplayMode('clusters');
                 } else {
-                    setProperties(data.data);
+                    setProperties(data.data || []);
                     setDisplayMode('properties');
 
                     // 如果啟用聚合且資料點太多，進行客戶端聚合
-                    if (enableClustering && data.data.length > clusterThreshold) {
-                        const points: MapPoint[] = data.data.map((prop: Property) => ({
+                    if (enableClustering && (data.data || []).length > clusterThreshold) {
+                        const points: MapPoint[] = (data.data || []).map((prop: Property) => ({
                             lat: prop.position.lat,
                             lng: prop.position.lng,
                             price: prop.info.total_rent,
@@ -112,7 +112,7 @@ export function useAIMap(options: UseAIMapOptions = {}) {
 
                 // 生成熱力圖資料
                 if (enableHeatmap) {
-                    const points: MapPoint[] = data.data.map((prop: Property) => ({
+                    const points: MapPoint[] = (data.data || []).map((prop: Property) => ({
                         lat: prop.position.lat,
                         lng: prop.position.lng,
                         price: prop.info.total_rent,

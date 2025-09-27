@@ -6,8 +6,8 @@ window.Pusher = Pusher;
 
 const echo = new Echo({
     broadcaster: 'log', // 使用 log driver 確保 Hostinger 相容性
-    key: process.env.MIX_PUSHER_APP_KEY || 'rentalradar',
-    cluster: process.env.MIX_PUSHER_APP_CLUSTER || 'mt1',
+    key: import.meta.env.VITE_PUSHER_APP_KEY || 'rentalradar',
+    cluster: import.meta.env.VITE_PUSHER_APP_CLUSTER || 'mt1',
     encrypted: true,
     logToConsole: true, // 開發環境啟用日誌
 });
