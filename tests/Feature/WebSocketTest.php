@@ -79,8 +79,10 @@ it('validates notification data properly', function () {
 
 it('can broadcast map data when fetching properties', function () {
     Event::fake();
+    
+    $user = \App\Models\User::factory()->create();
 
-    $response = $this->getJson('/api/map/properties?limit=10');
+    $response = $this->actingAs($user)->getJson('/api/map/rentals?limit=10');
 
     $response->assertStatus(200);
 
@@ -91,8 +93,10 @@ it('can broadcast map data when fetching properties', function () {
 
 it('can broadcast cluster data when generating clusters', function () {
     Event::fake();
+    
+    $user = \App\Models\User::factory()->create();
 
-    $response = $this->getJson('/api/map/clusters?algorithm=kmeans&clusters=5');
+    $response = $this->actingAs($user)->getJson('/api/map/clusters?algorithm=kmeans&clusters=5');
 
     $response->assertStatus(200);
 

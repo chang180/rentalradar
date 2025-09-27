@@ -62,7 +62,9 @@ class MapController extends Controller
         $predictionInput = $this->buildPredictionPayload($properties);
         $predictionResult = $predictionInput === []
             ? ['predictions' => ['items' => [], 'summary' => []], 'model_info' => []]
-            : $this->aiMapService->predictPrices($predictionInput);
+            : $monitor->trackModel('price_prediction', function () use ($predictionInput) {
+                return $this->aiMapService->predictPrices($predictionInput);
+            }, ['threshold_ms' => 300]);
 
         $predictionLookup = $this->indexPredictions($predictionResult['predictions']['items'] ?? []);
         $predictionSummary = $predictionResult['predictions']['summary'] ?? [];
@@ -91,6 +93,7 @@ class MapController extends Controller
                 'average_predicted_price' => $predictionSummary['average_price'] ?? null,
                 'average_confidence' => $predictionSummary['average_confidence'] ?? null,
                 'confidence_distribution' => $predictionSummary['confidence_distribution'] ?? null,
+                'confidence_percentiles' => $predictionSummary['confidence_percentiles'] ?? null,
             ],
         ];
 
@@ -249,7 +252,9 @@ class MapController extends Controller
         $nClusters = (int) $request->get('clusters', 10);
 
         $serviceResult = $this->aiMapService->clusteringAlgorithm($data, $algorithm, $nClusters);
-        $predictionResult = $this->aiMapService->predictPrices($data);
+        $predictionResult = $monitor->trackModel('price_prediction', function () use ($data) {
+            return $this->aiMapService->predictPrices($data);
+        }, ['threshold_ms' => 300]);
         $priceSummary = $predictionResult['predictions']['summary'] ?? [];
         $modelInfo = $predictionResult['model_info'] ?? [];
 
@@ -330,6 +335,11 @@ class MapController extends Controller
 
     public function predictPrices(Request $request): JsonResponse
     {
+        $monitor = PerformanceMonitor::start('map.predict_prices');
+        $connection = DB::connection();
+        $connection->flushQueryLog();
+        $connection->enableQueryLog();
+
         $inputData = $request->validate([
             'properties' => 'required|array',
             'properties.*.lat' => 'required|numeric',
@@ -339,7 +349,19 @@ class MapController extends Controller
             'properties.*.age' => 'numeric',
         ]);
 
-        $result = $this->aiMapService->predictPrices($inputData['properties']);
+        $result = $monitor->trackModel('price_prediction', function () use ($inputData) {
+            return $this->aiMapService->predictPrices($inputData['properties']);
+        }, ['threshold_ms' => 300]);
+
+        $monitor->mark('prediction_ready');
+        $queryCount = count($connection->getQueryLog());
+        $connection->disableQueryLog();
+
+        $result['meta'] = [
+            'performance' => $monitor->summary([
+                'query_count' => $queryCount,
+            ]),
+        ];
 
         return response()->json($result);
     }
@@ -390,7 +412,9 @@ class MapController extends Controller
             })->toArray();
 
             $clusters = $this->aiMapService->clusteringAlgorithm($data, 'grid', 20);
-            $predictionResult = $this->aiMapService->predictPrices($data);
+            $predictionResult = $monitor->trackModel('price_prediction', function () use ($data) {
+                return $this->aiMapService->predictPrices($data);
+            }, ['threshold_ms' => 300]);
             $priceSummary = $predictionResult['predictions']['summary'] ?? [];
             $modelInfo = $predictionResult['model_info'] ?? [];
 
@@ -432,7 +456,9 @@ class MapController extends Controller
         $predictionInput = $this->buildPredictionPayload($properties);
         $predictionResult = $predictionInput === []
             ? ['predictions' => ['items' => [], 'summary' => []], 'model_info' => []]
-            : $this->aiMapService->predictPrices($predictionInput);
+            : $monitor->trackModel('price_prediction', function () use ($predictionInput) {
+                return $this->aiMapService->predictPrices($predictionInput);
+            }, ['threshold_ms' => 300]);
         $predictionLookup = $this->indexPredictions($predictionResult['predictions']['items'] ?? []);
         $predictionSummary = $predictionResult['predictions']['summary'] ?? [];
         $modelInfo = $predictionResult['model_info'] ?? [];
@@ -544,6 +570,42 @@ class MapController extends Controller
         }
 
         return array_map('floatval', $validator->validated());
+    }
+
+    // Legacy route aliases
+    public function getRentals(Request $request): JsonResponse
+    {
+        return $this->index($request);
+    }
+
+    public function getHeatmap(Request $request): JsonResponse
+    {
+        return $this->heatmapData($request);
+    }
+
+    public function getClusters(Request $request): JsonResponse
+    {
+        return $this->clusters($request);
+    }
+
+    public function getStatistics(Request $request): JsonResponse
+    {
+        return $this->statistics($request);
+    }
+
+    public function getDistricts(): JsonResponse
+    {
+        return $this->districts();
+    }
+
+    public function getAIHeatmap(Request $request): JsonResponse
+    {
+        return $this->aiHeatmap($request);
+    }
+
+    public function getOptimizedData(Request $request): JsonResponse
+    {
+        return $this->optimizedData($request);
     }
 
     private function buildPredictionPayload($properties): array

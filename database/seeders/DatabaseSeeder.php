@@ -24,5 +24,10 @@ class DatabaseSeeder extends Seeder
                 'email_verified_at' => now(),
             ]
         );
+
+        // 建立測試用的租賃物件資料
+        $this->call([
+            PropertySeeder::class,
+        ]);
     }
 }

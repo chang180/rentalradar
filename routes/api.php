@@ -32,14 +32,14 @@ Route::prefix('ai')->group(function () {
 
 // 地圖 API
 Route::prefix('map')->group(function () {
-    Route::get('/rentals', [MapController::class, 'getRentals']);
-    Route::get('/heatmap', [MapController::class, 'getHeatmap']);
-    Route::get('/clusters', [MapController::class, 'getClusters']);
-    Route::get('/statistics', [MapController::class, 'getStatistics']);
-    Route::get('/districts', [MapController::class, 'getDistricts']);
-    Route::get('/ai-heatmap', [MapController::class, 'getAIHeatmap']);
+    Route::get('/rentals', [MapController::class, 'index']);
+    Route::get('/heatmap', [MapController::class, 'heatmapData']);
+    Route::get('/clusters', [MapController::class, 'clusters']);
+    Route::get('/statistics', [MapController::class, 'statistics']);
+    Route::get('/districts', [MapController::class, 'districts']);
+    Route::get('/ai-heatmap', [MapController::class, 'aiHeatmap']);
     Route::get('/predict-prices', [MapController::class, 'predictPrices']);
-    Route::get('/optimized-data', [MapController::class, 'getOptimizedData']);
+    Route::get('/optimized-data', [MapController::class, 'optimizedData']);
     Route::post('/notify', [MapController::class, 'sendNotification']);
 });
 

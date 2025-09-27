@@ -1,0 +1,40 @@
+{
+  "task": "DEV-20 進階 AI 模型整合開發 - 測試修正",
+  "description": "修正 AdvancedPricePredictionTest.php 中的測試問題",
+  "issues": [
+    {
+      "problem": "方法名稱錯誤",
+      "details": "測試中使用了錯誤的方法名稱",
+      "fixes": [
+        "將 predictPrice() 改為 predict()",
+        "將 predictBatch() 改為 predictCollection()",
+        "確保傳入正確的參數格式"
+      ]
+    },
+    {
+      "problem": "API 路由問題",
+      "details": "部分 API 需要認證或方法不存在",
+      "fixes": [
+        "檢查 MapController 是否有 getOptimizedData() 方法",
+        "確認 API 路由是否需要認證中間件",
+        "修正或移除不存在的 API 端點"
+      ]
+    },
+    {
+      "problem": "百分位數測試期望值",
+      "details": "測試期望的百分位數值與實際計算不符",
+      "fixes": [
+        "調整測試期望值以符合實際計算結果",
+        "或修正百分位數計算邏輯"
+      ]
+    }
+  ],
+  "priority": "high",
+  "estimated_time": "30 minutes",
+  "files_to_modify": [
+    "tests/Feature/AdvancedPricePredictionTest.php",
+    "app/Http/Controllers/MapController.php",
+    "routes/api.php"
+  ],
+  "expected_outcome": "所有測試通過，API 端點正常運作"
+}

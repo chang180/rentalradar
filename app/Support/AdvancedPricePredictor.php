@@ -180,6 +180,7 @@ class AdvancedPricePredictor
             'price_std_dev' => $this->standardDeviation($prices),
             'average_confidence' => round(array_sum($confidences) / max(count($confidences), 1), 3),
             'confidence_distribution' => $this->confidenceDistribution($predictions),
+            'confidence_percentiles' => $this->confidencePercentiles($confidences),
             'min_price' => min($prices),
             'max_price' => max($prices),
         ];
@@ -331,6 +332,40 @@ class AdvancedPricePredictor
         }
 
         return $buckets;
+    }
+
+    private function confidencePercentiles(array $confidences): array
+    {
+        if ($confidences === []) {
+            return ['p50' => 0.0, 'p75' => 0.0, 'p90' => 0.0];
+        }
+
+        sort($confidences);
+
+        return [
+            'p50' => round($this->percentile($confidences, 0.5), 3),
+            'p75' => round($this->percentile($confidences, 0.75), 3),
+            'p90' => round($this->percentile($confidences, 0.9), 3),
+        ];
+    }
+
+    private function percentile(array $values, float $percent): float
+    {
+        $count = count($values);
+        if ($count === 0) {
+            return 0.0;
+        }
+
+        $rank = $percent * ($count - 1);
+        $lowerIndex = (int) floor($rank);
+        $upperIndex = (int) ceil($rank);
+
+        if ($lowerIndex === $upperIndex) {
+            return $values[$lowerIndex];
+        }
+
+        $weight = $rank - $lowerIndex;
+        return $values[$lowerIndex] * (1 - $weight) + $values[$upperIndex] * $weight;
     }
 
     private function countFeatures(array $features): int

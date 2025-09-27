@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\ErrorTrackingService;
 use App\Services\UserBehaviorTrackingService;
-use App\Services\PerformanceMonitor;
+use App\Support\PerformanceMonitor;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
@@ -12,8 +12,7 @@ class PerformanceDashboardController extends Controller
 {
     public function __construct(
         private ErrorTrackingService $errorTracking,
-        private UserBehaviorTrackingService $behaviorTracking,
-        private PerformanceMonitor $performanceMonitor
+        private UserBehaviorTrackingService $behaviorTracking
     ) {}
 
     /**
@@ -25,7 +24,7 @@ class PerformanceDashboardController extends Controller
         
         $errorStats = $this->errorTracking->getErrorStats($timeRange);
         $behaviorStats = $this->behaviorTracking->getUserBehaviorStats($timeRange);
-        $performanceMetrics = $this->performanceMonitor->getCurrentMetrics();
+        $performanceMetrics = PerformanceMonitor::start('dashboard')->getCurrentMetrics();
 
         return response()->json([
             'success' => true,
@@ -45,7 +44,7 @@ class PerformanceDashboardController extends Controller
     public function getPerformanceMetrics(Request $request): JsonResponse
     {
         $timeRange = $request->get('timeRange', '24h');
-        $metrics = $this->performanceMonitor->getMetrics($timeRange);
+        $metrics = PerformanceMonitor::start('performance')->getMetrics($timeRange);
 
         return response()->json([
             'success' => true,
@@ -187,7 +186,7 @@ class PerformanceDashboardController extends Controller
      */
     public function getRealtimeMetrics(): JsonResponse
     {
-        $metrics = $this->performanceMonitor->getCurrentMetrics();
+        $metrics = PerformanceMonitor::start('realtime')->getCurrentMetrics();
         
         return response()->json([
             'success' => true,
@@ -202,7 +201,7 @@ class PerformanceDashboardController extends Controller
     public function getSystemHealth(): JsonResponse
     {
         $errorStats = $this->errorTracking->getErrorStats('1h');
-        $performanceMetrics = $this->performanceMonitor->getCurrentMetrics();
+        $performanceMetrics = PerformanceMonitor::start('system-health')->getCurrentMetrics();
         
         $healthScore = $this->calculateHealthScore($errorStats, $performanceMetrics);
         $status = $this->getHealthStatus($healthScore);

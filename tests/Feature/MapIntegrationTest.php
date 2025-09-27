@@ -64,13 +64,18 @@ class MapIntegrationTest extends TestCase
                         'districts',
                         'average_predicted_price',
                         'average_confidence',
-                        'confidence_distribution'
+                        'confidence_distribution',
+                        'confidence_percentiles'
                     ]
                 ],
                 'meta' => [
                     'performance' => [
+                        'name',
                         'response_time',
                         'memory_usage',
+                        'checkpoints',
+                        'models',
+                        'warnings',
                         'query_count'
                     ],
                     'models' => [
@@ -113,8 +118,12 @@ class MapIntegrationTest extends TestCase
                 ],
                 'meta' => [
                     'performance' => [
+                        'name',
                         'response_time',
                         'memory_usage',
+                        'checkpoints',
+                        'models',
+                        'warnings',
                         'query_count'
                     ]
                 ]
@@ -164,6 +173,7 @@ class MapIntegrationTest extends TestCase
                             'price_std_dev',
                             'average_confidence',
                             'confidence_distribution',
+                            'confidence_percentiles',
                             'min_price',
                             'max_price'
                         ]
@@ -212,14 +222,19 @@ class MapIntegrationTest extends TestCase
                         'price_std_dev',
                         'average_confidence',
                         'confidence_distribution',
+                        'confidence_percentiles',
                         'min_price',
                         'max_price'
                     ]
                 ],
                 'meta' => [
                     'performance' => [
+                        'name',
                         'response_time',
                         'memory_usage',
+                        'checkpoints',
+                        'models',
+                        'warnings',
                         'query_count'
                     ],
                     'models' => [
@@ -326,8 +341,12 @@ class MapIntegrationTest extends TestCase
                 ],
                 'meta' => [
                     'performance' => [
+                        'name',
                         'response_time',
                         'memory_usage',
+                        'checkpoints',
+                        'models',
+                        'warnings',
                         'query_count'
                     ],
                     'models' => [
@@ -346,5 +365,7 @@ class MapIntegrationTest extends TestCase
         $this->assertGreaterThanOrEqual(1, $data['meta']['performance']['query_count']);
         $this->assertArrayHasKey('price_prediction', $data['meta']['models']);
         $this->assertArrayHasKey('confidence_distribution', $data['data']['statistics']);
+        $this->assertArrayHasKey('confidence_percentiles', $data['data']['statistics']);
+        $this->assertArrayHasKey('warnings', $data['meta']['performance']);
     }
 }

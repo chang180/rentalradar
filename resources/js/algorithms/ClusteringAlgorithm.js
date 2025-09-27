@@ -3,7 +3,7 @@
  * 適用於 Hostinger 共享空間
  */
 
-export class ClusteringAlgorithm {
+class ClusteringAlgorithm {
     constructor() {
         this.earthRadius = 6371; // 地球半徑 (km)
         this.maxIterations = 15;
@@ -360,4 +360,207 @@ export class ClusteringAlgorithm {
         }
         return (sorted[middle - 1] + sorted[middle]) / 2;
     }
+
+    static predictPrice(data) {
+        const CBD_LAT = 25.0423;
+        const CBD_LNG = 121.5651;
+        const BASE_PRICE = 14500.0;
+
+        const numberOrNull = value => {
+            if (value === null || value === undefined || value === '') {
+                return null;
+            }
+            const numeric = Number(value);
+            return Number.isFinite(numeric) ? numeric : null;
+        };
+
+        const lat = numberOrNull(data.lat ?? data.latitude);
+        const lng = numberOrNull(data.lng ?? data.longitude);
+        const area = numberOrNull(data.area);
+        const floor = numberOrNull(data.floor);
+        const age = numberOrNull(data.age);
+        const listedRent = numberOrNull(data.rent_per_month ?? data.rentPerMonth);
+        const buildingType = (data.building_type ?? data.buildingType ?? '').toLowerCase();
+        const pattern = data.pattern ?? data.room_type ?? data.roomType;
+        const rooms = this.resolveRoomsStatic(data.rooms, pattern);
+        const district = data.district ?? null;
+
+        const normalizedArea = area !== null ? Math.max(area, 6) : null;
+        const areaComponent = normalizedArea !== null ? Math.pow(normalizedArea, 0.92) * 950 : 0;
+        const roomComponent = rooms !== null ? Math.min(rooms, 4) * 1200 : 0;
+
+        let distanceKm = null;
+        let locationMultiplier = 1.0;
+        if (lat !== null && lng !== null) {
+            distanceKm = this.haversine(lat, lng, CBD_LAT, CBD_LNG);
+            const locationBoost = 0.35 - Math.log(1 + distanceKm * 0.9) * 0.28;
+            locationMultiplier += this.clamp(locationBoost, -0.35, 0.45);
+            if (district) {
+                locationMultiplier += this.districtAdjustment(district);
+            }
+        }
+
+        let floorMultiplier = 1.0;
+        if (floor !== null) {
+            const normalizedFloor = Math.max(1, Math.min(floor, 25));
+            floorMultiplier += Math.min(Math.max(normalizedFloor - 1, 0), 14) * 0.015;
+            if (normalizedFloor <= 2) {
+                floorMultiplier -= 0.02;
+            }
+        }
+
+        let ageMultiplier = 1.0;
+        if (age !== null) {
+            const agePenalty = age <= 5 ? 0 : Math.min(0.45, (age - 5) * 0.012);
+            ageMultiplier = Math.max(0.55, 1 - agePenalty);
+        }
+
+        const amenityAdjustment = this.buildingTypeAdjustment(buildingType);
+        const baseForMarket = BASE_PRICE + areaComponent + roomComponent;
+        const baseline = baseForMarket + amenityAdjustment.absolute;
+        const marketModifier = this.marketPressureModifier(listedRent, baseForMarket);
+
+        const rawPrice = baseline
+            * locationMultiplier
+            * floorMultiplier
+            * ageMultiplier
+            * (1 + amenityAdjustment.multiplier + marketModifier);
+
+        const price = Math.round(Math.max(6000, rawPrice));
+
+        const featureCount = [normalizedArea, rooms, floor, age, buildingType ? 1 : null, lat, lng]
+            .filter(value => value !== null)
+            .length;
+
+        let confidence = 0.58 + featureCount * 0.08;
+        if (distanceKm !== null && distanceKm > 12) {
+            confidence -= 0.05;
+        }
+        confidence = this.clamp(confidence, 0.55, 0.95);
+
+        let volatility = Math.max(0.08, 0.18 - featureCount * 0.015);
+        if (distanceKm !== null) {
+            volatility += Math.min(0.06, distanceKm * 0.004);
+        }
+
+        const range = {
+            min: Math.round(price * (1 - volatility)),
+            max: Math.round(price * (1 + volatility)),
+        };
+
+        const breakdown = {
+            base: Math.round(BASE_PRICE),
+            area_component: Math.round(areaComponent),
+            room_component: Math.round(roomComponent),
+            amenity_absolute: Math.round(amenityAdjustment.absolute),
+            location_multiplier: Number(locationMultiplier.toFixed(3)),
+            floor_multiplier: Number(floorMultiplier.toFixed(3)),
+            age_multiplier: Number(ageMultiplier.toFixed(3)),
+            amenity_multiplier: Number(amenityAdjustment.multiplier.toFixed(3)),
+            market_modifier: Number(marketModifier.toFixed(3)),
+        };
+
+        const explanations = [];
+        if (normalizedArea !== null) {
+            explanations.push(`面積 ${normalizedArea.toFixed(1)} 坪作為主要估價基礎`);
+        }
+        if (rooms !== null) {
+            explanations.push(`房數 ${rooms} 間帶來額外租金需求`);
+        }
+        if (floorMultiplier > 1) {
+            explanations.push('樓層偏高帶來景觀與通風加成');
+        }
+        if (ageMultiplier < 1) {
+            explanations.push(`建物年齡造成折價，同步反映於乘數 ${ageMultiplier.toFixed(2)}`);
+        }
+        if (distanceKm !== null) {
+            explanations.push(`距離市中心約 ${distanceKm.toFixed(1)} 公里`);
+        }
+        if (district) {
+            explanations.push(`行政區 ${district} 市場合理調整`);
+        }
+        explanations.push(`信心指數約 ${(confidence * 100).toFixed(1)}%`);
+
+        return {
+            price,
+            confidence: Number(confidence.toFixed(2)),
+            range,
+            modelVersion: 'v2.0-hostinger',
+            breakdown,
+            explanations: Array.from(new Set(explanations)),
+        };
+    }
+
+    static marketPressureModifier(listedRent, baseline) {
+        if (!listedRent || listedRent <= 0) {
+            return 0;
+        }
+        const delta = (listedRent - baseline) / Math.max(baseline, 1);
+        return this.clamp(delta * 0.45, -0.2, 0.35);
+    }
+
+    static buildingTypeAdjustment(buildingType) {
+        const type = (buildingType || '').toLowerCase();
+        if (!type) {
+            return { absolute: 0, multiplier: 0 };
+        }
+
+        if (type.includes('電梯')) return { absolute: 1200, multiplier: 0.06 };
+        if (type.includes('套房')) return { absolute: 800, multiplier: 0.03 };
+        if (type.includes('華廈')) return { absolute: 1500, multiplier: 0.05 };
+        if (type.includes('大樓')) return { absolute: 2000, multiplier: 0.07 };
+        return { absolute: 0, multiplier: 0 };
+    }
+
+    static resolveRoomsStatic(rooms, pattern) {
+        if (rooms !== null && rooms !== undefined && rooms !== '') {
+            const numeric = Number(rooms);
+            return Number.isFinite(numeric) ? Math.max(0, Math.trunc(numeric)) : null;
+        }
+
+        if (typeof pattern === 'string') {
+            const match = pattern.match(/(\d+)房/u);
+            if (match) {
+                return Math.max(0, Number.parseInt(match[1], 10));
+            }
+        }
+
+        return null;
+    }
+
+    static districtAdjustment(district) {
+        if (!district) {
+            return 0;
+        }
+        const normalized = district.toLowerCase();
+        if (normalized.includes('信義')) return 0.08;
+        if (normalized.includes('大安')) return 0.07;
+        if (normalized.includes('中山')) return 0.05;
+        if (normalized.includes('內湖')) return 0.03;
+        if (normalized.includes('文山')) return -0.02;
+        if (normalized.includes('萬華')) return -0.015;
+        return 0;
+    }
+
+    static haversine(lat1, lng1, lat2, lng2) {
+        const R = 6371.0088;
+        const toRad = value => value * (Math.PI / 180);
+        const dLat = toRad(lat2 - lat1);
+        const dLng = toRad(lng2 - lng1);
+        const lat1Rad = toRad(lat1);
+        const lat2Rad = toRad(lat2);
+        const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1Rad) * Math.cos(lat2Rad) * Math.sin(dLng / 2) ** 2;
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+    }
+
+    static clamp(value, min, max) {
+        return Math.min(max, Math.max(min, value));
+    }
+}
+
+export { ClusteringAlgorithm };
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { ClusteringAlgorithm };
 }
