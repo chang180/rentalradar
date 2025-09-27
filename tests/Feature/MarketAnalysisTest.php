@@ -95,6 +95,8 @@ it('returns market analysis overview with expected structure', function () {
         ->assertJson(fn (AssertableJson $json) => $json
             ->where('data.meta.property_count', fn ($count) => $count >= 1)
             ->whereType('data.trends.timeseries', 'array')
+            ->whereType('data.investment.hotspots', 'array')
+            ->whereType('data.interactive.price_matrix', 'array')
             ->where('data.trends.timeseries.0.period', fn ($value) => is_string($value))
             ->etc());
 });
@@ -140,6 +142,7 @@ it('generates market analysis report with narrative sections', function () {
         ->assertJson(fn (AssertableJson $json) => $json
             ->where('report.summary', fn ($summary) => is_string($summary) && $summary !== '')
             ->where('report.sections.0.title', 'Market Overview')
+            ->whereType('report.recommendations', 'array')
             ->etc());
 });
 
@@ -173,5 +176,6 @@ it('applies filters when requesting overview data', function () {
         ->assertJson(fn (AssertableJson $json) => $json
             ->where('data.meta.property_count', 3)
             ->where('data.trends.timeseries', fn ($series) => count($series) >= 1)
+            ->whereType('data.meta.filters', 'array')
             ->etc());
 });

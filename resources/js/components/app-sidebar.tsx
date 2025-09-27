@@ -27,6 +27,11 @@ const mainNavItems: NavItem[] = [
         href: '/map',
         icon: Map,
     },
+    {
+        title: 'Market Analysis',
+        href: '/analysis',
+        icon: BarChart3,
+    },
 ];
 
 export function AppSidebar() {

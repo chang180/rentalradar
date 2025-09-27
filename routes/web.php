@@ -75,6 +75,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('PerformanceDashboard');
     })->name('performance');
 
+    Route::get('analysis', function () {
+        return Inertia::render('MarketAnalysisDashboard');
+    })->name('analysis');
+
     Route::get('monitoring', function () {
         return Inertia::render('MonitoringDashboard');
     })->name('monitoring');
