@@ -5,8 +5,8 @@ namespace App\Http\Controllers;
 use App\Services\ErrorTrackingService;
 use App\Services\UserBehaviorTrackingService;
 use App\Support\PerformanceMonitor;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class PerformanceDashboardController extends Controller
 {
@@ -21,7 +21,7 @@ class PerformanceDashboardController extends Controller
     public function getOverview(Request $request): JsonResponse
     {
         $timeRange = $request->get('timeRange', '24h');
-        
+
         $errorStats = $this->errorTracking->getErrorStats($timeRange);
         $behaviorStats = $this->behaviorTracking->getUserBehaviorStats($timeRange);
         $performanceMetrics = PerformanceMonitor::start('dashboard')->getCurrentMetrics();
@@ -33,12 +33,13 @@ class PerformanceDashboardController extends Controller
 
         return response()->json([
             'success' => true,
-            'metrics' => $performanceMetrics,
-            'errorLogs' => $errorLogs,
-            'userBehaviors' => $userBehaviors,
-            'performanceHistory' => $performanceHistory,
-            'time_range' => $timeRange,
-            'timestamp' => now()->timestamp,
+            'data' => [
+                'time_range' => $timeRange,
+                'performance' => $performanceHistory,
+                'errors' => $errorLogs,
+                'user_behavior' => $userBehaviors,
+                'timestamp' => now()->timestamp,
+            ],
         ]);
     }
 
@@ -98,8 +99,8 @@ class PerformanceDashboardController extends Controller
     public function getSessionAnalysis(Request $request): JsonResponse
     {
         $sessionId = $request->get('session_id');
-        
-        if (!$sessionId) {
+
+        if (! $sessionId) {
             return response()->json([
                 'success' => false,
                 'message' => 'Session ID is required',
@@ -171,7 +172,7 @@ class PerformanceDashboardController extends Controller
     public function cleanupOldData(Request $request): JsonResponse
     {
         $daysToKeep = $request->get('days_to_keep', 7);
-        
+
         $errorCount = $this->errorTracking->cleanupOldErrors($daysToKeep);
         $behaviorCount = $this->behaviorTracking->cleanupOldBehaviors($daysToKeep * 4); // 保留行為資料更久
 
@@ -191,7 +192,7 @@ class PerformanceDashboardController extends Controller
     public function getRealtimeMetrics(): JsonResponse
     {
         $metrics = PerformanceMonitor::start('realtime')->getCurrentMetrics();
-        
+
         return response()->json([
             'success' => true,
             'data' => $metrics,
@@ -206,7 +207,7 @@ class PerformanceDashboardController extends Controller
     {
         $errorStats = $this->errorTracking->getErrorStats('1h');
         $performanceMetrics = PerformanceMonitor::start('system-health')->getCurrentMetrics();
-        
+
         $healthScore = $this->calculateHealthScore($errorStats, $performanceMetrics);
         $status = $this->getHealthStatus($healthScore);
 
@@ -229,7 +230,7 @@ class PerformanceDashboardController extends Controller
     private function calculateHealthScore(array $errorStats, array $performanceMetrics): int
     {
         $score = 100;
-        
+
         // 錯誤率影響
         $errorRate = $errorStats['error_rate'] ?? 0;
         if ($errorRate > 5) {
@@ -237,7 +238,7 @@ class PerformanceDashboardController extends Controller
         } elseif ($errorRate > 1) {
             $score -= 15;
         }
-        
+
         // 響應時間影響
         $responseTime = $performanceMetrics['response_time'] ?? 0;
         if ($responseTime > 1000) {
@@ -245,7 +246,7 @@ class PerformanceDashboardController extends Controller
         } elseif ($responseTime > 500) {
             $score -= 10;
         }
-        
+
         // 記憶體使用影響
         $memoryUsage = $performanceMetrics['memory_usage'] ?? 0;
         if ($memoryUsage > 200) {
@@ -253,7 +254,7 @@ class PerformanceDashboardController extends Controller
         } elseif ($memoryUsage > 100) {
             $score -= 10;
         }
-        
+
         return max(0, $score);
     }
 
@@ -279,7 +280,7 @@ class PerformanceDashboardController extends Controller
         $data = [];
         $now = now();
         $points = 24; // 24 個資料點
-        
+
         for ($i = $points; $i >= 0; $i--) {
             $timestamp = $now->copy()->subMinutes($i * 5)->timestamp;
             $data[] = [
@@ -293,7 +294,7 @@ class PerformanceDashboardController extends Controller
                 'throughput' => rand(100, 1000),
             ];
         }
-        
+
         return $data;
     }
 
@@ -312,7 +313,7 @@ class PerformanceDashboardController extends Controller
             'Cache key not found',
             'Authentication failed',
         ];
-        
+
         $logs = [];
         for ($i = 0; $i < 10; $i++) {
             $logs[] = [
@@ -323,7 +324,7 @@ class PerformanceDashboardController extends Controller
                 'count' => rand(1, 10),
             ];
         }
-        
+
         return $logs;
     }
 
@@ -340,7 +341,7 @@ class PerformanceDashboardController extends Controller
             'property_clicked',
             'performance_viewed',
         ];
-        
+
         $behaviors = [];
         for ($i = 0; $i < 15; $i++) {
             $behaviors[] = [
@@ -354,7 +355,7 @@ class PerformanceDashboardController extends Controller
                 ],
             ];
         }
-        
+
         return $behaviors;
     }
 }

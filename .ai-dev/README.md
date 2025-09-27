@@ -6,7 +6,6 @@
 - `linear-oauth-integration.cjs` - OAuth 認證和基本 API 操作
 - `linear-issues.cjs` - Issues 管理工具
 - `linear-cli.cjs` - 統一指令工具
-- `anomaly_detection.py` - 異常值檢測工具 (Codex 開發)
 - `create-issue-from-json.cjs` - JSON 方式建立 Issue (中文安全)
 - `create-issue-safe.cjs` - 安全腳本
 - `issue-template.json` - Issue 模板

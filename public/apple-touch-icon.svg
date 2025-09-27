@@ -1,0 +1,28 @@
+<svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- 背景圓形 -->
+  <circle cx="90" cy="90" r="90" fill="#1E40AF"/>
+  
+  <!-- 雷達掃描線 -->
+  <path d="M90 90 L90 30 A60 60 0 0 1 150 90 Z" fill="#3B82F6" opacity="0.3"/>
+  
+  <!-- 雷達圓圈 -->
+  <circle cx="90" cy="90" r="60" stroke="#60A5FA" stroke-width="3" fill="none" opacity="0.6"/>
+  <circle cx="90" cy="90" r="40" stroke="#60A5FA" stroke-width="3" fill="none" opacity="0.6"/>
+  <circle cx="90" cy="90" r="20" stroke="#60A5FA" stroke-width="3" fill="none" opacity="0.6"/>
+  
+  <!-- 房屋圖示 -->
+  <path d="M90 50 L50 80 L50 140 L130 140 L130 80 L90 50 Z" fill="#FEF3C7" stroke="#F59E0B" stroke-width="3"/>
+  
+  <!-- 房屋屋頂 -->
+  <path d="M90 50 L70 65 L110 65 L90 50 Z" fill="#DC2626"/>
+  
+  <!-- 房屋窗戶 -->
+  <rect x="70" y="95" width="12" height="12" fill="#1E40AF"/>
+  <rect x="98" y="95" width="12" height="12" fill="#1E40AF"/>
+  
+  <!-- 房屋門 -->
+  <rect x="83" y="110" width="14" height="30" fill="#92400E"/>
+  
+  <!-- 雷達中心點 -->
+  <circle cx="90" cy="90" r="8" fill="#FEF3C7"/>
+</svg>

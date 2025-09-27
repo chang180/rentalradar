@@ -165,7 +165,7 @@ export default function RentalMap() {
 
     if (loading) {
         return (
-            <div className="h-96 flex items-center justify-center">
+            <div className="h-full flex items-center justify-center">
                 <div className="text-center">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
                     <p className="mt-2 text-gray-600 dark:text-gray-400">載入地圖資料中...</p>
@@ -176,7 +176,7 @@ export default function RentalMap() {
 
     if (error) {
         return (
-            <div className="h-96 flex items-center justify-center">
+            <div className="h-full flex items-center justify-center">
                 <div className="text-center">
                     <p className="text-red-600 dark:text-red-400">{error}</p>
                     <button
@@ -191,9 +191,9 @@ export default function RentalMap() {
     }
 
     return (
-        <div className="space-y-4">
+        <div className="h-full flex flex-col">
             {/* AI 控制面板 */}
-            <div className="flex flex-wrap items-center gap-4 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+            <div className="flex-shrink-0 flex flex-wrap items-center gap-4 p-4 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
                 <div className="flex items-center gap-2">
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                         行政區：
@@ -268,13 +268,13 @@ export default function RentalMap() {
             </div>
 
             {/* 地圖容器 */}
-            <div className="relative">
+            <div className="flex-1 relative" style={{ minHeight: '400px' }}>
                 <MapContainer
                     center={defaultCenter}
                     zoom={defaultZoom}
-                    style={{ height: '600px', width: '100%' }}
+                    style={{ height: '100%', width: '100%', minHeight: '400px' }}
                     ref={mapRef}
-                    className="rounded-lg overflow-hidden"
+                    className="w-full h-full"
                 >
                     <TileLayer
                         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'

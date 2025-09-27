@@ -106,10 +106,10 @@ export default function Welcome() {
                                         <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                                     </Link>
                                     <Link
-                                        href="#features"
+                                        href="/public-map"
                                         className="group text-base font-semibold leading-6 text-gray-900 hover:text-blue-600 dark:text-white dark:hover:text-blue-400 transition-all duration-300 flex items-center gap-2"
                                     >
-                                        了解更多 
+                                        免費試用地圖
                                         <span className="group-hover:translate-x-1 transition-transform duration-300" aria-hidden="true">→</span>
                                     </Link>
                                 </div>
