@@ -12,58 +12,83 @@ class MarketAnalysisService
 
     public function getDashboardData(array $filters = []): array
     {
-        $timeRange = $filters['time_range'] ?? '12m';
-        $startDate = $this->resolveStartDate($timeRange);
+        try {
+            $timeRange = $filters['time_range'] ?? '12m';
+            $startDate = $this->resolveStartDate($timeRange);
 
-        $properties = Property::query()
-            ->select([
-                'id',
-                'city',
-                'district',
-                'building_type',
-                'rental_type',
-                'area_ping',
-                'bedrooms',
-                'living_rooms',
-                'bathrooms',
-                'building_age',
-                'has_elevator',
-                'has_management_organization',
-                'has_furniture',
-                'total_rent',
-                'rent_per_ping',
-                'rent_date',
-            ])
-            ->when($startDate, fn ($query) => $query->whereDate('rent_date', '>=', $startDate))
-            ->when(isset($filters['district']), fn ($query) => $query->where('district', $filters['district']))
-            ->when(isset($filters['building_type']), fn ($query) => $query->where('building_type', $filters['building_type']))
-            ->whereNotNull('total_rent')
-            ->whereNotNull('rent_date')
-            ->get();
+            // 先檢查是否有資料，避免無謂的查詢
+            $hasData = Property::query()
+                ->when($startDate, fn ($query) => $query->whereDate('rent_date', '>=', $startDate))
+                ->when(isset($filters['district']), fn ($query) => $query->where('district', $filters['district']))
+                ->when(isset($filters['building_type']), fn ($query) => $query->where('building_type', $filters['building_type']))
+                ->whereNotNull('total_rent')
+                ->whereNotNull('rent_date')
+                ->exists();
 
-        if ($properties->isEmpty()) {
-            return $this->buildEmptyDashboard($timeRange, $filters);
-        }
+            if (!$hasData) {
+                return $this->buildEmptyDashboard($timeRange, $filters);
+            }
 
-        $trends = $this->buildTrendAnalysis($properties);
-        $priceComparison = $this->buildPriceComparison($properties, $trends['timeseries']);
-        $investment = $this->buildInvestmentInsights($trends['timeseries'], $priceComparison['districts']);
-        $multiDimensional = $this->buildMultiDimensionalAnalysis($properties, $priceComparison['districts']);
-        $interactive = $this->buildInteractiveDatasets($trends, $priceComparison, $multiDimensional);
+            $properties = Property::query()
+                ->select([
+                    'id',
+                    'city',
+                    'district',
+                    'building_type',
+                    'rental_type',
+                    'area_ping',
+                    'bedrooms',
+                    'living_rooms',
+                    'bathrooms',
+                    'building_age',
+                    'has_elevator',
+                    'has_management_organization',
+                    'has_furniture',
+                    'total_rent',
+                    'rent_per_ping',
+                    'rent_date',
+                ])
+                ->when($startDate, fn ($query) => $query->whereDate('rent_date', '>=', $startDate))
+                ->when(isset($filters['district']), fn ($query) => $query->where('district', $filters['district']))
+                ->when(isset($filters['building_type']), fn ($query) => $query->where('building_type', $filters['building_type']))
+                ->whereNotNull('total_rent')
+                ->whereNotNull('rent_date')
+                ->orderBy('rent_date', 'desc')
+                ->limit(3000) // 進一步減少資料量
+                ->get();
 
-        return [
-            'trends' => $trends,
-            'price_comparison' => $priceComparison,
-            'investment' => $investment,
-            'multi_dimensional' => $multiDimensional,
-            'interactive' => $interactive,
-            'meta' => [
-                'generated_at' => now()->toAtomString(),
-                'time_range' => $timeRange,
+            if ($properties->isEmpty()) {
+                return $this->buildEmptyDashboard($timeRange, $filters);
+            }
+
+            $trends = $this->buildTrendAnalysis($properties);
+            $priceComparison = $this->buildPriceComparison($properties, $trends['timeseries']);
+            $investment = $this->buildInvestmentInsights($trends['timeseries'], $priceComparison['districts']);
+            $multiDimensional = $this->buildMultiDimensionalAnalysis($properties, $priceComparison['districts']);
+            $interactive = $this->buildInteractiveDatasets($trends, $priceComparison, $multiDimensional);
+
+            return [
+                'trends' => $trends,
+                'price_comparison' => $priceComparison,
+                'investment' => $investment,
+                'multi_dimensional' => $multiDimensional,
+                'interactive' => $interactive,
+                'meta' => [
+                    'generated_at' => now()->toAtomString(),
+                    'time_range' => $timeRange,
+                    'filters' => $filters,
+                    'property_count' => $properties->count(),
+                ],
+            ];
+        } catch (\Exception $e) {
+            \Log::error('MarketAnalysisService::getDashboardData failed: ' . $e->getMessage(), [
                 'filters' => $filters,
-                'property_count' => $properties->count(),
-            ],
-        ];
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            // 回傳空資料而不是拋出錯誤
+            return $this->buildEmptyDashboard($filters['time_range'] ?? '12m', $filters);
+        }
     }
 
     public function generateReport(array $filters = []): array
