@@ -48,7 +48,10 @@
       "Bash(rm:*)",
       "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan rental:process --no-interaction)",
       "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan properties:geocode --limit=50 --no-interaction)",
-      "Read(//d/**)"
+      "Read(//d/**)",
+      "Bash(curl -s \"https://rentalradar.test/api/map/cities\")",
+      "Bash(curl -s \"https://rentalradar.test/api/map/cities\" -H \"Accept: application/json\")",
+      "Bash(curl:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

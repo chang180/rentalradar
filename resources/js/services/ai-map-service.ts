@@ -360,7 +360,7 @@ export class AIMapService {
         },
     ): MapPoint[] {
         // 根據視口過濾
-        let filtered = points.filter(
+        const filtered = points.filter(
             (point) =>
                 point.lat >= viewport.south &&
                 point.lat <= viewport.north &&

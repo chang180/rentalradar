@@ -1,9 +1,14 @@
-﻿import type {
+import type {
     MarketAnalysisFilters,
     MarketAnalysisOverview,
     MarketAnalysisReport,
 } from '@/types/analysis';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+    useCallback,
+    useEffect,
+    useRef,
+    useState,
+} from 'react';
 
 interface UseMarketAnalysisOptions {
     initialFilters?: MarketAnalysisFilters;
@@ -23,16 +28,45 @@ interface UseMarketAnalysis {
     generateReport: (overrideFilters?: MarketAnalysisFilters) => Promise<void>;
 }
 
+const DEFAULT_TIME_RANGE = '12m';
+
 export function useMarketAnalysis(
     options: UseMarketAnalysisOptions = {},
 ): UseMarketAnalysis {
-    const { initialFilters = { time_range: '12m' }, autoLoad = true } = options;
+    const { initialFilters: providedInitialFilters, autoLoad = true } = options;
+
+    const defaultFiltersRef = useRef<MarketAnalysisFilters>({
+        time_range: providedInitialFilters?.time_range ?? DEFAULT_TIME_RANGE,
+        ...providedInitialFilters,
+    });
 
     const [data, setData] = useState<MarketAnalysisOverview | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
-    const [filters, setFiltersState] =
-        useState<MarketAnalysisFilters>(initialFilters);
+    const [filters, setFiltersState] = useState<MarketAnalysisFilters>(
+        defaultFiltersRef.current,
+    );
+
+    const filtersRef = useRef<MarketAnalysisFilters>(defaultFiltersRef.current);
+
+    useEffect(() => {
+        filtersRef.current = filters;
+    }, [filters]);
+
+    useEffect(() => {
+        if (!providedInitialFilters) {
+            return;
+        }
+
+        const nextDefaults: MarketAnalysisFilters = {
+            time_range: providedInitialFilters.time_range ?? DEFAULT_TIME_RANGE,
+            ...providedInitialFilters,
+        };
+
+        defaultFiltersRef.current = nextDefaults;
+        filtersRef.current = nextDefaults;
+        setFiltersState(nextDefaults);
+    }, [providedInitialFilters]);
 
     const [report, setReport] = useState<MarketAnalysisReport | null>(null);
     const [reportLoading, setReportLoading] = useState<boolean>(false);
@@ -52,14 +86,21 @@ export function useMarketAnalysis(
         return params.toString();
     }, []);
 
-    const mergedFilters = useMemo(
-        () => ({ ...initialFilters, ...filters }),
-        [initialFilters, filters],
+    const resolveFilters = useCallback(
+        (overrideFilters?: MarketAnalysisFilters) => ({
+            ...defaultFiltersRef.current,
+            ...filtersRef.current,
+            ...overrideFilters,
+        }),
+        [defaultFiltersRef, filtersRef],
     );
 
     const fetchOverview = useCallback(
         async (overrideFilters?: MarketAnalysisFilters) => {
-            const nextFilters = { ...mergedFilters, ...overrideFilters };
+            const nextFilters = resolveFilters(overrideFilters);
+
+            filtersRef.current = nextFilters;
+            setFiltersState(nextFilters);
             setLoading(true);
             setError(null);
 
@@ -80,7 +121,6 @@ export function useMarketAnalysis(
 
                 const body = await response.json();
                 setData(body.data as MarketAnalysisOverview);
-                setFiltersState(nextFilters);
             } catch (exception) {
                 setError(
                     exception instanceof Error
@@ -91,12 +131,12 @@ export function useMarketAnalysis(
                 setLoading(false);
             }
         },
-        [buildQuery, mergedFilters],
+        [buildQuery, resolveFilters],
     );
 
     const generateReport = useCallback(
         async (overrideFilters?: MarketAnalysisFilters) => {
-            const payload = { ...mergedFilters, ...overrideFilters };
+            const payload = resolveFilters(overrideFilters);
             setReportLoading(true);
             setReportError(null);
 
@@ -126,7 +166,7 @@ export function useMarketAnalysis(
                 setReportLoading(false);
             }
         },
-        [mergedFilters],
+        [resolveFilters],
     );
 
     useEffect(() => {
@@ -136,14 +176,19 @@ export function useMarketAnalysis(
     }, [autoLoad, fetchOverview]);
 
     const setFilters = useCallback((next: MarketAnalysisFilters) => {
-        setFiltersState((previous) => ({ ...previous, ...next }));
-    }, []);
+        setFiltersState((previous) => {
+            const updated = { ...previous, ...next };
+            filtersRef.current = updated;
+
+            return updated;
+        });
+    }, [filtersRef]);
 
     return {
         data,
         loading,
         error,
-        filters: mergedFilters,
+        filters,
         refresh: fetchOverview,
         setFilters,
         report,
@@ -152,3 +197,4 @@ export function useMarketAnalysis(
         generateReport,
     };
 }
+

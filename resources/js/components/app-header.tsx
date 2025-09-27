@@ -145,7 +145,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                     </div>
 
                     <Link
-                        href={dashboard.url()}
+                        href="/dashboard"
                         prefetch
                         className="flex items-center space-x-2"
                     >

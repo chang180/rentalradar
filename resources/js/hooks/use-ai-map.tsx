@@ -98,7 +98,7 @@ export function useAIMap(options: UseAIMapOptions = {}) {
                 }
 
                 const response = await fetch(
-                    `/api/map/optimized-data?${params}`,
+                    `/api/map/rentals?${params}`,
                 );
                 const data = await response.json();
 

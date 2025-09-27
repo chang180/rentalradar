@@ -32,7 +32,7 @@ import { useMemo } from 'react';
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: '儀表板',
-        href: dashboard.url(),
+        href: '/dashboard',
     },
     {
         title: '市場分析',
