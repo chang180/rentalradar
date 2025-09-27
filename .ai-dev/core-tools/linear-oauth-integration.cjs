@@ -154,6 +154,80 @@ async function listTeamsAndProjects() {
   return await makeApiRequest(query);
 }
 
+// 列出 Issues
+async function listIssues() {
+  const query = `
+    query {
+      issues {
+        nodes {
+          id
+          identifier
+          title
+          description
+          state {
+            name
+            type
+          }
+          priority
+          assignee {
+            name
+            email
+          }
+          createdAt
+          updatedAt
+          url
+        }
+      }
+    }
+  `;
+
+  return await makeApiRequest(query);
+}
+
+// 取得所有狀態
+async function getStates() {
+  const query = `
+    query {
+      workflowStates {
+        nodes {
+          id
+          name
+          type
+        }
+      }
+    }
+  `;
+
+  return await makeApiRequest(query);
+}
+
+// 更新 Issue 狀態
+async function updateIssueStatus(issueId, stateId) {
+  const query = `
+    mutation UpdateIssue($id: String!, $input: IssueUpdateInput!) {
+      issueUpdate(id: $id, input: $input) {
+        success
+        issue {
+          id
+          title
+          state {
+            name
+          }
+        }
+      }
+    }
+  `;
+
+  const variables = {
+    id: issueId,
+    input: {
+      stateId: stateId
+    }
+  };
+
+  return await makeApiRequest(query, variables);
+}
+
 // 建立 Issue
 async function createIssue(title, description, teamId) {
   const query = `
@@ -242,6 +316,84 @@ async function main() {
         }
         break;
 
+      case 'list':
+        console.log('🔍 正在取得 Linear Issues...');
+        const issuesResult = await listIssues();
+        
+        if (issuesResult.errors) {
+          console.log('❌ API 錯誤:', issuesResult.errors);
+          return;
+        }
+
+        console.log('✅ Linear Issues 載入成功！\n');
+        
+        if (issuesResult.data && issuesResult.data.issues) {
+          const issues = issuesResult.data.issues.nodes;
+          
+          if (issues.length === 0) {
+            console.log('📋 目前沒有 Issues');
+            return;
+          }
+
+          // 按狀態分組
+          const groupedIssues = {};
+          issues.forEach(issue => {
+            const stateName = issue.state.name;
+            if (!groupedIssues[stateName]) {
+              groupedIssues[stateName] = [];
+            }
+            groupedIssues[stateName].push(issue);
+          });
+
+          // 顯示分組的 Issues
+          Object.keys(groupedIssues).forEach(stateName => {
+            console.log(`\n📊 ${stateName}:`);
+            groupedIssues[stateName].forEach(issue => {
+              const priority = issue.priority ? ` (${issue.priority})` : '';
+              const assignee = issue.assignee ? ` - ${issue.assignee.name}` : '';
+              console.log(`  ${issue.identifier}: ${issue.title}${priority}${assignee}`);
+              console.log(`    ID: ${issue.id}`);
+              console.log(`    🔗 ${issue.url}`);
+            });
+          });
+        }
+        break;
+
+      case 'states':
+        console.log('🔍 正在取得可用狀態...');
+        const statesResult = await getStates();
+        
+        if (statesResult.errors) {
+          console.log('❌ API 錯誤:', statesResult.errors);
+          return;
+        }
+
+        console.log('✅ 可用狀態:');
+        if (statesResult.data && statesResult.data.workflowStates) {
+          statesResult.data.workflowStates.nodes.forEach(state => {
+            console.log(`  ${state.name} (ID: ${state.id}) - ${state.type}`);
+          });
+        }
+        break;
+
+      case 'update':
+        if (args.length < 2) {
+          console.log('❌ 請提供完整參數');
+          console.log('用法: node linear-oauth-integration.cjs update <issue-id> <state-id>');
+          return;
+        }
+
+        console.log(`🔄 正在更新 Issue ${args[0]} 狀態為 ${args[1]}...`);
+        const updateResult = await updateIssueStatus(args[0], args[1]);
+        
+        if (updateResult.data && updateResult.data.issueUpdate.success) {
+          console.log('✅ Issue 狀態更新成功！');
+          console.log(`📋 ${updateResult.data.issueUpdate.issue.title} → ${updateResult.data.issueUpdate.issue.state.name}`);
+        } else {
+          console.log('❌ Issue 狀態更新失敗:', updateResult);
+        }
+        break;
+
       case 'create':
         if (args.length < 3) {
           console.log('❌ 請提供完整參數');
@@ -266,6 +418,9 @@ async function main() {
         console.log('  auth                    - 取得授權 URL');
         console.log('  token <授權碼>          - 使用授權碼取得 token');
         console.log('  status                  - 顯示 Teams 和 Projects');
+        console.log('  list                    - 列出所有 Issues');
+        console.log('  states                  - 列出可用狀態');
+        console.log('  update <issue-id> <state-id> - 更新 Issue 狀態');
         console.log('  create <team-id> <title> <description> - 建立 Issue');
         console.log('\n使用流程:');
         console.log('1. node linear-oauth-integration.cjs auth');

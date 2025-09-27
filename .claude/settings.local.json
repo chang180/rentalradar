@@ -33,7 +33,21 @@
       "Bash(curl -s \"https://rentalradar.test/api/map/districts\")",
       "Bash(npm install:*)",
       "Bash(composer require:*)",
-      "mcp__laravel-boost__list-artisan-commands"
+      "mcp__laravel-boost__list-artisan-commands",
+      "Bash(curl -s \"https://rentalradar.test/api/map/properties\")",
+      "Bash(curl -s \"https://rentalradar.test/api/map/rentals\")",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan test tests/Feature/MapIntegrationTest.php)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan test --filter=MapIntegrationTest)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan test --filter=\"can_fetch_rental_data_for_map_bounds\")",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan test tests/Feature/PublicMapTest.php)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan government:download --format=zip --no-interaction)",
+      "Bash(unzip:*)",
+      "Bash(mkdir:*)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan government:download --format=zip --parse --save --no-interaction)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan government:test --full --no-interaction)",
+      "Bash(rm:*)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan rental:process --no-interaction)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan properties:geocode --limit=50 --no-interaction)"
     ]
   },
   "enableAllProjectMcpServers": true,
