@@ -24,7 +24,7 @@ class RiskAssessmentController extends Controller
                 'property_data' => 'required|array',
                 'property_data.area' => 'required|numeric|min:1',
                 'property_data.district' => 'required|string',
-                'property_data.rent_per_month' => 'required|numeric|min:0',
+                'property_data.total_rent' => 'required|numeric|min:0',
                 'property_data.building_type' => 'nullable|string',
                 'property_data.rooms' => 'nullable|integer|min:1',
                 'property_data.floor' => 'nullable|integer|min:1',
@@ -130,7 +130,7 @@ class RiskAssessmentController extends Controller
                 'properties' => 'required|array|min:1|max:50',
                 'properties.*.area' => 'required|numeric|min:1',
                 'properties.*.district' => 'required|string',
-                'properties.*.rent_per_month' => 'required|numeric|min:0',
+                'properties.*.total_rent' => 'required|numeric|min:0',
             ]);
 
             $properties = $request->input('properties');

@@ -4,7 +4,6 @@ namespace App\Mail;
 
 use App\Models\User;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
@@ -30,6 +29,7 @@ class VerifyEmailMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
+            to: $this->user->email,
             subject: '驗證您的電子郵件地址 - RentalRadar',
         );
     }
@@ -40,7 +40,7 @@ class VerifyEmailMail extends Mailable
     public function content(): Content
     {
         return new Content(
-            markdown: 'emails.verify-email',
+            view: 'emails.verify-email',
             with: [
                 'userName' => $this->user->name,
                 'verificationUrl' => $this->verificationUrl,

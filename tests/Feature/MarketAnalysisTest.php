@@ -14,9 +14,9 @@ it('returns market analysis overview with expected structure', function () {
         Property::factory()->state([
             'district' => 'District Alpha',
             'building_type' => 'Apartment',
-            'compartment_pattern' => '2B1B',
-            'rent_per_month' => 20000 + ($offset * 500),
-            'total_floor_area' => 32 + $offset,
+            'bedrooms' => 2,
+            'living_rooms' => 1,
+            'bathrooms' => 1,
             'total_rent' => 240000 + ($offset * 6000),
             'rent_date' => $baseDate->copy()->subMonths($offset),
         ])->create();
@@ -24,9 +24,9 @@ it('returns market analysis overview with expected structure', function () {
         Property::factory()->state([
             'district' => 'District Beta',
             'building_type' => 'Studio',
-            'compartment_pattern' => '1B1B',
-            'rent_per_month' => 15000 + ($offset * 300),
-            'total_floor_area' => 24 + $offset,
+            'bedrooms' => 1,
+            'living_rooms' => 1,
+            'bathrooms' => 1,
             'total_rent' => 180000 + ($offset * 3600),
             'rent_date' => $baseDate->copy()->subMonths($offset + 1),
         ])->create();
@@ -109,9 +109,9 @@ it('generates market analysis report with narrative sections', function () {
         Property::factory()->state([
             'district' => 'District Gamma',
             'building_type' => 'Loft',
-            'compartment_pattern' => '3B2B',
-            'rent_per_month' => 32000 + ($offset * 800),
-            'total_floor_area' => 45 + $offset,
+            'bedrooms' => 3,
+            'living_rooms' => 2,
+            'bathrooms' => 2,
             'total_rent' => 384000 + ($offset * 9600),
             'rent_date' => $baseDate->copy()->subMonths($offset),
         ])->create();
@@ -153,9 +153,9 @@ it('applies filters when requesting overview data', function () {
     Property::factory()->count(3)->state([
         'district' => 'Filter District',
         'building_type' => 'Highrise',
-        'compartment_pattern' => '2B1B',
-        'rent_per_month' => 28000,
-        'total_floor_area' => 38,
+        'bedrooms' => 2,
+        'living_rooms' => 1,
+        'bathrooms' => 1,
         'total_rent' => 336000,
         'rent_date' => $baseDate,
     ])->create();
@@ -163,9 +163,9 @@ it('applies filters when requesting overview data', function () {
     Property::factory()->count(5)->state([
         'district' => 'Other District',
         'building_type' => 'Studio',
-        'compartment_pattern' => '1B0B',
-        'rent_per_month' => 18000,
-        'total_floor_area' => 28,
+        'bedrooms' => 1,
+        'living_rooms' => 0,
+        'bathrooms' => 1,
         'total_rent' => 216000,
         'rent_date' => $baseDate->subMonth(),
     ])->create();

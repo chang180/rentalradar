@@ -308,7 +308,7 @@ class RecommendationEngine
             $score += 0.2;
         }
 
-        if ($property->total_floor_area >= 15 && $property->total_floor_area <= 50) {
+        if ($property->area_ping >= 15 && $property->area_ping <= 50) {
             $score += 0.1;
         }
 

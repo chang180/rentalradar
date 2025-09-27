@@ -26,85 +26,64 @@ class AdvancedPricePredictionTest extends TestCase
         // 建立測試用的租賃物件
         $properties = [
             [
+                'city' => '台北市',
                 'district' => '大安區',
-                'village' => '測試里',
-                'road' => '信義路四段123號',
-                'land_section' => '測試段',
-                'land_subsection' => '測試小段',
-                'land_number' => 123,
                 'building_type' => '住宅大樓',
-                'total_floor_area' => 25.5,
-                'main_use' => '住家用',
-                'main_building_materials' => '鋼筋混凝土造',
-                'construction_completion_year' => 2020,
-                'total_floors' => 10,
-                'compartment_pattern' => '2房1廳1衛',
-                'has_management_organization' => true,
-                'rent_per_month' => 35000,
+                'rental_type' => '整層住家',
                 'total_rent' => 35000,
+                'rent_per_ping' => 1400,
                 'rent_date' => '2024-01-15',
-                'rental_period' => '12個月',
+                'area_ping' => 25.0,
+                'building_age' => 4,
+                'bedrooms' => 2,
+                'living_rooms' => 1,
+                'bathrooms' => 1,
+                'has_elevator' => true,
+                'has_management_organization' => true,
+                'has_furniture' => false,
                 'is_geocoded' => true,
                 'latitude' => 25.0330,
                 'longitude' => 121.5650,
-                'full_address' => '台北市大安區信義路四段123號',
-                'data_source' => 'test',
-                'is_processed' => true,
-                'processing_notes' => json_encode(['source' => 'test']),
             ],
             [
+                'city' => '台北市',
                 'district' => '信義區',
-                'village' => '測試里',
-                'road' => '松仁路456號',
-                'land_section' => '測試段',
-                'land_subsection' => '測試小段',
-                'land_number' => 456,
                 'building_type' => '華廈',
-                'total_floor_area' => 30.0,
-                'main_use' => '住家用',
-                'main_building_materials' => '鋼筋混凝土造',
-                'construction_completion_year' => 2018,
-                'total_floors' => 8,
-                'compartment_pattern' => '3房2廳2衛',
-                'has_management_organization' => true,
-                'rent_per_month' => 45000,
+                'rental_type' => '整層住家',
                 'total_rent' => 45000,
+                'rent_per_ping' => 1500,
                 'rent_date' => '2024-02-01',
-                'rental_period' => '12個月',
+                'area_ping' => 30.0,
+                'building_age' => 6,
+                'bedrooms' => 3,
+                'living_rooms' => 2,
+                'bathrooms' => 2,
+                'has_elevator' => true,
+                'has_management_organization' => true,
+                'has_furniture' => true,
                 'is_geocoded' => true,
                 'latitude' => 25.0280,
                 'longitude' => 121.5700,
-                'full_address' => '台北市信義區松仁路456號',
-                'data_source' => 'test',
-                'is_processed' => true,
-                'processing_notes' => json_encode(['source' => 'test']),
             ],
             [
+                'city' => '台北市',
                 'district' => '中山區',
-                'village' => '測試里',
-                'road' => '南京東路二段789號',
-                'land_section' => '測試段',
-                'land_subsection' => '測試小段',
-                'land_number' => 789,
                 'building_type' => '公寓',
-                'total_floor_area' => 20.0,
-                'main_use' => '住家用',
-                'main_building_materials' => '鋼筋混凝土造',
-                'construction_completion_year' => 2015,
-                'total_floors' => 5,
-                'compartment_pattern' => '1房1廳1衛',
-                'has_management_organization' => false,
-                'rent_per_month' => 25000,
+                'rental_type' => '整層住家',
                 'total_rent' => 25000,
-                'rent_date' => '2024-01-20',
-                'rental_period' => '6個月',
+                'rent_per_ping' => 1250,
+                'rent_date' => '2024-03-01',
+                'area_ping' => 20.0,
+                'building_age' => 9,
+                'bedrooms' => 1,
+                'living_rooms' => 1,
+                'bathrooms' => 1,
+                'has_elevator' => false,
+                'has_management_organization' => false,
+                'has_furniture' => false,
                 'is_geocoded' => true,
                 'latitude' => 25.0520,
                 'longitude' => 121.5300,
-                'full_address' => '台北市中山區南京東路二段789號',
-                'data_source' => 'test',
-                'is_processed' => true,
-                'processing_notes' => json_encode(['source' => 'test']),
             ],
         ];
 
@@ -115,7 +94,7 @@ class AdvancedPricePredictionTest extends TestCase
 
     public function test_advanced_price_predictor_works(): void
     {
-        $predictor = new AdvancedPricePredictor();
+        $predictor = new AdvancedPricePredictor;
         $property = Property::first();
 
         $prediction = $predictor->predict($property->toArray());
@@ -138,7 +117,7 @@ class AdvancedPricePredictionTest extends TestCase
 
     public function test_batch_price_prediction_works(): void
     {
-        $predictor = new AdvancedPricePredictor();
+        $predictor = new AdvancedPricePredictor;
         $properties = Property::all()->toArray();
 
         $predictions = $predictor->predictCollection($properties);
@@ -166,13 +145,13 @@ class AdvancedPricePredictionTest extends TestCase
         $response = $this->actingAs($this->user)
             ->getJson('/api/map/rentals', [
                 'bounds' => [
-                'north' => 25.1,
-                'south' => 25.0,
-                'east' => 121.6,
-                'west' => 121.5,
-            ],
-            'zoom' => 12,
-        ]);
+                    'north' => 25.1,
+                    'south' => 25.0,
+                    'east' => 121.6,
+                    'west' => 121.5,
+                ],
+                'zoom' => 12,
+            ]);
 
         $response->assertSuccessful()
             ->assertJsonStructure([
@@ -276,14 +255,14 @@ class AdvancedPricePredictionTest extends TestCase
     {
         $response = $this->actingAs($this->user)
             ->getJson('/api/map/optimized-data', [
-            'bounds' => [
-                'north' => 25.1,
-                'south' => 25.0,
-                'east' => 121.6,
-                'west' => 121.5,
-            ],
-            'zoom' => 12,
-        ]);
+                'bounds' => [
+                    'north' => 25.1,
+                    'south' => 25.0,
+                    'east' => 121.6,
+                    'west' => 121.5,
+                ],
+                'zoom' => 12,
+            ]);
 
         $response->assertSuccessful()
             ->assertJsonStructure([
@@ -402,22 +381,22 @@ class AdvancedPricePredictionTest extends TestCase
 
     public function test_confidence_percentiles_are_calculated_correctly(): void
     {
-        $predictor = new AdvancedPricePredictor();
-        
+        $predictor = new AdvancedPricePredictor;
+
         // 建立測試用的信心度陣列
         $confidences = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
-        
+
         // 使用反射來測試私有方法
         $reflection = new \ReflectionClass($predictor);
         $method = $reflection->getMethod('confidencePercentiles');
         $method->setAccessible(true);
-        
+
         $result = $method->invoke($predictor, $confidences);
-        
+
         $this->assertArrayHasKey('p50', $result);
         $this->assertArrayHasKey('p75', $result);
         $this->assertArrayHasKey('p90', $result);
-        
+
         // 驗證百分位數值
         $this->assertEquals(0.55, $result['p50']);
         $this->assertEquals(0.775, $result['p75']);
@@ -426,19 +405,19 @@ class AdvancedPricePredictionTest extends TestCase
 
     public function test_empty_confidence_array_handled_gracefully(): void
     {
-        $predictor = new AdvancedPricePredictor();
-        
+        $predictor = new AdvancedPricePredictor;
+
         // 使用反射來測試私有方法
         $reflection = new \ReflectionClass($predictor);
         $method = $reflection->getMethod('confidencePercentiles');
         $method->setAccessible(true);
-        
+
         $result = $method->invoke($predictor, []);
-        
+
         $this->assertArrayHasKey('p50', $result);
         $this->assertArrayHasKey('p75', $result);
         $this->assertArrayHasKey('p90', $result);
-        
+
         $this->assertEquals(0.0, $result['p50']);
         $this->assertEquals(0.0, $result['p75']);
         $this->assertEquals(0.0, $result['p90']);

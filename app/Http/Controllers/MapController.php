@@ -16,9 +16,8 @@ use Illuminate\Support\Facades\Validator;
 
 class MapController extends Controller
 {
-    public function __construct(private AIMapOptimizationService $aiMapService)
-    {
-    }
+    public function __construct(private AIMapOptimizationService $aiMapService) {}
+
     public function index(Request $request): JsonResponse
     {
         $monitor = PerformanceMonitor::start('map.index');
@@ -28,6 +27,10 @@ class MapController extends Controller
 
         $query = Property::query()->geocoded();
         $this->applyBounds($request, $query);
+
+        if ($request->has('city')) {
+            $query->byCity($request->city);
+        }
 
         if ($request->has('district')) {
             $query->byDistrict($request->district);
@@ -39,21 +42,21 @@ class MapController extends Controller
 
         $properties = $query->select([
             'id',
+            'city',
             'district',
-            'village',
-            'road',
             'building_type',
-            'total_floor_area',
-            'rent_per_month',
+            'area_ping',
+            'rent_per_ping',
             'total_rent',
             'rent_date',
             'latitude',
             'longitude',
             'full_address',
-            'compartment_pattern'
+            'compartment_pattern',
+            'rental_type',
         ])
-        ->limit($request->get('limit', 1000))
-        ->get();
+            ->limit($request->get('limit', 1000))
+            ->get();
 
         $monitor->mark('query_loaded');
         $queryCount = count($connection->getQueryLog());
@@ -77,8 +80,8 @@ class MapController extends Controller
                 return [
                     'id' => $property->id,
                     'title' => $property->full_address,
-                    'price' => $property->rent_per_month,
-                    'area' => $property->total_floor_area,
+                    'price' => $property->rent_per_ping,
+                    'area' => $property->area_ping,
                     'location' => [
                         'lat' => (float) $property->latitude,
                         'lng' => (float) $property->longitude,
@@ -89,6 +92,7 @@ class MapController extends Controller
             }),
             'statistics' => [
                 'count' => $properties->count(),
+                'cities' => $properties->groupBy('city')->map->count(),
                 'districts' => $properties->groupBy('district')->map->count(),
                 'average_predicted_price' => $predictionSummary['average_price'] ?? null,
                 'average_confidence' => $predictionSummary['average_confidence'] ?? null,
@@ -126,32 +130,54 @@ class MapController extends Controller
         $query = Property::query()->geocoded();
         $this->applyBounds($request, $query);
 
+        if ($request->has('city')) {
+            $query->byCity($request->city);
+        }
+
         if ($request->has('district')) {
             $query->byDistrict($request->district);
         }
 
         $stats = [
             'total_properties' => $query->count(),
-            'avg_rent_per_month' => $query->avg('rent_per_month'),
+            'avg_rent_per_ping' => $query->avg('rent_per_ping'),
             'avg_total_rent' => $query->avg('total_rent'),
-            'avg_floor_area' => $query->avg('total_floor_area'),
+            'avg_area_ping' => $query->avg('area_ping'),
+            'city_stats' => $query->selectRaw('
+                city,
+                COUNT(*) as count,
+                AVG(rent_per_ping) as avg_rent_per_ping,
+                AVG(total_rent) as avg_total_rent,
+                MIN(rent_per_ping) as min_rent_per_ping,
+                MAX(rent_per_ping) as max_rent_per_ping
+            ')
+                ->groupBy('city')
+                ->get(),
             'district_stats' => $query->selectRaw('
+                city,
                 district,
                 COUNT(*) as count,
-                AVG(rent_per_month) as avg_rent_per_month,
+                AVG(rent_per_ping) as avg_rent_per_ping,
                 AVG(total_rent) as avg_total_rent,
-                MIN(rent_per_month) as min_rent,
-                MAX(rent_per_month) as max_rent
+                MIN(rent_per_ping) as min_rent_per_ping,
+                MAX(rent_per_ping) as max_rent_per_ping
             ')
-            ->groupBy('district')
-            ->get(),
+                ->groupBy('city', 'district')
+                ->get(),
             'building_type_stats' => $query->selectRaw('
                 building_type,
                 COUNT(*) as count,
-                AVG(rent_per_month) as avg_rent_per_month
+                AVG(rent_per_ping) as avg_rent_per_ping
             ')
-            ->groupBy('building_type')
-            ->get(),
+                ->groupBy('building_type')
+                ->get(),
+            'rental_type_stats' => $query->selectRaw('
+                rental_type,
+                COUNT(*) as count,
+                AVG(rent_per_ping) as avg_rent_per_ping
+            ')
+                ->groupBy('rental_type')
+                ->get(),
         ];
 
         $monitor->mark('stats_ready');
@@ -179,7 +205,15 @@ class MapController extends Controller
         $query = Property::query()->geocoded();
         $this->applyBounds($request, $query);
 
-        $properties = $query->select('latitude', 'longitude', 'rent_per_month')
+        if ($request->has('city')) {
+            $query->byCity($request->city);
+        }
+
+        if ($request->has('district')) {
+            $query->byDistrict($request->district);
+        }
+
+        $properties = $query->select('latitude', 'longitude', 'rent_per_ping')
             ->limit($request->get('limit', 2000))
             ->get();
 
@@ -187,7 +221,7 @@ class MapController extends Controller
             return [
                 (float) $property->latitude,
                 (float) $property->longitude,
-                (float) $property->rent_per_month / 1000 // 正規化強度值
+                (float) $property->rent_per_ping / 100, // 正規化強度值
             ];
         });
 
@@ -209,19 +243,78 @@ class MapController extends Controller
         ]);
     }
 
+    public function cities(): JsonResponse
+    {
+        $cities = Property::query()
+            ->select('city')
+            ->selectRaw('COUNT(*) as property_count')
+            ->selectRaw('AVG(rent_per_ping) as avg_rent_per_ping')
+            ->groupBy('city')
+            ->orderBy('property_count', 'desc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $cities,
+        ]);
+    }
+
     public function districts(): JsonResponse
     {
         $districts = Property::query()
-            ->select('district')
+            ->select('city', 'district')
             ->selectRaw('COUNT(*) as property_count')
-            ->selectRaw('AVG(rent_per_month) as avg_rent')
-            ->groupBy('district')
+            ->selectRaw('AVG(rent_per_ping) as avg_rent_per_ping')
+            ->groupBy('city', 'district')
             ->orderBy('property_count', 'desc')
             ->get();
 
         return response()->json([
             'success' => true,
             'data' => $districts,
+        ]);
+    }
+
+    public function districtBounds(Request $request): JsonResponse
+    {
+        $city = $request->get('city');
+        $district = $request->get('district');
+
+        if (! $city || ! $district) {
+            return response()->json([
+                'success' => false,
+                'message' => 'City and district parameters are required',
+            ], 400);
+        }
+
+        $bounds = Property::query()
+            ->where('city', $city)
+            ->where('district', $district)
+            ->whereNotNull('latitude')
+            ->whereNotNull('longitude')
+            ->selectRaw('
+                MIN(latitude) as south,
+                MAX(latitude) as north,
+                MIN(longitude) as west,
+                MAX(longitude) as east
+            ')
+            ->first();
+
+        if (! $bounds || ! $bounds->north) {
+            return response()->json([
+                'success' => false,
+                'message' => "No bounds found for {$city}{$district}",
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'bounds' => [
+                'north' => (float) $bounds->north,
+                'south' => (float) $bounds->south,
+                'east' => (float) $bounds->east,
+                'west' => (float) $bounds->west,
+            ],
         ]);
     }
 
@@ -234,6 +327,14 @@ class MapController extends Controller
 
         $query = Property::query()->geocoded();
         $this->applyBounds($request, $query);
+
+        if ($request->has('city')) {
+            $query->byCity($request->city);
+        }
+
+        if ($request->has('district')) {
+            $query->byDistrict($request->district);
+        }
 
         $properties = $query->select('latitude', 'longitude')->get();
 
@@ -297,7 +398,15 @@ class MapController extends Controller
         $query = Property::query()->geocoded();
         $this->applyBounds($request, $query);
 
-        $properties = $query->select('latitude', 'longitude', 'total_rent')->get();
+        if ($request->has('city')) {
+            $query->byCity($request->city);
+        }
+
+        if ($request->has('district')) {
+            $query->byDistrict($request->district);
+        }
+
+        $properties = $query->select('latitude', 'longitude', 'rent_per_ping')->get();
 
         $monitor->mark('query_loaded');
 
@@ -305,7 +414,7 @@ class MapController extends Controller
             return [
                 'lat' => (float) $property->latitude,
                 'lng' => (float) $property->longitude,
-                'price' => (float) $property->total_rent,
+                'price' => (float) $property->rent_per_ping,
             ];
         })->toArray();
 
@@ -376,6 +485,10 @@ class MapController extends Controller
         $query = Property::query()->geocoded();
         $this->applyBounds($request, $query);
 
+        if ($request->has('city')) {
+            $query->byCity($request->city);
+        }
+
         if ($request->has('district')) {
             $query->byDistrict($request->district);
         }
@@ -385,16 +498,23 @@ class MapController extends Controller
 
         $properties = $query->select([
             'id',
+            'city',
             'district',
             'building_type',
-            'total_floor_area',
-            'rent_per_month',
+            'area_ping',
+            'rent_per_ping',
             'total_rent',
             'latitude',
-            'longitude'
+            'longitude',
+            'bedrooms',
+            'living_rooms',
+            'bathrooms',
+            'has_elevator',
+            'has_management_organization',
+            'has_furniture',
         ])
-        ->limit($limit)
-        ->get();
+            ->limit($limit)
+            ->get();
 
         $monitor->mark('query_loaded');
 
@@ -404,9 +524,10 @@ class MapController extends Controller
                 return [
                     'lat' => (float) $property->latitude,
                     'lng' => (float) $property->longitude,
-                    'area' => (float) $property->total_floor_area,
-                    'rent_per_month' => (float) $property->rent_per_month,
+                    'area' => (float) $property->area_ping,
+                    'rent_per_ping' => (float) $property->rent_per_ping,
                     'building_type' => $property->building_type,
+                    'city' => $property->city,
                     'district' => $property->district,
                 ];
             })->toArray();
@@ -430,7 +551,7 @@ class MapController extends Controller
                     'optimization_info' => [
                         'original_count' => $properties->count(),
                         'cluster_count' => count($clusters['clusters'] ?? []),
-                        'reduction_ratio' => round((1 - count($clusters['clusters'] ?? []) / $properties->count()) * 100, 2)
+                        'reduction_ratio' => round((1 - count($clusters['clusters'] ?? []) / $properties->count()) * 100, 2),
                     ],
                     'price_summary' => $priceSummary,
                 ],
@@ -477,10 +598,11 @@ class MapController extends Controller
                             'lng' => (float) $property->longitude,
                         ],
                         'info' => [
+                            'city' => $property->city,
                             'district' => $property->district,
                             'building_type' => $property->building_type,
-                            'area' => $property->total_floor_area,
-                            'rent_per_month' => $property->rent_per_month,
+                            'area' => $property->area_ping,
+                            'rent_per_ping' => $property->rent_per_ping,
                             'total_rent' => $property->total_rent,
                         ],
                         'price_prediction' => $this->formatPricePrediction($prediction),
@@ -506,7 +628,7 @@ class MapController extends Controller
     private function calculateOptimalLimit(int $zoom): int
     {
         // 根據縮放級別優化資料載入量
-        return match(true) {
+        return match (true) {
             $zoom <= 10 => 50,
             $zoom <= 12 => 200,
             $zoom <= 14 => 500,
@@ -529,7 +651,7 @@ class MapController extends Controller
         $incoming = $request->get('bounds');
         $hasDirect = $request->has(['north', 'south', 'east', 'west']);
 
-        if ($incoming === null && !$hasDirect) {
+        if ($incoming === null && ! $hasDirect) {
             return null;
         }
 
@@ -547,7 +669,7 @@ class MapController extends Controller
             $candidate['west'] = $candidate['west'] ?? $request->get('west');
         }
 
-        if (!array_filter($candidate, static fn ($value) => $value !== null)) {
+        if (! array_filter($candidate, static fn ($value) => $value !== null)) {
             return null;
         }
 
@@ -620,13 +742,14 @@ class MapController extends Controller
                 'index' => $index,
                 'lat' => $property->latitude ?? null,
                 'lng' => $property->longitude ?? null,
-                'area' => $property->total_floor_area ?? null,
-                'floor' => $property->floor ?? null,
-                'age' => $property->age ?? null,
-                'rent_per_month' => $property->rent_per_month ?? null,
+                'area' => $property->area_ping ?? null,
+                'floor' => $property->total_floors ?? null,
+                'age' => $property->building_age ?? null,
+                'rent_per_ping' => $property->rent_per_ping ?? null,
                 'building_type' => $property->building_type ?? null,
                 'pattern' => $property->compartment_pattern ?? null,
-                'rooms' => $property->rooms ?? null,
+                'rooms' => $property->bedrooms ?? null,
+                'city' => $property->city ?? null,
                 'district' => $property->district ?? null,
             ];
         })->all();

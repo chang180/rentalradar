@@ -6,13 +6,10 @@ use App\Models\Property;
 use App\Services\MarketAnalysisService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
-    public function __construct(private readonly MarketAnalysisService $marketAnalysisService)
-    {
-    }
+    public function __construct(private readonly MarketAnalysisService $marketAnalysisService) {}
 
     /**
      * 獲取 dashboard 統計數據
@@ -21,9 +18,9 @@ class DashboardController extends Controller
     {
         try {
             $timeRange = $request->get('time_range', '30d');
-            
+
             // 計算時間範圍
-            $startDate = match($timeRange) {
+            $startDate = match ($timeRange) {
                 '7d' => now()->subDays(7),
                 '30d' => now()->subDays(30),
                 '90d' => now()->subDays(90),
@@ -43,7 +40,7 @@ class DashboardController extends Controller
                 ->geocoded()
                 ->selectRaw('
                     AVG(total_rent) as avg_rent,
-                    AVG(total_rent) as avg_total_rent,
+                    AVG(rent_per_ping) as avg_rent_per_ping,
                     MIN(total_rent) as min_rent,
                     MAX(total_rent) as max_rent
                 ')
@@ -53,22 +50,21 @@ class DashboardController extends Controller
             $popularDistricts = Property::query()
                 ->geocoded()
                 ->selectRaw('
+                    city,
                     district,
                     COUNT(*) as property_count,
                     AVG(total_rent) as avg_rent,
-                    AVG(total_floor_area) as avg_area
+                    AVG(area_ping) as avg_area_ping,
+                    AVG(rent_per_ping) as avg_rent_per_ping
                 ')
-                ->groupBy('district')
+                ->groupBy('city', 'district')
                 ->orderBy('property_count', 'desc')
                 ->limit(5)
                 ->get();
 
             // 計算最熱門區域的每坪租金
             $topDistrict = $popularDistricts->first();
-            $topDistrictRentPerSqm = null;
-            if ($topDistrict && $topDistrict->avg_area > 0) {
-                $topDistrictRentPerSqm = round($topDistrict->avg_rent / $topDistrict->avg_area);
-            }
+            $topDistrictRentPerPing = $topDistrict ? round($topDistrict->avg_rent_per_ping) : null;
 
             // 建築類型統計
             $buildingTypeStats = Property::query()
@@ -76,9 +72,22 @@ class DashboardController extends Controller
                 ->selectRaw('
                     building_type,
                     COUNT(*) as count,
-                    AVG(total_rent) as avg_rent
+                    AVG(total_rent) as avg_rent,
+                    AVG(rent_per_ping) as avg_rent_per_ping
                 ')
                 ->groupBy('building_type')
+                ->orderBy('count', 'desc')
+                ->get();
+
+            // 租賃類型統計
+            $rentalTypeStats = Property::query()
+                ->geocoded()
+                ->selectRaw('
+                    rental_type,
+                    COUNT(*) as count,
+                    AVG(total_rent) as avg_rent
+                ')
+                ->groupBy('rental_type')
                 ->orderBy('count', 'desc')
                 ->get();
 
@@ -93,9 +102,22 @@ class DashboardController extends Controller
                 ->whereBetween('rent_date', [now()->subDays(60), now()->subDays(30)])
                 ->avg('total_rent');
 
-            $priceChange = $previousPeriod > 0 
-                ? (($currentPeriod - $previousPeriod) / $previousPeriod) * 100 
+            $priceChange = $previousPeriod > 0
+                ? (($currentPeriod - $previousPeriod) / $previousPeriod) * 100
                 : 0;
+
+            // 縣市統計
+            $cityStats = Property::query()
+                ->geocoded()
+                ->selectRaw('
+                    city,
+                    COUNT(*) as property_count,
+                    AVG(total_rent) as avg_rent,
+                    AVG(rent_per_ping) as avg_rent_per_ping
+                ')
+                ->groupBy('city')
+                ->orderBy('property_count', 'desc')
+                ->get();
 
             return response()->json([
                 'success' => true,
@@ -107,7 +129,7 @@ class DashboardController extends Controller
                     ],
                     'rent_statistics' => [
                         'average_rent' => round($avgRentStats->avg_rent ?? 0),
-                        'average_total_rent' => round($avgRentStats->avg_total_rent ?? 0),
+                        'average_rent_per_ping' => round($avgRentStats->avg_rent_per_ping ?? 0),
                         'min_rent' => round($avgRentStats->min_rent ?? 0),
                         'max_rent' => round($avgRentStats->max_rent ?? 0),
                         'price_change_percent' => round($priceChange, 1),
@@ -115,19 +137,36 @@ class DashboardController extends Controller
                     ],
                     'popular_districts' => $popularDistricts->map(function ($district) {
                         return [
-                            'name' => $district->district,
+                            'city' => $district->city,
+                            'district' => $district->district,
                             'property_count' => $district->property_count,
                             'average_rent' => round($district->avg_rent),
-                            'average_area' => round($district->avg_area, 1),
-                            'rent_per_sqm' => $district->avg_area > 0 ? round($district->avg_rent / $district->avg_area) : null,
+                            'average_area_ping' => round($district->avg_area_ping, 1),
+                            'average_rent_per_ping' => round($district->avg_rent_per_ping),
                         ];
                     }),
-                    'top_district_rent_per_sqm' => $topDistrictRentPerSqm,
+                    'top_district_rent_per_ping' => $topDistrictRentPerPing,
                     'building_types' => $buildingTypeStats->map(function ($type) {
                         return [
                             'type' => $type->building_type,
                             'count' => $type->count,
                             'average_rent' => round($type->avg_rent),
+                            'average_rent_per_ping' => round($type->avg_rent_per_ping),
+                        ];
+                    }),
+                    'rental_types' => $rentalTypeStats->map(function ($type) {
+                        return [
+                            'type' => $type->rental_type,
+                            'count' => $type->count,
+                            'average_rent' => round($type->avg_rent),
+                        ];
+                    }),
+                    'city_statistics' => $cityStats->map(function ($city) {
+                        return [
+                            'city' => $city->city,
+                            'property_count' => $city->property_count,
+                            'average_rent' => round($city->avg_rent),
+                            'average_rent_per_ping' => round($city->avg_rent_per_ping),
                         ];
                     }),
                     'last_updated' => now()->toISOString(),
@@ -137,7 +176,7 @@ class DashboardController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => '獲取統計數據失敗: ' . $e->getMessage(),
+                'message' => '獲取統計數據失敗: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -149,14 +188,29 @@ class DashboardController extends Controller
     {
         try {
             // 獲取可用的篩選選項
-            $districts = Property::query()
+            $cities = Property::query()
                 ->geocoded()
-                ->select('district')
+                ->select('city')
                 ->distinct()
-                ->orderBy('district')
-                ->pluck('district')
+                ->orderBy('city')
+                ->pluck('city')
                 ->filter()
                 ->values();
+
+            $districts = Property::query()
+                ->geocoded()
+                ->select('city', 'district')
+                ->distinct()
+                ->orderBy('city')
+                ->orderBy('district')
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'city' => $item->city,
+                        'district' => $item->district,
+                        'label' => $item->city.$item->district,
+                    ];
+                });
 
             $buildingTypes = Property::query()
                 ->geocoded()
@@ -167,12 +221,23 @@ class DashboardController extends Controller
                 ->filter()
                 ->values();
 
+            $rentalTypes = Property::query()
+                ->geocoded()
+                ->select('rental_type')
+                ->distinct()
+                ->orderBy('rental_type')
+                ->pluck('rental_type')
+                ->filter()
+                ->values();
+
             return response()->json([
                 'success' => true,
                 'data' => [
                     'available_filters' => [
+                        'cities' => $cities,
                         'districts' => $districts,
                         'building_types' => $buildingTypes,
+                        'rental_types' => $rentalTypes,
                     ],
                     'ai_features' => [
                         'price_prediction' => true,
@@ -186,7 +251,7 @@ class DashboardController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => '獲取快速操作數據失敗: ' . $e->getMessage(),
+                'message' => '獲取快速操作數據失敗: '.$e->getMessage(),
             ], 500);
         }
     }

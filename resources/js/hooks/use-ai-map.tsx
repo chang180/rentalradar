@@ -75,27 +75,33 @@ export function useAIMap(options: UseAIMapOptions = {}) {
 
         try {
             const params = new URLSearchParams();
-            params.append('north', viewport.north.toString());
-            params.append('south', viewport.south.toString());
-            params.append('east', viewport.east.toString());
-            params.append('west', viewport.west.toString());
-            params.append('zoom', viewport.zoom.toString());
-
+            
+            // 如果選擇了特定行政區，不傳送視口範圍參數，讓後端返回該行政區的所有資料
             if (district) {
                 params.append('district', district);
+                params.append('zoom', viewport.zoom.toString());
+            } else {
+                // 只有在沒有選擇行政區時才傳送視口範圍
+                params.append('north', viewport.north.toString());
+                params.append('south', viewport.south.toString());
+                params.append('east', viewport.east.toString());
+                params.append('west', viewport.west.toString());
+                params.append('zoom', viewport.zoom.toString());
             }
 
             const response = await fetch(`/api/map/optimized-data?${params}`);
             const data = await response.json();
 
             if (data.success) {
-                // 確保 data.data 是陣列
-                const propertiesData = Array.isArray(data.data) ? data.data : [];
+                // 處理不同的數據結構
+                let propertiesData: Property[] = [];
                 
-                if (data.data_type === 'clusters') {
-                    setClusters(propertiesData);
+                if (data.data.type === 'clusters') {
+                    const clustersData = data.data.clusters || [];
+                    setClusters(clustersData);
                     setDisplayMode('clusters');
-                } else {
+                } else if (data.data.type === 'properties') {
+                    propertiesData = data.data.properties || [];
                     setProperties(propertiesData);
                     setDisplayMode('properties');
 
@@ -114,7 +120,7 @@ export function useAIMap(options: UseAIMapOptions = {}) {
                 }
 
                 // 生成熱力圖資料
-                if (enableHeatmap) {
+                if (enableHeatmap && propertiesData.length > 0) {
                     const points: MapPoint[] = propertiesData.map((prop: Property) => ({
                         lat: prop.position.lat,
                         lng: prop.position.lng,
@@ -180,7 +186,7 @@ export function useAIMap(options: UseAIMapOptions = {}) {
             const data = await response.json();
 
             if (data.success) {
-                setClusters(data.clusters);
+                setClusters(data.data.clusters || []);
                 setDisplayMode('clusters');
             }
         } catch (err) {
@@ -210,7 +216,7 @@ export function useAIMap(options: UseAIMapOptions = {}) {
             const data = await response.json();
 
             if (data.success) {
-                setHeatmapData(data.heatmap_points);
+                setHeatmapData(data.data.heatmap_points || []);
                 setDisplayMode('heatmap');
             }
         } catch (err) {

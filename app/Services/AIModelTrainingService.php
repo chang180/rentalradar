@@ -82,22 +82,30 @@ class AIModelTrainingService
         return Property::query()
             ->whereNotNull('latitude')
             ->whereNotNull('longitude')
-            ->whereNotNull('rent_per_month')
-            ->where('rent_per_month', '>', 0)
-            ->whereNotNull('total_floor_area')
-            ->where('total_floor_area', '>', 0)
+            ->whereNotNull('total_rent')
+            ->where('total_rent', '>', 0)
+            ->whereNotNull('area_ping')
+            ->where('area_ping', '>', 0)
             ->get()
             ->map(function ($property) {
                 return [
                     'id' => $property->id,
-                    'total_floor_area' => $property->total_floor_area,
-                    'compartment_pattern' => $property->compartment_pattern,
+                    'area_ping' => $property->area_ping,
+                    'bedrooms' => $property->bedrooms,
+                    'living_rooms' => $property->living_rooms,
+                    'bathrooms' => $property->bathrooms,
                     'latitude' => $property->latitude,
                     'longitude' => $property->longitude,
+                    'city' => $property->city,
                     'district' => $property->district,
-                    'village' => $property->village,
                     'building_type' => $property->building_type,
-                    'rent_per_month' => $property->rent_per_month,
+                    'rental_type' => $property->rental_type,
+                    'total_rent' => $property->total_rent,
+                    'rent_per_ping' => $property->rent_per_ping,
+                    'building_age' => $property->building_age,
+                    'has_elevator' => $property->has_elevator,
+                    'has_management_organization' => $property->has_management_organization,
+                    'has_furniture' => $property->has_furniture,
                     'rent_date' => $property->rent_date,
                 ];
             })
@@ -109,13 +117,16 @@ class AIModelTrainingService
         $features = [];
 
         foreach ($data as $property) {
-            $area = (float) $property['total_floor_area'];
-            $rooms = $this->extractRoomCount($property['compartment_pattern']);
-            $rentPrice = (float) $property['rent_per_month'];
+            $area = (float) $property['area_ping'];
+            $rooms = (int) $property['bedrooms'] + (int) $property['living_rooms'];
+            $rentPrice = (float) $property['total_rent'];
 
             $features[] = [
                 'area' => $area,
                 'rooms' => $rooms,
+                'bedrooms' => (int) $property['bedrooms'],
+                'living_rooms' => (int) $property['living_rooms'],
+                'bathrooms' => (int) $property['bathrooms'],
                 'district_encoded' => $this->encodeDistrict($property['district']),
                 'building_type_encoded' => $this->encodeBuildingType($property['building_type']),
                 'age' => $this->calculateAge($property['rent_date']),
@@ -165,19 +176,6 @@ class AIModelTrainingService
         }
 
         return $this->calculateAccuracy($predictions, $actuals);
-    }
-
-    private function extractRoomCount(?string $pattern): int
-    {
-        if (! $pattern) {
-            return 1;
-        }
-
-        if (preg_match('/(\d+)房/', $pattern, $matches)) {
-            return (int) $matches[1];
-        }
-
-        return 1;
     }
 
     private function encodeDistrict(string $district): float

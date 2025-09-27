@@ -165,6 +165,34 @@ npm run dev
   - 114 個測試全部通過，848 個斷言成功
   - 代碼格式檢查通過，所有 IDE 錯誤修復完成
 
+### 2025-09-27 (資料庫結構重構與測試修復)
+- ✅ **重大資料庫結構重構完成**
+  - 重新設計 `properties` 表結構，優化欄位命名和資料類型
+  - 移除舊欄位：`village`, `road`, `land_section`, `land_subsection`, `land_number`, `main_use`, `main_building_materials`, `construction_completion_year`, `total_floors`, `compartment_pattern`, `rent_per_month`, `rental_period`, `full_address`, `data_source`, `is_processed`, `processing_notes`
+  - 新增欄位：`city`, `rental_type`, `rent_per_ping`, `area_ping`, `building_age`, `bedrooms`, `living_rooms`, `bathrooms`, `has_elevator`, `has_management_organization`, `has_furniture`
+  - 建立新的遷移文件：`2025_09_27_200920_remove_unused_property_columns.php`
+
+- ✅ **全面測試修復完成**
+  - 修復 **25 個失敗測試** → **0 個失敗**，所有 **118 個測試通過**
+  - 更新 `PropertyFactory` 以匹配新的資料庫結構
+  - 修復 `AIModelTrainingService` 的資料處理邏輯
+  - 更新 `MarketAnalysisService` 的查詢和統計功能
+  - 修復所有控制器和服務中的欄位引用
+  - 解決 SQLite 文件鎖定問題，改用內存資料庫進行測試
+  - 更新所有測試文件中的測試數據結構
+
+- ✅ **服務層架構優化**
+  - 重構 `AIModelTrainingService` 的特徵提取和資料準備邏輯
+  - 優化 `MarketAnalysisService` 的查詢效能和統計計算
+  - 更新 `RecommendationEngine` 的推薦演算法
+  - 修復所有 API 端點的驗證規則和資料處理
+
+- ✅ **開發環境優化**
+  - 解決 Cursor 編輯器的 SQLite 文件鎖定問題
+  - 配置測試專用內存資料庫，提升測試執行速度
+  - 優化資料庫配置，避免 WAL 模式導致的文件鎖定
+  - 確保測試環境的穩定性和可靠性
+
 ### 2025-01-XX (前期更新)
 - ✅ **前端 UI 重新設計完成**
   - 移除效能監控功能 (一般使用者不需要)

@@ -112,6 +112,8 @@ const RentalMap = memo(() => {
     const [districts, setDistricts] = useState<{ district: string; property_count: number }[]>([]);
     const [viewMode, setViewMode] = useState<'properties' | 'clusters' | 'heatmap'>('properties');
     const [aiMode, setAIMode] = useState<'off' | 'clustering' | 'heatmap'>('off');
+    const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
+    const [locationError, setLocationError] = useState<string | null>(null);
     const [performanceMetrics, setPerformanceMetrics] = useState<PerformanceMetrics | null>(null);
     const [isInitialLoad, setIsInitialLoad] = useState(true);
 
@@ -142,6 +144,118 @@ const RentalMap = memo(() => {
     const defaultCenter: [number, number] = [25.0330, 121.5654];
     const defaultZoom = 12;
 
+    // 獲取用戶位置
+    const getUserLocation = useCallback(() => {
+        if (!navigator.geolocation) {
+            setLocationError('此瀏覽器不支援地理位置功能');
+            return;
+        }
+
+        setLocationError(null);
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const { latitude, longitude } = position.coords;
+                setUserLocation([latitude, longitude]);
+                
+                // 如果沒有選擇特定行政區，移動地圖到用戶位置
+                if (!selectedDistrict && mapRef.current) {
+                    mapRef.current.setView([latitude, longitude], 15);
+                }
+            },
+            (error) => {
+                let errorMessage = '無法獲取位置資訊';
+                switch (error.code) {
+                    case error.PERMISSION_DENIED:
+                        errorMessage = '位置權限被拒絕，請允許位置存取';
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        errorMessage = '位置資訊不可用';
+                        break;
+                    case error.TIMEOUT:
+                        errorMessage = '位置請求超時';
+                        break;
+                }
+                setLocationError(errorMessage);
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 300000, // 5分鐘緩存
+            }
+        );
+    }, [selectedDistrict]);
+
+    // 根據行政區移動地圖
+    const navigateToDistrict = useCallback(async (district: string) => {
+        if (!district || !mapRef.current) return;
+
+        try {
+            // 動態獲取該行政區的實際座標範圍
+            const response = await fetch(`/api/map/district-bounds?district=${encodeURIComponent(district)}`);
+            const data = await response.json();
+            
+            if (data.success && data.bounds) {
+                const { north, south, east, west } = data.bounds;
+                const centerLat = (north + south) / 2;
+                const centerLng = (east + west) / 2;
+                
+                // 計算合適的縮放級別
+                const latDiff = north - south;
+                const lngDiff = east - west;
+                const maxDiff = Math.max(latDiff, lngDiff);
+                
+                let zoom = 12;
+                if (maxDiff < 0.01) zoom = 14;
+                else if (maxDiff < 0.02) zoom = 13;
+                else if (maxDiff < 0.05) zoom = 12;
+                else zoom = 11;
+                
+                mapRef.current.setView([centerLat, centerLng], zoom);
+            } else {
+                // 如果無法獲取邊界，使用預設的台北市座標
+                const defaultCoordinates: { [key: string]: [number, number] } = {
+                    '中正區': [25.0324, 121.5194],
+                    '大同區': [25.0631, 121.5120],
+                    '中山區': [25.0640, 121.5250],
+                    '松山區': [25.0500, 121.5770],
+                    '大安區': [25.0264, 121.5435],
+                    '萬華區': [25.0360, 121.4990],
+                    '信義區': [25.0330, 121.5654],
+                    '士林區': [25.0880, 121.5250],
+                    '北投區': [25.1320, 121.4990],
+                    '內湖區': [25.0690, 121.5940],
+                    '南港區': [25.0540, 121.6060],
+                    '文山區': [25.0040, 121.5700],
+                };
+                
+                const coordinates = defaultCoordinates[district];
+                if (coordinates) {
+                    mapRef.current.setView(coordinates, 12);
+                }
+            }
+        } catch (error) {
+            console.error('Failed to get district bounds:', error);
+            // 降級處理：使用預設座標
+            const defaultCoordinates: { [key: string]: [number, number] } = {
+                '中正區': [25.0324, 121.5194],
+                '中山區': [25.0640, 121.5250],
+                '信義區': [25.0330, 121.5654],
+                '內湖區': [25.0690, 121.5940],
+                '北投區': [25.1320, 121.4990],
+                '士林區': [25.0880, 121.5250],
+                '大安區': [25.0264, 121.5435],
+                '文山區': [25.0040, 121.5700],
+                '松山區': [25.0500, 121.5770],
+                '萬華區': [25.0360, 121.4990],
+            };
+            
+            const coordinates = defaultCoordinates[district];
+            if (coordinates) {
+                mapRef.current.setView(coordinates, 12);
+            }
+        }
+    }, []);
+
     // 性能監控
     const updatePerformanceMetrics = useCallback(() => {
         if (typeof performance !== 'undefined') {
@@ -152,14 +266,19 @@ const RentalMap = memo(() => {
                 loadTime: loadStartTime.current > 0 ? now - loadStartTime.current : 0,
                 renderTime: now,
                 memoryUsage: memoryInfo ? Math.round(memoryInfo.usedJSHeapSize / 1024 / 1024) : 0,
-                markerCount: properties.length + clusters.length,
+                markerCount: (properties?.length || 0) + (clusters?.length || 0),
             });
         }
-    }, [properties.length, clusters.length]);
+    }, [properties?.length, clusters?.length]);
 
     useEffect(() => {
         loadStartTime.current = performance.now();
         fetchDistricts();
+
+        // 如果沒有選擇特定行政區，嘗試獲取用戶位置
+        if (!selectedDistrict) {
+            getUserLocation();
+        }
 
         // 延遲初始載入以改善首次渲染性能
         const timer = setTimeout(() => {
@@ -174,7 +293,7 @@ const RentalMap = memo(() => {
         }, 100);
 
         return () => clearTimeout(timer);
-    }, []);
+    }, [getUserLocation, selectedDistrict]);
 
     useEffect(() => {
         updatePerformanceMetrics();
@@ -206,6 +325,21 @@ const RentalMap = memo(() => {
         }
     };
 
+    // 處理行政區選擇變更
+    const handleDistrictChange = useCallback((district: string) => {
+        setSelectedDistrict(district);
+        if (district) {
+            navigateToDistrict(district);
+        } else {
+            // 如果選擇"全部區域"，回到用戶位置或預設位置
+            if (userLocation) {
+                if (mapRef.current) {
+                    mapRef.current.setView(userLocation, 15);
+                }
+            }
+        }
+    }, [navigateToDistrict, userLocation]);
+
     // 優化的視口變更處理，加入節流
     const handleViewportChange = useCallback(
         throttle((viewport: any) => {
@@ -215,9 +349,11 @@ const RentalMap = memo(() => {
     );
 
     // 優化的圖標創建，使用緩存
-    const createCustomIcon = useCallback((rentPerMonth: number) => {
-        const priceCategory = rentPerMonth > 1000 ? 'high' :
-                            rentPerMonth > 600 ? 'medium' : 'low';
+    const createCustomIcon = useCallback((totalRent: number, area: number) => {
+        // 計算每坪租金（將平方公尺轉換為坪數）
+        const rentPerPing = totalRent / (area / 3.30579);
+        const priceCategory = rentPerPing > 1000 ? 'high' :
+                            rentPerPing > 600 ? 'medium' : 'low';
 
         if (iconCache.has(priceCategory)) {
             return iconCache.get(priceCategory)!;
@@ -283,11 +419,12 @@ const RentalMap = memo(() => {
                     </label>
                     <select
                         value={selectedDistrict}
-                        onChange={(e) => setSelectedDistrict(e.target.value)}
+                        onChange={(e) => handleDistrictChange(e.target.value)}
                         className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                        title="選擇特定行政區查看租屋資料"
                     >
                         <option value="">全部區域</option>
-                        {districts.map((district) => (
+                        {districts?.map((district) => (
                             <option key={district.district} value={district.district}>
                                 {district.district} ({district.property_count})
                             </option>
@@ -303,50 +440,79 @@ const RentalMap = memo(() => {
                         value={displayMode}
                         onChange={(e) => toggleDisplayMode(e.target.value as any)}
                         className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                        title="選擇地圖顯示模式"
                     >
-                        <option value="properties">個別物件</option>
-                        <option value="clusters">AI 聚合</option>
-                        <option value="heatmap">熱力圖</option>
+                        <option value="properties">個別租屋標記</option>
+                        <option value="clusters">智慧群組顯示</option>
+                        <option value="heatmap">租金密度圖</option>
                     </select>
                 </div>
 
                 <div className="flex items-center gap-2">
                     <button
+                        onClick={getUserLocation}
+                        disabled={loading}
+                        className="px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50 text-sm relative group"
+                        title="獲取我的位置並移動地圖到該位置"
+                    >
+                        📍 我的位置
+                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                            獲取我的位置並移動地圖到該位置
+                            <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                        </div>
+                    </button>
+                    <button
                         onClick={() => getAIClusters('kmeans', 15)}
                         disabled={loading}
-                        className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 text-sm"
+                        className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 text-sm relative group"
+                        title="將附近的租屋標記合併成群組，讓地圖更清晰易讀。適合查看區域密度。"
                     >
-                        AI 聚合
+                        智慧群組
+                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                            將附近的租屋標記合併成群組，讓地圖更清晰易讀
+                            <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                        </div>
                     </button>
                     <button
                         onClick={() => getAIHeatmap('medium')}
                         disabled={loading}
-                        className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 text-sm"
+                        className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 text-sm relative group"
+                        title="顯示租金密度分布，顏色越深表示租金越高。適合分析價格趨勢。"
                     >
-                        AI 熱力圖
+                        租金熱力圖
+                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                            顯示租金密度分布，顏色越深表示租金越高
+                            <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                        </div>
                     </button>
                 </div>
 
                 <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+                    <span className="text-xs text-gray-500 dark:text-gray-500">每坪租金等級：</span>
                     <div className="flex items-center gap-1">
                         <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                        <span>低租金</span>
+                        <span>低租金 (&lt; 600元/坪)</span>
                     </div>
                     <div className="flex items-center gap-1">
                         <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                        <span>中租金</span>
+                        <span>中租金 (600-1000元/坪)</span>
                     </div>
                     <div className="flex items-center gap-1">
                         <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                        <span>高租金</span>
+                        <span>高租金 (&gt; 1000元/坪)</span>
                     </div>
                 </div>
 
                 <div className="ml-auto text-sm text-gray-600 dark:text-gray-400">
-                    {displayMode === 'properties' && `顯示 ${properties.length} 個物件`}
-                    {displayMode === 'clusters' && `顯示 ${clusters.length} 個聚合`}
-                    {displayMode === 'heatmap' && `熱力圖模式`}
+                    {displayMode === 'properties' && `顯示 ${properties?.length || 0} 個租屋標記`}
+                    {displayMode === 'clusters' && `顯示 ${clusters?.length || 0} 個智慧群組`}
+                    {displayMode === 'heatmap' && `租金密度分布圖`}
                     {loading && ' (載入中...)'}
+                    {locationError && (
+                        <span className="text-red-500 text-xs ml-2">
+                            {locationError}
+                        </span>
+                    )}
                 </div>
             </div>
 
@@ -367,11 +533,11 @@ const RentalMap = memo(() => {
                     <MapEventHandler onViewportChange={handleViewportChange} />
 
                     {/* 個別物件標記 */}
-                    {displayMode === 'properties' && properties.map((property) => (
+                    {displayMode === 'properties' && properties?.map((property) => (
                         <Marker
                             key={property.id}
                             position={[property.position.lat, property.position.lng]}
-                            icon={createCustomIcon(property.info.rent_per_month)}
+                            icon={createCustomIcon(property.info.total_rent, property.info.area)}
                         >
                             <Popup className="rental-popup">
                                 <div className="p-2 min-w-64">
@@ -390,12 +556,12 @@ const RentalMap = memo(() => {
                                         </div>
                                         <div className="flex justify-between">
                                             <span>面積：</span>
-                                            <span>{property.info.area} m²</span>
+                                            <span>{Math.round(property.info.area / 3.30579 * 10) / 10} 坪</span>
                                         </div>
                                         <div className="flex justify-between font-medium text-blue-600">
-                                            <span>租金：</span>
+                                            <span>每坪租金：</span>
                                             <span>
-                                                {formatCurrency(property.info.rent_per_month)}/m²
+                                                {formatCurrency(Math.round(property.info.total_rent / (property.info.area / 3.30579)))}/坪
                                             </span>
                                         </div>
                                         <div className="flex justify-between font-medium text-green-600">
@@ -409,7 +575,7 @@ const RentalMap = memo(() => {
                     ))}
 
                     {/* AI 聚合標記 - 增強視覺效果 */}
-                    {displayMode === 'clusters' && clusters.map((cluster) => {
+                    {displayMode === 'clusters' && clusters?.map((cluster) => {
                         // 使用視覺等級來確定大小和顏色
                         const visualLevel = cluster.visual_level || Math.min(5, Math.max(1, Math.floor(cluster.count / 10) + 1));
                         const baseSize = 15;
@@ -531,7 +697,7 @@ const RentalMap = memo(() => {
                     })}
 
                     {/* 熱力圖點 - 增強視覺效果 */}
-                    {displayMode === 'heatmap' && heatmapData.map((point, index) => {
+                    {displayMode === 'heatmap' && heatmapData?.map((point, index) => {
                         // 使用進階顏色和大小計算
                         const radius = point.radius || Math.max(3, Math.min(15, 5 + (point.weight * 8)));
                         const color = point.color || (

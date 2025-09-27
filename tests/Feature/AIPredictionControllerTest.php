@@ -22,8 +22,8 @@ class AIPredictionControllerTest extends TestCase
 
         // 創建測試房產資料
         Property::factory()->count(10)->create([
-            'rent_per_month' => 25000,
-            'total_floor_area' => 30,
+            'total_rent' => 25000,
+            'area_ping' => 30,
             'district' => '中正區',
             'building_type' => '公寓',
         ]);
@@ -35,7 +35,7 @@ class AIPredictionControllerTest extends TestCase
             'property_data' => [
                 'area' => 30,
                 'district' => '中正區',
-                'rent_per_month' => 25000,
+                'total_rent' => 25000,
             ],
         ]);
 
@@ -56,7 +56,7 @@ class AIPredictionControllerTest extends TestCase
         $propertyData = [
             'area' => 30,
             'district' => '中正區',
-            'rent_per_month' => 25000,
+            'total_rent' => 25000,
             'building_type' => '公寓',
             'rooms' => 2,
             'floor' => 3,
@@ -132,7 +132,7 @@ class AIPredictionControllerTest extends TestCase
             'property_data' => [
                 'area' => -10, // 無效的面積
                 'district' => '中正區',
-                'rent_per_month' => 25000,
+                'total_rent' => 25000,
             ],
         ]);
 
@@ -147,12 +147,12 @@ class AIPredictionControllerTest extends TestCase
             'property_data' => [
                 'area' => 30,
                 'district' => '中正區',
-                'rent_per_month' => -1000, // 無效的租金
+                'total_rent' => -1000, // 無效的租金
             ],
         ]);
 
         $response->assertStatus(422)
-            ->assertJsonValidationErrors(['property_data.rent_per_month']);
+            ->assertJsonValidationErrors(['property_data.total_rent']);
     }
 
     public function test_predict_endpoint_handles_missing_district(): void
@@ -161,7 +161,7 @@ class AIPredictionControllerTest extends TestCase
         $response = $this->postJson('/api/ai-prediction/predict', [
             'property_data' => [
                 'area' => 30,
-                'rent_per_month' => 25000,
+                'total_rent' => 25000,
                 // 缺少 district
             ],
         ]);
@@ -177,7 +177,7 @@ class AIPredictionControllerTest extends TestCase
         $minimalData = [
             'area' => 30,
             'district' => '中正區',
-            'rent_per_month' => 25000,
+            'total_rent' => 25000,
         ];
 
         $response = $this->postJson('/api/ai-prediction/predict', [
@@ -198,7 +198,7 @@ class AIPredictionControllerTest extends TestCase
             'property_data' => [
                 'area' => 30,
                 'district' => '中正區',
-                'rent_per_month' => 25000,
+                'total_rent' => 25000,
                 'safety_score' => 150, // 超出範圍 (0-100)
             ],
         ]);

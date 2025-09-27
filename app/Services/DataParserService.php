@@ -3,12 +3,17 @@
 namespace App\Services;
 
 use App\Models\Property;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use ZipArchive;
 
 class DataParserService
 {
+    private array $cityMapping = [];
+
+    private array $buildTime = [];
+
     /**
      * 解析 ZIP 格式的租賃資料
      */
@@ -48,6 +53,18 @@ class DataParserService
                 'files_count' => count(glob($extractPath.'/*')),
             ]);
 
+            // 解析 manifest.csv
+            $manifestPath = $extractPath.'/manifest.csv';
+            if (file_exists($manifestPath)) {
+                $this->parseManifest($manifestPath);
+            }
+
+            // 解析 build_time.xml
+            $buildTimePath = $extractPath.'/build_time.xml';
+            if (file_exists($buildTimePath)) {
+                $this->parseBuildTime($buildTimePath);
+            }
+
             // 找出主要的租賃資料檔案 (*_lvr_land_c.csv)
             $csvFiles = glob($extractPath.'/*_lvr_land_c.csv');
 
@@ -59,57 +76,20 @@ class DataParserService
                 $fileName = basename($csvFile);
                 Log::info('開始處理 CSV 檔案', ['file' => $fileName]);
 
-                // 讀取檔案內容並處理 BOM
-                $content = file_get_contents($csvFile);
-                if (substr($content, 0, 3) === "\xEF\xBB\xBF") {
-                    $content = substr($content, 3);
-                }
+                // 從檔案名解析縣市代碼
+                $prefix = substr($fileName, 0, 1);
+                $city = $this->cityMapping[$prefix] ?? '未知縣市';
 
-                $lines = explode("\n", $content);
-                if (count($lines) < 3) {
-                    Log::warning('CSV 檔案行數不足', ['file' => $fileName, 'lines' => count($lines)]);
-
-                    continue;
-                }
-
-                // 跳過中英文標題行，使用第一行（中文）作為標題
-                $headers = str_getcsv($lines[0]);
-
-                for ($i = 2; $i < count($lines); $i++) {
-                    $line = trim($lines[$i]);
-                    if (empty($line)) {
-                        continue;
-                    }
-
-                    try {
-                        $row = str_getcsv($line);
-                        if (count($row) === count($headers)) {
-                            $record = array_combine($headers, $row);
-                            $allData[] = $this->normalizeRentalRecord($record);
-                            $totalProcessed++;
-                        } else {
-                            $totalErrors++;
-                            Log::warning('CSV 行資料欄位數量不符', [
-                                'file' => $fileName,
-                                'line' => $i + 1,
-                                'expected' => count($headers),
-                                'actual' => count($row),
-                            ]);
-                        }
-                    } catch (\Exception $e) {
-                        $totalErrors++;
-                        Log::error('解析 CSV 行時發生錯誤', [
-                            'file' => $fileName,
-                            'line' => $i + 1,
-                            'error' => $e->getMessage(),
-                        ]);
-                    }
-                }
+                $result = $this->parseMainRentFile($csvFile, $city);
+                $allData = array_merge($allData, $result['data']);
+                $totalProcessed += $result['processed_count'];
+                $totalErrors += $result['error_count'];
 
                 Log::info('CSV 檔案處理完成', [
                     'file' => $fileName,
-                    'processed' => $totalProcessed,
-                    'errors' => $totalErrors,
+                    'city' => $city,
+                    'processed' => $result['processed_count'],
+                    'errors' => $result['error_count'],
                 ]);
             }
 
@@ -133,6 +113,8 @@ class DataParserService
                 'processed_count' => $totalProcessed,
                 'error_count' => $totalErrors,
                 'csv_files_count' => count($csvFiles),
+                'city_mapping' => $this->cityMapping,
+                'build_time' => $this->buildTime,
             ];
 
         } catch (\Exception $e) {
@@ -151,182 +133,162 @@ class DataParserService
     }
 
     /**
-     * 解析 CSV 格式的租賃資料
+     * 解析 manifest.csv 建立縣市對應表
      */
-    public function parseCsvData(string $filePath): array
+    private function parseManifest(string $filePath): void
     {
-        try {
-            $content = Storage::get($filePath);
-            $lines = explode("\n", $content);
-            $headers = str_getcsv($lines[0]);
-            $data = [];
-            $processedCount = 0;
-            $errorCount = 0;
+        $handle = fopen($filePath, 'r');
+        $header = fgetcsv($handle, 0, ',', '"', '\\');
 
-            Log::info('開始解析 CSV 資料', [
-                'file_path' => $filePath,
-                'total_lines' => count($lines),
-            ]);
+        while (($row = fgetcsv($handle, 0, ',', '"', '\\')) !== false) {
+            $name = $row[0];
+            $description = $row[2];
 
-            for ($i = 1; $i < count($lines); $i++) {
-                if (empty(trim($lines[$i]))) {
-                    continue;
-                }
-
-                try {
-                    $row = str_getcsv($lines[$i]);
-                    if (count($row) === count($headers)) {
-                        $record = array_combine($headers, $row);
-                        $data[] = $this->normalizeRentalRecord($record);
-                        $processedCount++;
-                    } else {
-                        $errorCount++;
-                        Log::warning('CSV 行資料欄位數量不符', [
-                            'line' => $i + 1,
-                            'expected' => count($headers),
-                            'actual' => count($row),
-                        ]);
-                    }
-                } catch (\Exception $e) {
-                    $errorCount++;
-                    Log::error('解析 CSV 行時發生錯誤', [
-                        'line' => $i + 1,
-                        'error' => $e->getMessage(),
-                    ]);
-                }
+            // 解析縣市名稱
+            if (preg_match('/(.+?)(市|縣)/', $description, $matches)) {
+                $city = $matches[1].$matches[2];
+                $prefix = substr($name, 0, 1);
+                $this->cityMapping[$prefix] = $city;
             }
-
-            Log::info('CSV 解析完成', [
-                'processed_count' => $processedCount,
-                'error_count' => $errorCount,
-                'success_rate' => $processedCount > 0 ? round(($processedCount / ($processedCount + $errorCount)) * 100, 2) : 0,
-            ]);
-
-            return [
-                'success' => true,
-                'data' => $data,
-                'processed_count' => $processedCount,
-                'error_count' => $errorCount,
-                'headers' => $headers,
-            ];
-
-        } catch (\Exception $e) {
-            Log::error('CSV 解析失敗', [
-                'file_path' => $filePath,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-
-            return [
-                'success' => false,
-                'error' => $e->getMessage(),
-                'data' => [],
-            ];
         }
+        fclose($handle);
+
+        Log::info('縣市對應表建立完成', ['mapping' => $this->cityMapping]);
     }
 
     /**
-     * 解析 XML 格式的租賃資料
+     * 解析 build_time.xml 獲取時間範圍
      */
-    public function parseXmlData(string $filePath): array
+    private function parseBuildTime(string $filePath): void
     {
-        try {
-            $content = Storage::get($filePath);
-            $xml = simplexml_load_string($content);
+        $xml = simplexml_load_file($filePath);
+        $timeText = (string) $xml->lvr_time;
 
-            if ($xml === false) {
-                throw new \Exception('無法解析 XML 內容');
+        // 解析租賃案件時間範圍
+        if (preg_match('/訂約日期\s*(\d+)年(\d+)月(\d+)日至\s*(\d+)年(\d+)月(\d+)日/', $timeText, $matches)) {
+            $this->buildTime = [
+                'start_year' => (int) $matches[1],
+                'start_month' => (int) $matches[2],
+                'start_day' => (int) $matches[3],
+                'end_year' => (int) $matches[4],
+                'end_month' => (int) $matches[5],
+                'end_day' => (int) $matches[6],
+            ];
+        }
+
+        Log::info('時間範圍解析完成', ['build_time' => $this->buildTime]);
+    }
+
+    /**
+     * 解析主表檔案
+     */
+    private function parseMainRentFile(string $filePath, string $city): array
+    {
+        $data = [];
+        $processedCount = 0;
+        $errorCount = 0;
+
+        $handle = fopen($filePath, 'r');
+        $header = fgetcsv($handle, 0, ',', '"', '\\');
+
+        // 處理BOM字符問題
+        $header = array_map(function ($col) {
+            return trim($col, "\xEF\xBB\xBF");
+        }, $header);
+
+        while (($row = fgetcsv($handle, 0, ',', '"', '\\')) !== false) {
+            // 跳過英文標題行
+            if (isset($row[0]) && strpos($row[0], 'The ') === 0) {
+                continue;
             }
 
-            Log::info('開始解析 XML 資料', [
-                'file_path' => $filePath,
-                'root_element' => $xml->getName(),
-            ]);
-
-            $data = [];
-            $processedCount = 0;
-            $errorCount = 0;
-
-            // 根據 XML 結構解析資料
-            foreach ($xml->children() as $record) {
+            // 檢查是否為有效資料行
+            if (count($row) >= count($header)) {
                 try {
-                    $recordData = $this->xmlToArray($record);
-                    $normalizedRecord = $this->normalizeRentalRecord($recordData);
+                    $record = array_combine($header, $row);
+                    $normalizedRecord = $this->normalizeRentalRecord($record, $city);
                     $data[] = $normalizedRecord;
                     $processedCount++;
                 } catch (\Exception $e) {
                     $errorCount++;
-                    Log::warning('解析 XML 記錄時發生錯誤', [
+                    Log::warning('解析記錄時發生錯誤', [
                         'error' => $e->getMessage(),
+                        'record' => $record ?? null,
                     ]);
                 }
             }
-
-            Log::info('XML 解析完成', [
-                'processed_count' => $processedCount,
-                'error_count' => $errorCount,
-                'success_rate' => $processedCount > 0 ? round(($processedCount / ($processedCount + $errorCount)) * 100, 2) : 0,
-            ]);
-
-            return [
-                'success' => true,
-                'data' => $data,
-                'processed_count' => $processedCount,
-                'error_count' => $errorCount,
-            ];
-
-        } catch (\Exception $e) {
-            Log::error('XML 解析失敗', [
-                'file_path' => $filePath,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-
-            return [
-                'success' => false,
-                'error' => $e->getMessage(),
-                'data' => [],
-            ];
         }
-    }
+        fclose($handle);
 
-    /**
-     * 將 XML 節點轉換為陣列
-     */
-    private function xmlToArray(\SimpleXMLElement $xml): array
-    {
-        $array = [];
-
-        foreach ($xml->children() as $child) {
-            if ($child->count() > 0) {
-                $array[$child->getName()] = $this->xmlToArray($child);
-            } else {
-                $array[$child->getName()] = (string) $child;
-            }
-        }
-
-        return $array;
+        return [
+            'data' => $data,
+            'processed_count' => $processedCount,
+            'error_count' => $errorCount,
+        ];
     }
 
     /**
      * 標準化租賃記錄資料
      */
-    private function normalizeRentalRecord(array $record): array
+    private function normalizeRentalRecord(array $record, string $city): array
     {
+        // 基本資訊
+        $serialNumber = $record['編號'] ?? '';
+        $district = $record['鄉鎮市區'] ?? '';
+        $fullAddress = $record['土地位置建物門牌'] ?? '';
+
+        // 租賃資訊
+        $rentalType = $record['出租型態'] ?? '';
+        $totalRent = $this->parsePrice($record['總額元'] ?? '0');
+        $rentDate = $this->parseDate($record['租賃年月日'] ?? '');
+        $rentalPeriod = $record['租賃期間'] ?? '';
+
+        // 建物資訊
+        $buildingType = $record['建物型態'] ?? '';
+        $areaSqm = $this->parseArea($record['建物總面積平方公尺'] ?? '0');
+        $areaPing = $this->convertToPing($areaSqm);
+        $totalFloors = $this->parseInteger($record['總樓層數'] ?? '');
+        $mainUse = $record['主要用途'] ?? '';
+        $mainBuildingMaterials = $record['主要建材'] ?? '';
+        $constructionYear = $this->parseConstructionYear($record['建築完成年月'] ?? '');
+
+        // 格局資訊
+        $bedrooms = (int) ($record['建物現況格局-房'] ?? 0);
+        $livingRooms = (int) ($record['建物現況格局-廳'] ?? 0);
+        $bathrooms = (int) ($record['建物現況格局-衛'] ?? 0);
+        $compartmentPattern = "{$bedrooms}房{$livingRooms}廳{$bathrooms}衛";
+
+        // 設施資訊
+        $hasElevator = $this->parseYesNo($record['有無電梯'] ?? '');
+        $hasManagement = $this->parseYesNo($record['有無管理組織'] ?? '');
+        $hasFurniture = $this->parseYesNo($record['有無附傢俱'] ?? '');
+        $equipment = $record['附屬設備'] ?? '';
+
+        // 計算每坪租金
+        $rentPerPing = $areaPing > 0 ? round($totalRent / $areaPing) : 0;
+
+        // 計算建物年齡
+        $buildingAge = $constructionYear ? date('Y') - $constructionYear : null;
+
         return [
-            'address' => $record['土地位置建物門牌'] ?? $record['address'] ?? '',
-            'district' => $record['鄉鎮市區'] ?? $record['district'] ?? '',
-            'road' => $record['路名'] ?? $record['road'] ?? '',
-            'building_type' => $record['建物型態'] ?? $record['building_type'] ?? '',
-            'total_price' => $this->parsePrice($record['總額元'] ?? $record['total_price'] ?? '0'),
-            'unit_price' => $this->parsePrice($record['單價元平方公尺'] ?? $record['unit_price'] ?? '0'),
-            'area' => $this->parseArea($record['建物總面積平方公尺'] ?? $record['area'] ?? '0'),
-            'rooms' => $this->parseRoomsFromRecord($record),
-            'floor' => $record['總樓層數'] ?? $record['floor'] ?? '',
-            'elevator' => $record['有無電梯'] ?? $record['elevator'] ?? '',
-            'purpose' => $record['主要用途'] ?? $record['purpose'] ?? '',
-            'transaction_date' => $this->parseDate($record['交易年月日'] ?? $record['transaction_date'] ?? ''),
-            'raw_data' => $record,
+            'city' => $city,
+            'district' => $district,
+            'latitude' => null,  // 預留給地理編碼
+            'longitude' => null, // 預留給地理編碼
+            'is_geocoded' => false,
+            'rental_type' => $rentalType,
+            'total_rent' => $totalRent,
+            'rent_per_ping' => $rentPerPing,
+            'rent_date' => $rentDate,
+            'building_type' => $buildingType,
+            'area_ping' => $areaPing,
+            'building_age' => $buildingAge,
+            'bedrooms' => $bedrooms,
+            'living_rooms' => $livingRooms,
+            'bathrooms' => $bathrooms,
+            'has_elevator' => $hasElevator,
+            'has_management_organization' => $hasManagement,
+            'has_furniture' => $hasFurniture,
         ];
     }
 
@@ -351,40 +313,21 @@ class DataParserService
     }
 
     /**
-     * 從記錄中解析房間數資料
+     * 轉換平方公尺為坪數
      */
-    private function parseRoomsFromRecord(array $record): array
+    private function convertToPing(float $squareMeters): float
     {
-        $bedrooms = (int) ($record['建物現況格局-房'] ?? $record['bedrooms'] ?? 0);
-        $living_rooms = (int) ($record['建物現況格局-廳'] ?? $record['living_rooms'] ?? 0);
-        $bathrooms = (int) ($record['建物現況格局-衛'] ?? $record['bathrooms'] ?? 0);
-
-        $original = $bedrooms.'房'.$living_rooms.'廳'.$bathrooms.'衛';
-
-        return [
-            'bedrooms' => $bedrooms,
-            'living_rooms' => $living_rooms,
-            'bathrooms' => $bathrooms,
-            'original' => $original,
-        ];
+        return round($squareMeters / 3.30579, 2);
     }
 
     /**
-     * 解析房間數資料（舊方法，保留向後相容）
+     * 解析整數
      */
-    private function parseRooms(string $rooms): array
+    private function parseInteger(string $value): ?int
     {
-        // 解析 "3房2廳1衛" 格式
-        preg_match('/(\d+)房/', $rooms, $bedroomMatches);
-        preg_match('/(\d+)廳/', $rooms, $livingRoomMatches);
-        preg_match('/(\d+)衛/', $rooms, $bathroomMatches);
+        $cleaned = preg_replace('/[^\d]/', '', $value);
 
-        return [
-            'bedrooms' => (int) ($bedroomMatches[1] ?? 0),
-            'living_rooms' => (int) ($livingRoomMatches[1] ?? 0),
-            'bathrooms' => (int) ($bathroomMatches[1] ?? 0),
-            'original' => $rooms,
-        ];
+        return $cleaned ? (int) $cleaned : null;
     }
 
     /**
@@ -404,16 +347,6 @@ class DataParserService
                 $day = substr($date, 5, 2);
 
                 return sprintf('%04d-%02d-%02d', $year, $month, $day);
-            }
-
-            // 嘗試其他日期格式
-            $formats = ['Y-m-d', 'Y/m/d', 'Ymd', 'Y年m月d日'];
-
-            foreach ($formats as $format) {
-                $parsed = \DateTime::createFromFormat($format, $date);
-                if ($parsed !== false) {
-                    return $parsed->format('Y-m-d');
-                }
             }
 
             return null;
@@ -466,67 +399,57 @@ class DataParserService
             'total_records' => count($data),
         ]);
 
-        foreach ($data as $index => $record) {
-            try {
-                // 檢查是否已存在相同記錄
-                $existing = Property::where('address', $record['address'])
-                    ->where('transaction_date', $record['transaction_date'])
-                    ->first();
+        // 分批處理，每批 100 筆
+        $batchSize = 100;
+        $batches = array_chunk($data, $batchSize);
 
-                if ($existing) {
-                    // 更新現有記錄
-                    $existing->update([
-                        'district' => $record['district'],
-                        'road' => $record['road'],
-                        'building_type' => $record['building_type'],
-                        'total_price' => $record['total_price'],
-                        'unit_price' => $record['unit_price'],
-                        'area' => $record['area'],
-                        'rooms' => $record['rooms'],
-                        'floor' => $record['floor'],
-                        'elevator' => $record['elevator'],
-                        'purpose' => $record['purpose'],
-                        'raw_data' => $record['raw_data'],
-                        'updated_at' => now(),
-                    ]);
-                } else {
-                    // 建立新記錄 - 映射到正確的資料庫欄位
-                    Property::create([
-                        'full_address' => $record['address'],
-                        'district' => $record['district'],
-                        'road' => $record['road'],
-                        'building_type' => $record['building_type'],
-                        'total_rent' => $record['total_price'],
-                        'rent_per_month' => $record['unit_price'],
-                        'total_floor_area' => $record['area'],
-                        'compartment_pattern' => $record['rooms']['original'] ?? '',
-                        'total_floors' => (int) $record['floor'],
-                        'main_use' => $record['purpose'],
-                        'rent_date' => $record['transaction_date'] ?? $this->parseDate($record['raw_data']['租賃年月日'] ?? '') ?? '2025-01-01',
-                        'rental_period' => $record['raw_data']['租賃期間'] ?? '',
-                        'has_management_organization' => $this->parseYesNo($record['raw_data']['有無管理組織'] ?? ''),
-                        'main_building_materials' => $record['raw_data']['主要建材'] ?? '',
-                        'construction_completion_year' => $this->parseConstructionYear($record['raw_data']['建築完成年月'] ?? ''),
-                        'data_source' => 'government_api',
-                        'is_geocoded' => false,
-                        'is_processed' => true,
-                    ]);
+        foreach ($batches as $batchIndex => $batch) {
+            try {
+                // 使用事務處理整批資料
+                DB::transaction(function () use ($batch, &$savedCount, &$errorCount, &$errors) {
+                    foreach ($batch as $index => $record) {
+                        try {
+                            // 檢查是否已存在相同記錄（基於地址和租金）
+                            $existing = Property::where('full_address', $record['full_address'])
+                                ->where('total_rent', $record['total_rent'])
+                                ->where('rent_date', $record['rent_date'])
+                                ->first();
+
+                            if ($existing) {
+                                // 更新現有記錄
+                                $existing->update($record);
+                            } else {
+                                // 建立新記錄
+                                Property::create($record);
+                            }
+
+                            $savedCount++;
+                        } catch (\Exception $e) {
+                            $errorCount++;
+                            $errors[] = [
+                                'index' => $index,
+                                'error' => $e->getMessage(),
+                                'record' => $record,
+                            ];
+
+                            Log::error('儲存記錄時發生錯誤', [
+                                'index' => $index,
+                                'error' => $e->getMessage(),
+                                'record' => $record,
+                            ]);
+                        }
+                    }
+                });
+
+                // 批次間暫停，避免 I/O 過載
+                if ($batchIndex < count($batches) - 1) {
+                    usleep(100000); // 暫停 0.1 秒
                 }
 
-                $savedCount++;
-
             } catch (\Exception $e) {
-                $errorCount++;
-                $errors[] = [
-                    'index' => $index,
+                Log::error('批次處理失敗', [
+                    'batch_index' => $batchIndex,
                     'error' => $e->getMessage(),
-                    'record' => $record,
-                ];
-
-                Log::error('儲存記錄時發生錯誤', [
-                    'index' => $index,
-                    'error' => $e->getMessage(),
-                    'record' => $record,
                 ]);
             }
         }
@@ -543,5 +466,55 @@ class DataParserService
             'error_count' => $errorCount,
             'errors' => $errors,
         ];
+    }
+
+    /**
+     * 清理 UTF-8 字符
+     */
+    private function cleanUtf8Data($data): array|string
+    {
+        if (is_array($data)) {
+            $cleaned = [];
+            foreach ($data as $key => $value) {
+                $cleaned[$this->cleanUtf8String($key)] = $this->cleanUtf8String($value);
+            }
+
+            return $cleaned;
+        }
+
+        return $this->cleanUtf8String($data);
+    }
+
+    /**
+     * 清理 UTF-8 字符串
+     */
+    private function cleanUtf8String($string): string
+    {
+        if (! is_string($string)) {
+            return $string;
+        }
+
+        // 嘗試從 Big-5 轉換到 UTF-8
+        if (mb_check_encoding($string, 'Big5')) {
+            $string = mb_convert_encoding($string, 'UTF-8', 'Big5');
+        } elseif (mb_check_encoding($string, 'CP950')) {
+            $string = mb_convert_encoding($string, 'UTF-8', 'CP950');
+        } else {
+            // 嘗試自動檢測編碼
+            $detected = mb_detect_encoding($string, ['Big5', 'CP950', 'UTF-8', 'ISO-8859-1'], true);
+            if ($detected && $detected !== 'UTF-8') {
+                $string = mb_convert_encoding($string, 'UTF-8', $detected);
+            }
+        }
+
+        // 移除控制字符
+        $string = preg_replace('/[\x00-\x1F\x7F]/', '', $string);
+
+        // 確保字符串是有效的 UTF-8
+        if (! mb_check_encoding($string, 'UTF-8')) {
+            $string = mb_convert_encoding($string, 'UTF-8', 'auto');
+        }
+
+        return $string;
     }
 }

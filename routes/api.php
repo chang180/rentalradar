@@ -3,6 +3,7 @@
 use App\Http\Controllers\AIController;
 use App\Http\Controllers\AIPredictionController;
 use App\Http\Controllers\AnomalyDetectionController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MapController;
 use App\Http\Controllers\MarketAnalysisController;
 use App\Http\Controllers\PerformanceDashboardController;
@@ -47,7 +48,9 @@ Route::prefix('map')->group(function () {
     Route::get('/heatmap', [MapController::class, 'heatmapData']);
     Route::get('/clusters', [MapController::class, 'clusters']);
     Route::get('/statistics', [MapController::class, 'statistics']);
+    Route::get('/cities', [MapController::class, 'cities']);
     Route::get('/districts', [MapController::class, 'districts']);
+    Route::get('/district-bounds', [MapController::class, 'districtBounds']);
     Route::get('/ai-heatmap', [MapController::class, 'aiHeatmap']);
     Route::get('/predict-prices', [MapController::class, 'predictPrices']);
     Route::get('/optimized-data', [MapController::class, 'optimizedData']);
@@ -105,6 +108,6 @@ Route::prefix('anomaly-detection')->group(function () {
 
 // Dashboard API
 Route::prefix('dashboard')->group(function () {
-    Route::get('/statistics', [App\Http\Controllers\DashboardController::class, 'getStatistics']);
-    Route::get('/quick-actions', [App\Http\Controllers\DashboardController::class, 'getQuickActions']);
+    Route::get('/statistics', [DashboardController::class, 'getStatistics']);
+    Route::get('/quick-actions', [DashboardController::class, 'getQuickActions']);
 });

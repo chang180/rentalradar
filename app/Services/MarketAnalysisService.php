@@ -18,19 +18,26 @@ class MarketAnalysisService
         $properties = Property::query()
             ->select([
                 'id',
+                'city',
                 'district',
-                'village',
                 'building_type',
-                'compartment_pattern',
-                'total_floor_area',
-                'rent_per_month',
+                'rental_type',
+                'area_ping',
+                'bedrooms',
+                'living_rooms',
+                'bathrooms',
+                'building_age',
+                'has_elevator',
+                'has_management_organization',
+                'has_furniture',
                 'total_rent',
+                'rent_per_ping',
                 'rent_date',
             ])
             ->when($startDate, fn ($query) => $query->whereDate('rent_date', '>=', $startDate))
             ->when(isset($filters['district']), fn ($query) => $query->where('district', $filters['district']))
             ->when(isset($filters['building_type']), fn ($query) => $query->where('building_type', $filters['building_type']))
-            ->whereNotNull('rent_per_month')
+            ->whereNotNull('total_rent')
             ->whereNotNull('rent_date')
             ->get();
 
@@ -205,8 +212,8 @@ class MarketAnalysisService
 
         $series = [];
         foreach ($grouped as $period => $items) {
-            $rentValues = $items->pluck('rent_per_month')->map(fn ($value) => (float) $value)->sort()->values();
-            $areaValues = $items->pluck('total_floor_area')->map(function ($value) {
+            $rentValues = $items->pluck('total_rent')->map(fn ($value) => (float) $value)->sort()->values();
+            $areaValues = $items->pluck('area_ping')->map(function ($value) {
                 $numeric = $value !== null ? (float) $value : null;
 
                 return $numeric && $numeric > 0 ? $numeric : null;
@@ -314,8 +321,8 @@ class MarketAnalysisService
     private function buildPriceComparison(Collection $properties, array $trendSeries): array
     {
         $districts = $properties->groupBy('district')->map(function ($group, $district) use ($trendSeries) {
-            $rentValues = $group->pluck('rent_per_month')->map(fn ($value) => (float) $value)->sort()->values();
-            $areaValues = $group->pluck('total_floor_area')->map(function ($value) {
+            $rentValues = $group->pluck('total_rent')->map(fn ($value) => (float) $value)->sort()->values();
+            $areaValues = $group->pluck('area_ping')->map(function ($value) {
                 $numeric = $value !== null ? (float) $value : null;
 
                 return $numeric && $numeric > 0 ? $numeric : null;
@@ -417,7 +424,7 @@ class MarketAnalysisService
         $temporal = $properties->groupBy(function ($property) {
             return CarbonImmutable::parse($property->rent_date)->format('Y-m');
         })->map(function ($group, $period) {
-            $values = $group->pluck('rent_per_month')->map(fn ($value) => (float) $value);
+            $values = $group->pluck('total_rent')->map(fn ($value) => (float) $value);
 
             return [
                 'period' => $period,
@@ -596,8 +603,8 @@ class MarketAnalysisService
         $latestPeriod = $grouped->keys()->last();
         $previousPeriod = $grouped->keys()->reverse()->skip(1)->first();
 
-        $latestAverage = $grouped[$latestPeriod]->pluck('rent_per_month')->avg();
-        $previousAverage = $previousPeriod ? $grouped[$previousPeriod]->pluck('rent_per_month')->avg() : null;
+        $latestAverage = $grouped[$latestPeriod]->pluck('total_rent')->avg();
+        $previousAverage = $previousPeriod ? $grouped[$previousPeriod]->pluck('total_rent')->avg() : null;
 
         $change = null;
         $direction = 'neutral';
@@ -619,7 +626,7 @@ class MarketAnalysisService
 
     private function buildPriceDistribution(Collection $properties): array
     {
-        $values = $properties->pluck('rent_per_month')->map(fn ($value) => (float) $value)->sort()->values();
+        $values = $properties->pluck('total_rent')->map(fn ($value) => (float) $value)->sort()->values();
         $median = $this->median($values);
 
         $segments = [
@@ -649,8 +656,10 @@ class MarketAnalysisService
     {
         $segments = [];
 
-        $segments['by_room_type'] = $properties->groupBy('compartment_pattern')->map(function ($group, $pattern) {
-            $average = $group->pluck('rent_per_month')->avg();
+        $segments['by_room_type'] = $properties->groupBy(function ($property) {
+            return $property->bedrooms.'房'.$property->living_rooms.'廳'.$property->bathrooms.'衛';
+        })->map(function ($group, $pattern) {
+            $average = $group->pluck('total_rent')->avg();
 
             return [
                 'pattern' => $pattern,
@@ -660,7 +669,7 @@ class MarketAnalysisService
         })->values()->all();
 
         $segments['by_building_type'] = $properties->groupBy('building_type')->map(function ($group, $type) {
-            $average = $group->pluck('rent_per_month')->avg();
+            $average = $group->pluck('total_rent')->avg();
 
             return [
                 'building_type' => $type,

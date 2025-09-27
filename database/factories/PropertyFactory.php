@@ -16,48 +16,48 @@ class PropertyFactory extends Factory
      */
     public function definition(): array
     {
+        $cities = ['台北市', '新北市', '桃園市', '台中市', '台南市', '高雄市'];
         $districts = ['松山區', '信義區', '大安區', '中山區', '中正區', '大同區', '萬華區', '文山區', '南港區', '內湖區', '士林區', '北投區'];
         $buildingTypes = ['住宅大樓', '華廈', '公寓', '透天厝', '套房'];
-        $mainUses = ['住家用', '商業用', '工業用', '其他'];
-        $buildingMaterials = ['鋼筋混凝土造', '鋼骨造', '磚造', '其他'];
-        $patterns = ['1房1廳1衛', '2房1廳1衛', '2房2廳1衛', '3房2廳2衛', '4房2廳2衛'];
+        $rentalTypes = ['整層住家', '分租套房', '獨立套房', '雅房', '店面', '辦公室'];
 
+        $city = fake()->randomElement($cities);
         $district = fake()->randomElement($districts);
-        $totalFloorArea = fake()->randomFloat(2, 10, 100);
-        $rentPerMonth = fake()->randomFloat(2, 300, 2000);
+        $areaPing = fake()->randomFloat(2, 5, 100); // 面積(坪)
+        $rentPerPing = fake()->randomFloat(2, 800, 2500); // 每坪租金
+        $totalRent = $areaPing * $rentPerPing; // 總租金
 
         $latitude = fake()->latitude(25.001, 25.199);
         $longitude = fake()->longitude(121.450, 121.650);
 
-        $villageNames = ['中正里', '信義里', '和平里', '光復里', '復興里', '民生里', '忠孝里', '仁愛里'];
-        $roadNames = ['忠孝東路', '信義路', '仁愛路', '和平東路', '羅斯福路', '中山北路', '敦化南路', '復興南路'];
-
         return [
+            // 基本位置資訊
+            'city' => $city,
             'district' => $district,
-            'village' => fake()->randomElement($villageNames),
-            'road' => fake()->randomElement($roadNames) . fake()->numberBetween(1, 7) . '段',
-            'land_section' => fake()->optional()->word(),
-            'land_subsection' => fake()->optional()->word(),
-            'land_number' => fake()->optional()->numerify('####'),
-            'building_type' => fake()->randomElement($buildingTypes),
-            'total_floor_area' => $totalFloorArea,
-            'main_use' => fake()->randomElement($mainUses),
-            'main_building_materials' => fake()->randomElement($buildingMaterials),
-            'construction_completion_year' => fake()->year(1970),
-            'total_floors' => fake()->numberBetween(1, 30),
-            'compartment_pattern' => fake()->randomElement($patterns),
-            'has_management_organization' => fake()->boolean(),
-            'rent_per_month' => $rentPerMonth,
-            'total_rent' => $totalFloorArea * $rentPerMonth,
-            'rent_date' => fake()->dateTimeBetween('-2 years', 'now'),
-            'rental_period' => fake()->randomElement(['1年', '2年', '3年']),
             'latitude' => $latitude,
             'longitude' => $longitude,
-            'full_address' => "台北市{$district}" . fake()->streetAddress(),
             'is_geocoded' => fake()->boolean(80),
-            'data_source' => 'government',
-            'is_processed' => fake()->boolean(60),
-            'processing_notes' => fake()->optional()->randomElements(['AI處理完成', '地址驗證', '價格異常檢測'], fake()->numberBetween(0, 2)),
+
+            // 租賃核心資訊
+            'rental_type' => fake()->randomElement($rentalTypes),
+            'total_rent' => $totalRent,
+            'rent_per_ping' => $rentPerPing,
+            'rent_date' => fake()->dateTimeBetween('-2 years', 'now'),
+
+            // 建物基本資訊
+            'building_type' => fake()->randomElement($buildingTypes),
+            'area_ping' => $areaPing,
+            'building_age' => fake()->numberBetween(0, 50),
+
+            // 格局資訊
+            'bedrooms' => fake()->numberBetween(0, 4),
+            'living_rooms' => fake()->numberBetween(0, 2),
+            'bathrooms' => fake()->numberBetween(1, 3),
+
+            // 設施資訊
+            'has_elevator' => fake()->boolean(60),
+            'has_management_organization' => fake()->boolean(70),
+            'has_furniture' => fake()->boolean(40),
         ];
     }
 }
