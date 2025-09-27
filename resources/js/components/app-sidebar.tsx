@@ -30,6 +30,7 @@ const mainNavItems: NavItem[] = [
         title: '效能監控',
         href: '/performance',
         icon: BarChart3,
+        external: true,
     },
 ];
 
