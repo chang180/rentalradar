@@ -96,10 +96,14 @@ class PerformanceMonitor
     public function getCurrentMetrics(): array
     {
         return [
-            'cpu_usage' => $this->getCpuUsage(),
-            'memory_usage' => memory_get_usage(true) / 1048576,
-            'memory_peak' => memory_get_peak_usage(true) / 1048576,
             'timestamp' => now()->timestamp,
+            'responseTime' => round((microtime(true) - $this->startedAt) * 1000, 2),
+            'memoryUsage' => round(memory_get_usage(true) / 1048576, 2),
+            'queryCount' => $this->getQueryCount(),
+            'cacheHitRate' => $this->getCacheHitRate(),
+            'activeConnections' => $this->getActiveConnections(),
+            'errorRate' => $this->getErrorRate(),
+            'throughput' => $this->getThroughput(),
         ];
     }
 
@@ -112,6 +116,51 @@ class PerformanceMonitor
         
         // Windows 替代方案：返回 0 或使用其他方法
         return 0.0;
+    }
+
+    /**
+     * 獲取查詢次數（模擬）
+     */
+    private function getQueryCount(): int
+    {
+        // 模擬資料庫查詢次數
+        return rand(5, 50);
+    }
+
+    /**
+     * 獲取快取命中率（模擬）
+     */
+    private function getCacheHitRate(): float
+    {
+        // 模擬快取命中率 (70-95%)
+        return round(rand(70, 95), 1);
+    }
+
+    /**
+     * 獲取活躍連接數（模擬）
+     */
+    private function getActiveConnections(): int
+    {
+        // 模擬活躍連接數
+        return rand(10, 100);
+    }
+
+    /**
+     * 獲取錯誤率（模擬）
+     */
+    private function getErrorRate(): float
+    {
+        // 模擬錯誤率 (0-5%)
+        return round(rand(0, 5), 2);
+    }
+
+    /**
+     * 獲取吞吐量（模擬）
+     */
+    private function getThroughput(): int
+    {
+        // 模擬吞吐量 (100-1000 req/min)
+        return rand(100, 1000);
     }
 
     /**
