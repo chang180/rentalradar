@@ -13,7 +13,20 @@
       "mcp__laravel-boost__list-routes",
       "mcp__laravel-boost__read-log-entries",
       "mcp__laravel-boost__database-query",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "mcp__laravel-boost__application-info",
+      "Bash(php:*)",
+      "mcp__herd__get_all_php_versions",
+      "mcp__herd__get_site_information",
+      "Bash(composer update:*)",
+      "Bash(where php)",
+      "Bash(C:Userschang180.configherdbinphp.bat -v)",
+      "Bash(echo $PATH)",
+      "Read(//c/Users/chang180/.config/herd/bin//**)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat -v)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan test tests/Feature/RentalDataProcessingServiceTest.php)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat vendor/bin/pint --dirty)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan test tests/Feature/Auth/RegistrationTest.php)"
     ]
   },
   "enableAllProjectMcpServers": true,
