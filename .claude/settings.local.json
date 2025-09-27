@@ -26,7 +26,8 @@
       "Bash(/c/Users/chang180/.config/herd/bin/php84.bat -v)",
       "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan test tests/Feature/RentalDataProcessingServiceTest.php)",
       "Bash(/c/Users/chang180/.config/herd/bin/php84.bat vendor/bin/pint --dirty)",
-      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan test tests/Feature/Auth/RegistrationTest.php)"
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan test tests/Feature/Auth/RegistrationTest.php)",
+      "Bash(git push:*)"
     ]
   },
   "enableAllProjectMcpServers": true,
