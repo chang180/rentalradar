@@ -21,6 +21,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('map', function () {
         return Inertia::render('map');
     })->name('map');
+
+    Route::get('performance', function () {
+        return Inertia::render('PerformanceDashboard');
+    })->name('performance');
 });
 
 require __DIR__.'/settings.php';
