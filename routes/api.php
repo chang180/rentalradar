@@ -6,6 +6,7 @@ use App\Http\Controllers\AnomalyDetectionController;
 use App\Http\Controllers\MapController;
 use App\Http\Controllers\MarketAnalysisController;
 use App\Http\Controllers\PerformanceDashboardController;
+use App\Http\Controllers\PublicMapController;
 use App\Http\Controllers\RecommendationController;
 use App\Http\Controllers\RiskAssessmentController;
 use Illuminate\Http\Request;
@@ -24,6 +25,11 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
+});
+
+// Public map API
+Route::prefix('public-map')->group(function () {
+    Route::get('/availability', [PublicMapController::class, 'checkAvailability']);
 });
 
 // AI analysis API

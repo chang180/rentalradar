@@ -3,9 +3,43 @@ import { type SharedData } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { MapPin, BarChart3, Brain, Users, Shield, Zap } from 'lucide-react';
 import AppearanceToggleDropdown from '@/components/appearance-dropdown';
+import { useEffect, useState } from 'react';
+
+interface PublicMapAvailability {
+    is_available: boolean;
+    remaining_seconds: number;
+    used_seconds: number;
+    daily_limit_seconds: number;
+}
 
 export default function Welcome() {
     const { auth } = usePage<SharedData>().props;
+    const [publicMapAvailability, setPublicMapAvailability] = useState<PublicMapAvailability | null>(null);
+    const [isCheckingAvailability, setIsCheckingAvailability] = useState(true);
+
+    // 檢查免費試用地圖可用性
+    useEffect(() => {
+        const checkAvailability = async () => {
+            try {
+                const response = await fetch('/api/public-map/availability');
+                if (response.ok) {
+                    const data = await response.json();
+                    setPublicMapAvailability(data);
+                }
+            } catch (error) {
+                console.error('檢查免費試用可用性失敗:', error);
+            } finally {
+                setIsCheckingAvailability(false);
+            }
+        };
+
+        // 只有在非登入狀態時才檢查
+        if (!auth.user) {
+            checkAvailability();
+        } else {
+            setIsCheckingAvailability(false);
+        }
+    }, [auth.user]);
 
     return (
         <>
@@ -105,13 +139,27 @@ export default function Welcome() {
                                         <span className="relative z-10">立即開始</span>
                                         <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                                     </Link>
-                                    <Link
-                                        href="/public-map"
-                                        className="group text-base font-semibold leading-6 text-gray-900 hover:text-blue-600 dark:text-white dark:hover:text-blue-400 transition-all duration-300 flex items-center gap-2"
-                                    >
-                                        免費試用地圖
-                                        <span className="group-hover:translate-x-1 transition-transform duration-300" aria-hidden="true">→</span>
-                                    </Link>
+                                    {/* 只在非登入狀態且免費試用可用時顯示 */}
+                                    {!auth.user && !isCheckingAvailability && publicMapAvailability?.is_available && (
+                                        <Link
+                                            href="/public-map"
+                                            className="group text-base font-semibold leading-6 text-gray-900 hover:text-blue-600 dark:text-white dark:hover:text-blue-400 transition-all duration-300 flex items-center gap-2"
+                                        >
+                                            免費試用地圖
+                                            <span className="group-hover:translate-x-1 transition-transform duration-300" aria-hidden="true">→</span>
+                                        </Link>
+                                    )}
+                                    {/* 如果正在檢查可用性或免費試用不可用，顯示載入中或提示 */}
+                                    {!auth.user && isCheckingAvailability && (
+                                        <div className="text-base font-semibold leading-6 text-gray-400 dark:text-gray-500 flex items-center gap-2">
+                                            檢查中...
+                                        </div>
+                                    )}
+                                    {!auth.user && !isCheckingAvailability && publicMapAvailability && !publicMapAvailability.is_available && (
+                                        <div className="text-base font-semibold leading-6 text-gray-400 dark:text-gray-500 flex items-center gap-2">
+                                            今日免費試用已用完
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
