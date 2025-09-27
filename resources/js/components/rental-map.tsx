@@ -408,43 +408,188 @@ const RentalMap = memo(() => {
                         </Marker>
                     ))}
 
-                    {/* AI 聚合標記 */}
+                    {/* AI 聚合標記 - 增強視覺效果 */}
                     {displayMode === 'clusters' && clusters.map((cluster) => {
-                        const size = Math.min(Math.max(cluster.count * 2, 20), 60);
-                        const color = cluster.count > 20 ? '#ef4444' :
-                                    cluster.count > 10 ? '#f97316' : '#22c55e';
+                        // 使用視覺等級來確定大小和顏色
+                        const visualLevel = cluster.visual_level || Math.min(5, Math.max(1, Math.floor(cluster.count / 10) + 1));
+                        const baseSize = 15;
+                        const size = Math.min(Math.max(baseSize + (visualLevel * 6), 15), 70);
+
+                        // 基於價格統計選擇顏色
+                        const priceStats = cluster.price_stats;
+                        let color = '#22c55e'; // 預設綠色
+                        let borderColor = '#16a34a';
+
+                        if (priceStats && priceStats.avg > 0) {
+                            if (priceStats.avg >= 40000) {
+                                color = '#dc2626'; // 高價紅色
+                                borderColor = '#991b1b';
+                            } else if (priceStats.avg >= 25000) {
+                                color = '#f97316'; // 中價橙色
+                                borderColor = '#ea580c';
+                            } else {
+                                color = '#eab308'; // 低價黃色
+                                borderColor = '#ca8a04';
+                            }
+                        } else if (cluster.count > 50) {
+                            color = '#6366f1'; // 大量群集藍色
+                            borderColor = '#4f46e5';
+                        }
 
                         return (
                             <CircleMarker
                                 key={cluster.id}
                                 center={[cluster.center.lat, cluster.center.lng]}
-                                radius={size / 4}
+                                radius={size / 3}
                                 pathOptions={{
                                     fillColor: color,
-                                    color: 'white',
+                                    color: borderColor,
                                     weight: 2,
+                                    opacity: 0.9,
+                                    fillOpacity: 0.7,
+                                }}
+                            >
+                                <Popup className="enhanced-cluster-popup">
+                                    <div className="p-3 min-w-72">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <h3 className="font-semibold text-gray-900">
+                                                AI 聚合區域
+                                            </h3>
+                                            <span className={`px-2 py-1 rounded text-xs font-medium text-white`}
+                                                  style={{ backgroundColor: color }}>
+                                                等級 {visualLevel}
+                                            </span>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-3 text-sm">
+                                            <div className="space-y-1">
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">物件數量：</span>
+                                                    <span className="font-medium">{cluster.count}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">覆蓋半徑：</span>
+                                                    <span className="font-medium">{cluster.radius_km?.toFixed(2)} km</span>
+                                                </div>
+                                                {cluster.density && (
+                                                    <div className="flex justify-between">
+                                                        <span className="text-gray-600">密度：</span>
+                                                        <span className="font-medium">{cluster.density.toFixed(1)}/km²</span>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {priceStats && (
+                                                <div className="space-y-1">
+                                                    <div className="flex justify-between">
+                                                        <span className="text-gray-600">平均租金：</span>
+                                                        <span className="font-medium text-blue-600">
+                                                            {formatCurrency(priceStats.avg)}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span className="text-gray-600">租金範圍：</span>
+                                                        <span className="font-medium text-green-600 text-xs">
+                                                            {formatCurrency(priceStats.min)} - {formatCurrency(priceStats.max)}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span className="text-gray-600">中位數：</span>
+                                                        <span className="font-medium">{formatCurrency(priceStats.median)}</span>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* 價格分佈視覺化 */}
+                                        {priceStats && (
+                                            <div className="mt-3 pt-3 border-t border-gray-200">
+                                                <div className="text-xs text-gray-600 mb-1">價格分佈</div>
+                                                <div className="flex h-2 bg-gray-200 rounded overflow-hidden">
+                                                    <div
+                                                        className="bg-green-500"
+                                                        style={{ width: '33.33%' }}
+                                                        title={`低價: ${formatCurrency(priceStats.min)}`}
+                                                    />
+                                                    <div
+                                                        className="bg-yellow-500"
+                                                        style={{ width: '33.33%' }}
+                                                        title={`中價: ${formatCurrency(priceStats.median)}`}
+                                                    />
+                                                    <div
+                                                        className="bg-red-500"
+                                                        style={{ width: '33.34%' }}
+                                                        title={`高價: ${formatCurrency(priceStats.max)}`}
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </Popup>
+                            </CircleMarker>
+                        );
+                    })}
+
+                    {/* 熱力圖點 - 增強視覺效果 */}
+                    {displayMode === 'heatmap' && heatmapData.map((point, index) => {
+                        // 使用進階顏色和大小計算
+                        const radius = point.radius || Math.max(3, Math.min(15, 5 + (point.weight * 8)));
+                        const color = point.color || (
+                            point.weight > 0.7 ? 'rgba(255, 0, 0, 0.8)' :
+                            point.weight > 0.4 ? 'rgba(255, 255, 0, 0.7)' : 'rgba(0, 255, 0, 0.6)'
+                        );
+                        const borderColor = point.weight > 0.7 ? '#dc2626' :
+                                           point.weight > 0.4 ? '#ca8a04' : '#16a34a';
+
+                        return (
+                            <CircleMarker
+                                key={`heatmap-${index}`}
+                                center={[point.lat, point.lng]}
+                                radius={radius}
+                                pathOptions={{
+                                    fillColor: color,
+                                    color: borderColor,
+                                    weight: 1,
                                     opacity: 0.8,
-                                    fillOpacity: 0.6,
+                                    fillOpacity: point.intensity || point.weight,
                                 }}
                             >
                                 <Popup>
-                                    <div className="p-2">
-                                        <h3 className="font-semibold text-gray-900 mb-2">
-                                            AI 聚合區域
-                                        </h3>
-                                        <div className="space-y-1 text-sm text-gray-600">
+                                    <div className="p-2 min-w-48">
+                                        <h4 className="font-semibold text-gray-900 mb-2">
+                                            熱力圖區域
+                                        </h4>
+                                        <div className="space-y-1 text-sm">
                                             <div className="flex justify-between">
-                                                <span>物件數量：</span>
-                                                <span>{cluster.count}</span>
+                                                <span className="text-gray-600">權重：</span>
+                                                <span className="font-medium">{(point.weight * 100).toFixed(1)}%</span>
                                             </div>
-                                            <div className="flex justify-between">
-                                                <span>半径：</span>
-                                                <span>{cluster.radius_km?.toFixed(2)} km</span>
-                                            </div>
-                                            {cluster.density && (
+                                            {point.count && (
                                                 <div className="flex justify-between">
-                                                    <span>密度：</span>
-                                                    <span>{cluster.density.toFixed(2)}/km²</span>
+                                                    <span className="text-gray-600">資料點：</span>
+                                                    <span className="font-medium">{point.count}</span>
+                                                </div>
+                                            )}
+                                            {point.avg_price && (
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">平均租金：</span>
+                                                    <span className="font-medium text-blue-600">
+                                                        {formatCurrency(point.avg_price)}
+                                                    </span>
+                                                </div>
+                                            )}
+                                            {point.price_range && (
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">價格區間：</span>
+                                                    <span className="font-medium text-green-600">
+                                                        {point.price_range}
+                                                    </span>
+                                                </div>
+                                            )}
+                                            {point.intensity && (
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">強度：</span>
+                                                    <span className="font-medium">{(point.intensity * 100).toFixed(1)}%</span>
                                                 </div>
                                             )}
                                         </div>
@@ -453,21 +598,6 @@ const RentalMap = memo(() => {
                             </CircleMarker>
                         );
                     })}
-
-                    {/* 熱力圖點 */}
-                    {displayMode === 'heatmap' && heatmapData.map((point, index) => (
-                        <CircleMarker
-                            key={`heatmap-${index}`}
-                            center={[point.lat, point.lng]}
-                            radius={5}
-                            pathOptions={{
-                                fillColor: point.weight > 0.7 ? '#ff0000' :
-                                         point.weight > 0.4 ? '#ffff00' : '#00ff00',
-                                color: 'transparent',
-                                fillOpacity: point.weight,
-                            }}
-                        />
-                    ))}
                 </MapContainer>
             </div>
         </div>

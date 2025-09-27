@@ -225,6 +225,13 @@ class ClusteringAlgorithm {
         const radius = this.calculateClusterRadius(center, points);
         const density = radius > 0 ? points.length / (Math.PI * radius ** 2) : null;
 
+        // 計算價格統計
+        const prices = points.map(point => point.price || point.rent_per_month || 0).filter(p => p > 0);
+        const priceStats = this.calculatePriceStats(prices);
+
+        // 計算視覺等級（用於前端顯示大小和顏色）
+        const visualLevel = this.calculateVisualLevel(points.length, density, priceStats.avg);
+
         return {
             id: `cluster_${id}`,
             center: {
@@ -234,8 +241,55 @@ class ClusteringAlgorithm {
             count: points.length,
             bounds,
             radius_km: Number(radius.toFixed(4)),
-            density: density === null ? null : Number(density.toFixed(4))
+            density: density === null ? null : Number(density.toFixed(4)),
+            price_stats: priceStats,
+            visual_level: visualLevel,
+            points: points // 包含原始點數據用於詳細顯示
         };
+    }
+
+    /**
+     * 計算價格統計
+     */
+    calculatePriceStats(prices) {
+        if (prices.length === 0) {
+            return { min: 0, max: 0, avg: 0, median: 0 };
+        }
+
+        const sorted = [...prices].sort((a, b) => a - b);
+        const min = sorted[0];
+        const max = sorted[sorted.length - 1];
+        const avg = prices.reduce((sum, price) => sum + price, 0) / prices.length;
+        const median = this.median(sorted);
+
+        return {
+            min: Number(min.toFixed(0)),
+            max: Number(max.toFixed(0)),
+            avg: Number(avg.toFixed(0)),
+            median: Number(median.toFixed(0))
+        };
+    }
+
+    /**
+     * 計算視覺等級（1-5）
+     */
+    calculateVisualLevel(count, density, avgPrice) {
+        let level = 1;
+
+        // 基於數量
+        if (count >= 100) level += 2;
+        else if (count >= 50) level += 1.5;
+        else if (count >= 20) level += 1;
+
+        // 基於密度
+        if (density && density >= 50) level += 1;
+        else if (density && density >= 20) level += 0.5;
+
+        // 基於價格
+        if (avgPrice >= 40000) level += 1;
+        else if (avgPrice >= 25000) level += 0.5;
+
+        return Math.min(5, Math.max(1, Math.round(level)));
     }
 
     /**

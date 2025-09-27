@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AIController;
 use App\Http\Controllers\MapController;
+use App\Http\Controllers\MarketAnalysisController;
 use App\Http\Controllers\PerformanceDashboardController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -21,7 +22,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-// AI 分析 API
+// AI analysis API
 Route::prefix('ai')->group(function () {
     Route::post('/analyze', [AIController::class, 'analyze']);
     Route::post('/detect-anomalies', [AIController::class, 'detectAnomalies']);
@@ -30,7 +31,7 @@ Route::prefix('ai')->group(function () {
     Route::get('/status', [AIController::class, 'status']);
 });
 
-// 地圖 API
+// Map data API
 Route::prefix('map')->group(function () {
     Route::get('/rentals', [MapController::class, 'index']);
     Route::get('/heatmap', [MapController::class, 'heatmapData']);
@@ -43,7 +44,7 @@ Route::prefix('map')->group(function () {
     Route::post('/notify', [MapController::class, 'sendNotification']);
 });
 
-// 效能監控儀表板 API
+// Performance dashboard API
 Route::prefix('dashboard')->group(function () {
     Route::get('/overview', [PerformanceDashboardController::class, 'getOverview']);
     Route::get('/performance', [PerformanceDashboardController::class, 'getPerformanceMetrics']);
@@ -56,3 +57,10 @@ Route::prefix('dashboard')->group(function () {
     Route::get('/realtime-metrics', [PerformanceDashboardController::class, 'getRealtimeMetrics']);
     Route::get('/system-health', [PerformanceDashboardController::class, 'getSystemHealth']);
 });
+
+// Market analysis API
+Route::prefix('analysis')->group(function () {
+    Route::get('/overview', [MarketAnalysisController::class, 'overview']);
+    Route::post('/report', [MarketAnalysisController::class, 'report']);
+});
+

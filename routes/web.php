@@ -74,6 +74,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('performance', function () {
         return Inertia::render('PerformanceDashboard');
     })->name('performance');
+
+    Route::get('monitoring', function () {
+        return Inertia::render('MonitoringDashboard');
+    })->name('monitoring');
 });
 
 require __DIR__.'/settings.php';
@@ -92,4 +96,20 @@ Route::prefix('api')->middleware(['auth', 'verified'])->group(function () {
     Route::get('/map/rentals', [App\Http\Controllers\MapController::class, 'getRentals']);
     Route::get('/map/heatmap', [App\Http\Controllers\MapController::class, 'getHeatmap']);
     Route::get('/map/clusters', [App\Http\Controllers\MapController::class, 'getClusters']);
+
+    // 監控 API
+    Route::prefix('monitoring')->group(function () {
+        Route::get('/dashboard', [App\Http\Controllers\MonitoringController::class, 'getDashboardData']);
+        Route::get('/health', [App\Http\Controllers\MonitoringController::class, 'getSystemHealth']);
+        Route::get('/core-metrics', [App\Http\Controllers\MonitoringController::class, 'getCoreMetrics']);
+        Route::get('/app-metrics', [App\Http\Controllers\MonitoringController::class, 'getApplicationMetrics']);
+        Route::get('/errors', [App\Http\Controllers\MonitoringController::class, 'detectErrors']);
+        Route::post('/alerts', [App\Http\Controllers\MonitoringController::class, 'sendAlerts']);
+        Route::get('/performance', [App\Http\Controllers\MonitoringController::class, 'analyzePerformance']);
+        Route::get('/optimization-suggestions', [App\Http\Controllers\MonitoringController::class, 'generateOptimizationSuggestions']);
+        Route::post('/auto-repair', [App\Http\Controllers\MonitoringController::class, 'executeAutoRepair']);
+        Route::post('/verify-repair', [App\Http\Controllers\MonitoringController::class, 'verifyRepair']);
+        Route::get('/historical-trends', [App\Http\Controllers\MonitoringController::class, 'getHistoricalTrends']);
+        Route::get('/alert-history', [App\Http\Controllers\MonitoringController::class, 'getAlertHistory']);
+    });
 });
