@@ -105,7 +105,32 @@ class ScheduleDataUpdates extends Command
         $this->info('開始下載政府資料...');
         
         try {
-            $result = $this->downloadService->downloadAllData();
+            // 下載 CSV 格式資料
+            $csvResult = $this->downloadService->downloadRentalData('csv');
+            
+            // 下載 XML 格式資料
+            $xmlResult = $this->downloadService->downloadRentalData('xml');
+            
+            // 下載 ZIP 格式資料
+            $zipResult = $this->downloadService->downloadRentalData('zip');
+            
+            $totalSuccessful = 0;
+            $totalFailed = 0;
+            
+            if ($csvResult['success']) $totalSuccessful++; else $totalFailed++;
+            if ($xmlResult['success']) $totalSuccessful++; else $totalFailed++;
+            if ($zipResult['success']) $totalSuccessful++; else $totalFailed++;
+            
+            $result = [
+                'successful' => $totalSuccessful,
+                'failed' => $totalFailed,
+                'total' => $totalSuccessful + $totalFailed,
+                'details' => [
+                    'csv' => $csvResult,
+                    'xml' => $xmlResult,
+                    'zip' => $zipResult
+                ]
+            ];
             
             $this->info("下載完成:");
             $this->line("  - 成功: {$result['successful']}");
@@ -127,7 +152,63 @@ class ScheduleDataUpdates extends Command
         $this->info('開始解析資料...');
         
         try {
-            $result = $this->parserService->parseAllData();
+            $totalFiles = 0;
+            $totalSuccessful = 0;
+            $totalFailed = 0;
+            $totalRecords = 0;
+            
+            // 解析 CSV 檔案
+            $csvFiles = \Storage::files('government-data');
+            foreach ($csvFiles as $file) {
+                if (str_ends_with($file, '.csv')) {
+                    $totalFiles++;
+                    try {
+                        $result = $this->parserService->parseCsvData($file);
+                        $totalSuccessful += $result['successful_records'] ?? 0;
+                        $totalFailed += $result['failed_records'] ?? 0;
+                        $totalRecords += $result['total_records'] ?? 0;
+                    } catch (\Exception $e) {
+                        $this->warn("CSV 檔案解析失敗: {$file} - " . $e->getMessage());
+                    }
+                }
+            }
+            
+            // 解析 XML 檔案
+            foreach ($csvFiles as $file) {
+                if (str_ends_with($file, '.xml')) {
+                    $totalFiles++;
+                    try {
+                        $result = $this->parserService->parseXmlData($file);
+                        $totalSuccessful += $result['successful_records'] ?? 0;
+                        $totalFailed += $result['failed_records'] ?? 0;
+                        $totalRecords += $result['total_records'] ?? 0;
+                    } catch (\Exception $e) {
+                        $this->warn("XML 檔案解析失敗: {$file} - " . $e->getMessage());
+                    }
+                }
+            }
+            
+            // 解析 ZIP 檔案
+            foreach ($csvFiles as $file) {
+                if (str_ends_with($file, '.zip')) {
+                    $totalFiles++;
+                    try {
+                        $result = $this->parserService->parseZipData($file);
+                        $totalSuccessful += $result['successful_records'] ?? 0;
+                        $totalFailed += $result['failed_records'] ?? 0;
+                        $totalRecords += $result['total_records'] ?? 0;
+                    } catch (\Exception $e) {
+                        $this->warn("ZIP 檔案解析失敗: {$file} - " . $e->getMessage());
+                    }
+                }
+            }
+            
+            $result = [
+                'files_processed' => $totalFiles,
+                'successful_records' => $totalSuccessful,
+                'failed_records' => $totalFailed,
+                'total_records' => $totalRecords
+            ];
             
             $this->info("解析完成:");
             $this->line("  - 處理檔案: {$result['files_processed']}");
@@ -151,7 +232,40 @@ class ScheduleDataUpdates extends Command
         
         try {
             $limit = (int) $this->option('limit');
-            $result = $this->geocodingService->geocodeProperties($limit);
+            
+            // 獲取未編碼的屬性
+            $properties = \App\Models\Property::where('is_geocoded', false)
+                ->whereNotNull('address')
+                ->limit($limit)
+                ->get();
+            
+            $processed = 0;
+            $successful = 0;
+            $failed = 0;
+            
+            foreach ($properties as $property) {
+                $processed++;
+                try {
+                    $success = $this->geocodingService->geocodeProperty($property);
+                    if ($success) {
+                        $successful++;
+                    } else {
+                        $failed++;
+                    }
+                } catch (\Exception $e) {
+                    $failed++;
+                    $this->warn("屬性 {$property->id} 地理編碼失敗: " . $e->getMessage());
+                }
+            }
+            
+            $successRate = $processed > 0 ? round(($successful / $processed) * 100, 2) : 0;
+            
+            $result = [
+                'processed' => $processed,
+                'successful' => $successful,
+                'failed' => $failed,
+                'success_rate' => $successRate
+            ];
             
             $this->info("地理編碼完成:");
             $this->line("  - 處理數量: {$result['processed']}");
