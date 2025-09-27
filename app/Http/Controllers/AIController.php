@@ -47,15 +47,13 @@ class AIController extends Controller
         $cacheKey = 'ai_analysis_' . md5(json_encode($request->all()));
 
         // 檢查快取
-        if (config('python.performance.enable_caching')) {
-            $cached = Cache::get($cacheKey);
-            if ($cached) {
-                return response()->json([
-                    'success' => true,
-                    'data' => $cached,
-                    'cached' => true
-                ]);
-            }
+        $cached = Cache::get($cacheKey);
+        if ($cached) {
+            return response()->json([
+                'success' => true,
+                'data' => $cached,
+                'cached' => true
+            ]);
         }
 
         try {
@@ -78,9 +76,7 @@ class AIController extends Controller
             }
 
             // 快取結果
-            if (config('python.performance.enable_caching')) {
-                Cache::put($cacheKey, $result['data'], config('python.cache_ttl'));
-            }
+            Cache::put($cacheKey, $result['data'], 3600); // 1小時快取
 
             return response()->json([
                 'success' => true,

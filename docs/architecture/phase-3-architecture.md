@@ -107,7 +107,7 @@ Phase 3 將建立 RentalRadar 的 AI 驅動地圖系統，整合 Leaflet.js 前�
 
 ### **後端整合點**
 - **Laravel API**: RESTful 地圖資料 API
-- **AI Services**: Python 演算法整合
+- **AI Services**: JavaScript 演算法整合
 - **Database**: 高效能資料查詢
 - **Caching**: Redis 快取策略
 
@@ -212,7 +212,7 @@ Phase 3 將建立 RentalRadar 的 AI 驅動地圖系統，整合 Leaflet.js 前�
 - Laravel Herd (PHP 8.4)
 - Node.js + Vite (前端)
 - SQLite (資料庫)
-- Python 3.11 (AI 演算法)
+- JavaScript (AI 演算法)
 
 ### **生產環境**
 - Laravel Forge (伺服器)

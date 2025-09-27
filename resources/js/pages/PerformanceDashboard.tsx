@@ -54,7 +54,29 @@ export const PerformanceDashboard: React.FC = () => {
             try {
                 setIsLoading(true);
                 
-                // 模擬載入效能資料
+                // 嘗試從 API 載入真實資料
+                try {
+                    const response = await fetch(`/api/dashboard/overview?timeRange=${timeRange}`, {
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        setMetrics(data.metrics);
+                        setErrorLogs(data.errorLogs || []);
+                        setUserBehaviors(data.userBehaviors || []);
+                        setPerformanceHistory(data.performanceHistory || []);
+                        return;
+                    }
+                } catch (apiError) {
+                    console.warn('API 載入失敗，使用模擬資料:', apiError);
+                }
+
+                // 如果 API 失敗，使用模擬資料作為後備
                 const mockMetrics: DashboardMetrics = {
                     timestamp: Date.now(),
                     responseTime: Math.random() * 200 + 50,

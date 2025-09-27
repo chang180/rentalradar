@@ -338,8 +338,8 @@ Authorization: Bearer {token}
 5. 建立 API 測試
 
 ### **Codex 整合重點**
-1. 開發 Python AI 演算法
-2. 建立 JavaScript 前端演算法
+1. 開發 JavaScript AI 演算法
+2. 建立前端演算法整合
 3. 實作效能優化
 4. 建立監控機制
 
