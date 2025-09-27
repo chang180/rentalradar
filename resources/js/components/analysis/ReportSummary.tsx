@@ -15,7 +15,7 @@ export function ReportSummary({
         return (
             <div className="rounded-lg border border-gray-200 p-6 dark:border-gray-700">
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Generating report...
+                    正在生成報告...
                 </p>
             </div>
         );
@@ -32,7 +32,7 @@ export function ReportSummary({
     if (!report) {
         return (
             <div className="rounded-lg border border-dashed border-gray-200 p-6 text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
-                Generate a report to receive executive-ready insights.
+                生成報告以獲得執行級別的洞察分析。
             </div>
         );
     }
@@ -42,7 +42,7 @@ export function ReportSummary({
             <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900">
                 <div className="flex flex-col gap-2">
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                        Executive Summary
+                        執行摘要
                     </h3>
                     <p className="text-sm text-gray-600 dark:text-gray-300">
                         {report.summary}
@@ -51,7 +51,7 @@ export function ReportSummary({
                 <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
                     <div className="rounded-md border border-gray-100 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/50">
                         <p className="text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
-                            Pricing
+                            價格分析
                         </p>
                         <p className="mt-1 text-sm text-gray-700 dark:text-gray-200">
                             {report.highlights.pricing}
@@ -59,7 +59,7 @@ export function ReportSummary({
                     </div>
                     <div className="rounded-md border border-gray-100 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/50">
                         <p className="text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
-                            Top Market
+                            頂尖市場
                         </p>
                         <p className="mt-1 text-sm text-gray-700 dark:text-gray-200">
                             {report.highlights.top_market}
@@ -67,7 +67,7 @@ export function ReportSummary({
                     </div>
                     <div className="rounded-md border border-gray-100 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/50">
                         <p className="text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
-                            Hotspot
+                            投資熱點
                         </p>
                         <p className="mt-1 text-sm text-gray-700 dark:text-gray-200">
                             {report.highlights.hotspot}
@@ -79,7 +79,7 @@ export function ReportSummary({
             {report.recommendations.length > 0 && (
                 <div className="rounded-lg border border-blue-200 bg-blue-50 p-6 dark:border-blue-500/40 dark:bg-blue-500/10">
                     <h4 className="text-sm font-semibold tracking-wide text-blue-800 uppercase dark:text-blue-200">
-                        Recommendations
+                        投資建議
                     </h4>
                     <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-blue-900 dark:text-blue-100">
                         {report.recommendations.map((item, index) => (

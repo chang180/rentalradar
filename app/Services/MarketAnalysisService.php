@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Models\Property;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class MarketAnalysisService
 {
@@ -14,6 +16,17 @@ class MarketAnalysisService
     {
         try {
             $timeRange = $filters['time_range'] ?? '12m';
+            
+            // 生成快取鍵值，包含所有篩選條件
+            $cacheKey = $this->generateCacheKey('market_analysis_dashboard', $filters);
+            
+            // 嘗試從快取取得資料（快取 10 天，因為資料每 10 天更新一次）
+            $cachedData = Cache::get($cacheKey);
+            if ($cachedData !== null) {
+                Log::info('Market analysis data served from cache', ['cache_key' => $cacheKey]);
+                return $cachedData;
+            }
+            
             $startDate = $this->resolveStartDate($timeRange);
 
             // 先檢查是否有資料，避免無謂的查詢
@@ -26,7 +39,10 @@ class MarketAnalysisService
                 ->exists();
 
             if (!$hasData) {
-                return $this->buildEmptyDashboard($timeRange, $filters);
+                $emptyData = $this->buildEmptyDashboard($timeRange, $filters);
+                // 快取空資料 1 小時，避免重複查詢
+                Cache::put($cacheKey, $emptyData, now()->addHour());
+                return $emptyData;
             }
 
             $properties = Property::query()
@@ -67,7 +83,7 @@ class MarketAnalysisService
             $multiDimensional = $this->buildMultiDimensionalAnalysis($properties, $priceComparison['districts']);
             $interactive = $this->buildInteractiveDatasets($trends, $priceComparison, $multiDimensional);
 
-            return [
+            $result = [
                 'trends' => $trends,
                 'price_comparison' => $priceComparison,
                 'investment' => $investment,
@@ -80,8 +96,14 @@ class MarketAnalysisService
                     'property_count' => $properties->count(),
                 ],
             ];
+            
+            // 快取結果 10 天（因為資料每 10 天更新一次）
+            Cache::put($cacheKey, $result, now()->addDays(10));
+            Log::info('Market analysis data cached', ['cache_key' => $cacheKey, 'property_count' => $properties->count()]);
+            
+            return $result;
         } catch (\Exception $e) {
-            \Log::error('MarketAnalysisService::getDashboardData failed: ' . $e->getMessage(), [
+            Log::error('MarketAnalysisService::getDashboardData failed: ' . $e->getMessage(), [
                 'filters' => $filters,
                 'trace' => $e->getTraceAsString()
             ]);
@@ -93,6 +115,16 @@ class MarketAnalysisService
 
     public function generateReport(array $filters = []): array
     {
+        // 生成報告快取鍵值
+        $cacheKey = $this->generateCacheKey('market_analysis_report', $filters);
+        
+        // 嘗試從快取取得報告
+        $cachedReport = Cache::get($cacheKey);
+        if ($cachedReport !== null) {
+            Log::info('Market analysis report served from cache', ['cache_key' => $cacheKey]);
+            return $cachedReport;
+        }
+        
         $dashboard = $this->getDashboardData($filters);
         $trends = $dashboard['trends'];
         $priceComparison = $dashboard['price_comparison'];
@@ -104,7 +136,7 @@ class MarketAnalysisService
 
         $summary = $this->buildReportSummary($latestTrend, $topDistrict, $emerging);
 
-        return [
+        $report = [
             'generated_at' => now()->toAtomString(),
             'time_range' => $dashboard['meta']['time_range'],
             'filters' => $dashboard['meta']['filters'],
@@ -167,6 +199,12 @@ class MarketAnalysisService
                 ],
             ],
         ];
+        
+        // 快取報告 10 天
+        Cache::put($cacheKey, $report, now()->addDays(10));
+        Log::info('Market analysis report cached', ['cache_key' => $cacheKey]);
+        
+        return $report;
     }
 
     private function buildEmptyDashboard(string $timeRange, array $filters): array
@@ -647,6 +685,30 @@ class MarketAnalysisService
             'change' => $change,
             'direction' => $direction,
         ];
+    }
+
+    /**
+     * 生成快取鍵值
+     */
+    private function generateCacheKey(string $prefix, array $filters): string
+    {
+        // 排序篩選條件以確保鍵值一致性
+        ksort($filters);
+        
+        // 將篩選條件轉換為字串
+        $filterString = http_build_query($filters);
+        
+        // 加入資料庫最後更新時間作為快取版本號
+        $lastUpdate = Property::query()
+            ->whereNotNull('rent_date')
+            ->max('updated_at');
+        
+        return sprintf(
+            '%s:%s:%s',
+            $prefix,
+            md5($filterString),
+            $lastUpdate ? (is_string($lastUpdate) ? strtotime($lastUpdate) : $lastUpdate->timestamp) : '0'
+        );
     }
 
     private function buildPriceDistribution(Collection $properties): array
