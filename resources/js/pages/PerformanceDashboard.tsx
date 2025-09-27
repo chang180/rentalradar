@@ -3,7 +3,7 @@ import { useWebSocket } from '../hooks/useWebSocket';
 import { PerformanceMonitor } from '../components/PerformanceMonitor';
 import { ConnectionStatus } from '../components/ConnectionStatus';
 import { LoadingIndicator } from '../components/LoadingIndicator';
-import { PerformanceChart, MultiMetricChart } from '../components/PerformanceChart';
+import { PerformanceChart, MultiMetricChart } from '../components/PerformanceChartSimple';
 import { PerformanceUtils } from '../utils/PerformanceUtils';
 
 interface DashboardMetrics {
@@ -533,3 +533,5 @@ export const PerformanceDashboard: React.FC = () => {
         </div>
     );
 };
+
+export default PerformanceDashboard;
