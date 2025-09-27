@@ -1,11 +1,26 @@
 # RentalRadar 多 AI 協作開發進度
 
 ## 📅 最後更新
-**時間**: 2025-09-27 10:00 UTC+8
+**時間**: 2025-09-27 10:15 UTC+8
 **更新者**: Claude (架構師)
-**Linear Issue**: DEV-21 前端 WebSocket 整合開發
+**Linear Issue**: DEV-22 效能監控儀表板開發
 
 ## 🎯 當前進行中的 Linear Issues
+
+### DEV-22: 效能監控儀表板開發 (Claude) - 🔄 75% 進行中
+**狀態**: 🚀 已啟動
+**負責 AI**: Claude (架構師)
+**開始時間**: 2025-09-27 10:15 UTC+8
+**預計完成**: 2025-09-27 14:00 UTC+8
+
+#### 任務重點
+- ✅ 建立 Linear Issue DEV-22
+- ✅ 開發效能監控儀表板主頁面
+- ✅ 實作錯誤追蹤系統 (ErrorTrackingService)
+- ✅ 建立使用者行為分析 (UserBehaviorTrackingService)
+- ✅ 建立效能監控控制器 (PerformanceDashboardController)
+- 🔄 整合即時效能監控
+- ⏳ 優化資料視覺化
 
 ### DEV-21: 前端 WebSocket 整合開發 (Claude) - ✅ 100% 完成
 **狀態**: ✅ 已完成
@@ -20,7 +35,7 @@
 - ✅ 建立 WebSocket 連接狀態管理
 - ✅ 優化使用者體驗和效能
 
-### DEV-20: 進階 AI 模型整合開發 (Codex) - 🔄 15% 進行中
+### DEV-20: 進階 AI 模型整合開發 (Codex) - 🔄 55% 進行中
 **狀態**: 🚀 已啟動
 **負責 AI**: Codex (AI 演算法專家)
 **開始時間**: 2025-09-27 09:48 UTC+8
@@ -28,8 +43,10 @@
 
 #### 任務重點
 - ✅ 建立高階價格預測模型的需求草稿與資料流程設計
-- 🔄 導入進階租屋價格預測模型與地圖聚合服務的整合界面
-- 🔄 建立跨語言 (PHP/JS) 模型輸出對齊策略與測試基準
+- ✅ 完成 PHP `AdvancedPricePredictor` 與 `AIMapOptimizationService` 的進階模型整合
+- ✅ `/api/map/rentals`、`/api/map/clusters`、`/api/map/optimized-data` 已回傳價格預測與模型摘要
+- ✅ JavaScript 客戶端 `AIMapService` 同步新版模型邏輯，確保前後端輸出一致
+- 🔄 建立跨語言 (PHP/JS) 模型輸出驗證與測試基準
 - ⏳ 擴充效能監控指標，追蹤模型推論延遲與資源使用
 - ⏳ 規劃 Hostinger 共享環境下的模型部署流程
 
@@ -115,7 +132,7 @@
   - K-means 聚合演算法 (JavaScript)
   - 網格聚合演算法
   - 熱力圖資料生成
-  - 價格預測 (簡化版)
+  - 價格預測 (進階版、與後端對齊)
   - 智慧資料過濾
   - 效能優化的視口更新
 

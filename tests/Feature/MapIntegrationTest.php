@@ -63,7 +63,8 @@ class MapIntegrationTest extends TestCase
                         'count',
                         'districts',
                         'average_predicted_price',
-                        'average_confidence'
+                        'average_confidence',
+                        'confidence_distribution'
                     ]
                 ],
                 'meta' => [
@@ -160,7 +161,9 @@ class MapIntegrationTest extends TestCase
                             'count',
                             'average_price',
                             'median_price',
+                            'price_std_dev',
                             'average_confidence',
+                            'confidence_distribution',
                             'min_price',
                             'max_price'
                         ]
@@ -202,7 +205,16 @@ class MapIntegrationTest extends TestCase
                         ]
                     ],
                     'algorithm_info',
-                    'price_summary'
+                    'price_summary' => [
+                        'count',
+                        'average_price',
+                        'median_price',
+                        'price_std_dev',
+                        'average_confidence',
+                        'confidence_distribution',
+                        'min_price',
+                        'max_price'
+                    ]
                 ],
                 'meta' => [
                     'performance' => [
@@ -333,5 +345,6 @@ class MapIntegrationTest extends TestCase
         $this->assertLessThan(128, $data['meta']['performance']['memory_usage']);
         $this->assertGreaterThanOrEqual(1, $data['meta']['performance']['query_count']);
         $this->assertArrayHasKey('price_prediction', $data['meta']['models']);
+        $this->assertArrayHasKey('confidence_distribution', $data['data']['statistics']);
     }
 }

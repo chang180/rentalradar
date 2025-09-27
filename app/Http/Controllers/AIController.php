@@ -85,7 +85,7 @@ class AIController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $result['data'],
-                'performance' => $result['performance'] ?? null
+                'performance' => $result['performance'] ?? $result['performance_metrics'] ?? null
             ]);
 
         } catch (\Exception $e) {

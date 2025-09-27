@@ -348,6 +348,25 @@ class AIMapOptimizationService
 
             return [
                 'success' => true,
+                'data' => [
+                    'predictions' => [
+                        'items' => $predictions,
+                        'summary' => $summary,
+                    ],
+                    'model_info' => [
+                        'version' => AdvancedPricePredictor::MODEL_VERSION,
+                        'trained_at' => AdvancedPricePredictor::TRAINED_AT,
+                        'feature_set' => AdvancedPricePredictor::FEATURE_SET,
+                    ],
+                    'performance_metrics' => [
+                        'processing_time_ms' => round($processingTimeMs, 2),
+                        'memory_peak_mb' => round(max(0, $memoryDeltaMb), 4),
+                        'predictions_per_second' => $processingTimeMs > 0
+                            ? round((count($predictions) / $processingTimeMs) * 1000, 2)
+                            : count($predictions),
+                    ],
+                    'alerts' => $alerts,
+                ],
                 'predictions' => [
                     'items' => $predictions,
                     'summary' => $summary,

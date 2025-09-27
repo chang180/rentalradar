@@ -177,7 +177,9 @@ class AdvancedPricePredictor
             'count' => count($predictions),
             'average_price' => round(array_sum($prices) / max(count($prices), 1), 2),
             'median_price' => $this->median($prices),
+            'price_std_dev' => $this->standardDeviation($prices),
             'average_confidence' => round(array_sum($confidences) / max(count($confidences), 1), 3),
+            'confidence_distribution' => $this->confidenceDistribution($predictions),
             'min_price' => min($prices),
             'max_price' => max($prices),
         ];
@@ -291,6 +293,44 @@ class AdvancedPricePredictor
         }
 
         return (float) (($values[$middle - 1] + $values[$middle]) / 2);
+    }
+
+    private function standardDeviation(array $values): float
+    {
+        $count = count($values);
+        if ($count === 0) {
+            return 0.0;
+        }
+
+        $mean = array_sum($values) / $count;
+        $variance = 0.0;
+        foreach ($values as $value) {
+            $variance += ($value - $mean) ** 2;
+        }
+
+        return round(sqrt($variance / $count), 2);
+    }
+
+    private function confidenceDistribution(array $predictions): array
+    {
+        $buckets = [
+            'high' => 0,
+            'medium' => 0,
+            'low' => 0,
+        ];
+
+        foreach ($predictions as $prediction) {
+            $confidence = $prediction['confidence'] ?? 0;
+            if ($confidence >= 0.85) {
+                $buckets['high']++;
+            } elseif ($confidence >= 0.7) {
+                $buckets['medium']++;
+            } else {
+                $buckets['low']++;
+            }
+        }
+
+        return $buckets;
     }
 
     private function countFeatures(array $features): int

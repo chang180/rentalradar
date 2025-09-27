@@ -90,6 +90,7 @@ class MapController extends Controller
                 'districts' => $properties->groupBy('district')->map->count(),
                 'average_predicted_price' => $predictionSummary['average_price'] ?? null,
                 'average_confidence' => $predictionSummary['average_confidence'] ?? null,
+                'confidence_distribution' => $predictionSummary['confidence_distribution'] ?? null,
             ],
         ];
 
