@@ -250,28 +250,57 @@ export default function Welcome() {
                             <div className="absolute -top-20 left-1/2 transform -translate-x-1/2 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl animate-pulse" />
                             
                             <div className="relative z-10">
-                                <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white animate-fade-in-up">
-                                    準備開始您的智慧租屋之旅？
-                                </h2>
-                                <p className="mt-4 text-lg text-gray-600 dark:text-gray-300 animate-fade-in-up delay-200">
-                                    立即註冊，體驗 AI 驅動的租屋市場分析平台
-                                </p>
-                                <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-x-6 gap-y-4 animate-fade-in-up delay-400">
-                                    <Link
-                                        href={register()}
-                                        className="group relative rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-8 py-4 text-lg font-semibold text-white shadow-lg hover:shadow-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 transform hover:scale-105"
-                                    >
-                                        <span className="relative z-10">免費註冊</span>
-                                        <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                                    </Link>
-                                    <Link
-                                        href={login()}
-                                        className="group text-lg font-semibold text-gray-900 hover:text-blue-600 dark:text-white dark:hover:text-blue-400 transition-all duration-300 flex items-center gap-2"
-                                    >
-                                        已有帳號？登入
-                                        <span className="group-hover:translate-x-1 transition-transform duration-300" aria-hidden="true">→</span>
-                                    </Link>
-                                </div>
+                                {auth.user ? (
+                                    <>
+                                        <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white animate-fade-in-up">
+                                            歡迎回來，{auth.user.name}！
+                                        </h2>
+                                        <p className="mt-4 text-lg text-gray-600 dark:text-gray-300 animate-fade-in-up delay-200">
+                                            準備開始您的智慧租屋分析之旅
+                                        </p>
+                                        <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-x-6 gap-y-4 animate-fade-in-up delay-400">
+                                            <Link
+                                                href={dashboard()}
+                                                className="group relative rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-8 py-4 text-lg font-semibold text-white shadow-lg hover:shadow-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 transform hover:scale-105"
+                                            >
+                                                <span className="relative z-10">進入 Dashboard</span>
+                                                <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                                            </Link>
+                                            <Link
+                                                href="/map"
+                                                className="group text-lg font-semibold text-gray-900 hover:text-blue-600 dark:text-white dark:hover:text-blue-400 transition-all duration-300 flex items-center gap-2"
+                                            >
+                                                查看地圖分析
+                                                <span className="group-hover:translate-x-1 transition-transform duration-300" aria-hidden="true">→</span>
+                                            </Link>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white animate-fade-in-up">
+                                            準備開始您的智慧租屋之旅？
+                                        </h2>
+                                        <p className="mt-4 text-lg text-gray-600 dark:text-gray-300 animate-fade-in-up delay-200">
+                                            立即註冊，體驗 AI 驅動的租屋市場分析平台
+                                        </p>
+                                        <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-x-6 gap-y-4 animate-fade-in-up delay-400">
+                                            <Link
+                                                href={register()}
+                                                className="group relative rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-8 py-4 text-lg font-semibold text-white shadow-lg hover:shadow-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 transform hover:scale-105"
+                                            >
+                                                <span className="relative z-10">免費註冊</span>
+                                                <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                                            </Link>
+                                            <Link
+                                                href={login()}
+                                                className="group text-lg font-semibold text-gray-900 hover:text-blue-600 dark:text-white dark:hover:text-blue-400 transition-all duration-300 flex items-center gap-2"
+                                            >
+                                                已有帳號？登入
+                                                <span className="group-hover:translate-x-1 transition-transform duration-300" aria-hidden="true">→</span>
+                                            </Link>
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </main>
