@@ -19,7 +19,7 @@ import AppLogo from './app-logo';
 const mainNavItems: NavItem[] = [
     {
         title: '首頁',
-        href: dashboard(),
+        href: dashboard.url(),
         icon: Home,
     },
     {
@@ -45,7 +45,7 @@ export function AppSidebar() {
                     <SidebarMenu>
                         <SidebarMenuItem>
                             <SidebarMenuButton size="lg" asChild>
-                                <Link href={dashboard()} prefetch>
+                                <Link href={dashboard.url()} prefetch>
                                     <AppLogo />
                                 </Link>
                             </SidebarMenuButton>

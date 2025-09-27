@@ -102,3 +102,9 @@ Route::prefix('anomaly-detection')->group(function () {
     Route::get('/market-anomalies', [AnomalyDetectionController::class, 'detectMarketAnomalies']);
     Route::get('/dashboard', [AnomalyDetectionController::class, 'dashboard']);
 });
+
+// Dashboard API
+Route::prefix('dashboard')->group(function () {
+    Route::get('/statistics', [App\Http\Controllers\DashboardController::class, 'getStatistics']);
+    Route::get('/quick-actions', [App\Http\Controllers\DashboardController::class, 'getQuickActions']);
+});

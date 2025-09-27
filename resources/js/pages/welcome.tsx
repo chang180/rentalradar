@@ -84,7 +84,7 @@ export default function Welcome() {
                                     <AppearanceToggleDropdown />
                                     {auth.user ? (
                                         <Link
-                                            href={dashboard()}
+                                            href={dashboard.url()}
                                             className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
                                         >
                                             開始分析
@@ -308,7 +308,7 @@ export default function Welcome() {
                                         </p>
                                         <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-x-6 gap-y-4 animate-fade-in-up delay-400">
                                             <Link
-                                                href={dashboard()}
+                                                href={dashboard.url()}
                                                 className="group relative rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-8 py-4 text-lg font-semibold text-white shadow-lg hover:shadow-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 transform hover:scale-105"
                                             >
                                                 <span className="relative z-10">進入 Dashboard</span>

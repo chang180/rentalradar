@@ -28,7 +28,7 @@ import { dashboard } from '@/routes';
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: '儀表板',
-        href: dashboard().url,
+        href: dashboard.url(),
     },
     {
         title: '市場分析',
