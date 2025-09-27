@@ -23,6 +23,7 @@ import { Head } from '@inertiajs/react';
 import {
     Activity,
     BarChart3,
+    Loader2,
     RefreshCw,
     Sparkles,
     TrendingUp,
@@ -118,6 +119,29 @@ export default function MarketAnalysisDashboard() {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="市場分析" />
+            
+            {/* 全頁面 Loading 覆蓋層 */}
+            {loading && !data && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-sm dark:bg-gray-900/80">
+                    <div className="flex flex-col items-center space-y-4 rounded-lg bg-white p-8 shadow-lg dark:bg-gray-800">
+                        <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
+                        <div className="text-center">
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                                正在分析市場數據
+                            </h3>
+                            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                                首次載入需要一些時間來處理複雜的市場分析...
+                            </p>
+                            <div className="mt-3 flex items-center justify-center space-x-2 text-xs text-gray-400">
+                                <div className="h-2 w-2 animate-bounce rounded-full bg-blue-500"></div>
+                                <div className="h-2 w-2 animate-bounce rounded-full bg-blue-500" style={{ animationDelay: '0.1s' }}></div>
+                                <div className="h-2 w-2 animate-bounce rounded-full bg-blue-500" style={{ animationDelay: '0.2s' }}></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+            
             <div className="flex h-full flex-1 flex-col gap-6 overflow-x-hidden rounded-xl p-6">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                     <div>
@@ -210,7 +234,18 @@ export default function MarketAnalysisDashboard() {
                 {error && (
                     <Alert variant="destructive">
                         <AlertTitle>無法載入分析資料</AlertTitle>
-                        <AlertDescription>{error}</AlertDescription>
+                        <AlertDescription className="flex items-center justify-between">
+                            <span>{error}</span>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => refresh()}
+                                className="ml-4"
+                            >
+                                <RefreshCw className="h-4 w-4" />
+                                <span className="ml-2">重試</span>
+                            </Button>
+                        </AlertDescription>
                     </Alert>
                 )}
 
@@ -268,7 +303,17 @@ export default function MarketAnalysisDashboard() {
                 <section className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                     <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm lg:col-span-2 dark:border-gray-700 dark:bg-gray-900">
                         {loading || !data ? (
-                            <Skeleton className="h-72 w-full" />
+                            <div className="flex flex-col items-center justify-center space-y-4 h-72">
+                                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                                <div className="text-center">
+                                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                        正在分析趨勢數據
+                                    </p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                                        這可能需要幾秒鐘...
+                                    </p>
+                                </div>
+                            </div>
                         ) : (
                             <AdvancedTrendAnalysis
                                 data={data.trends.timeseries}
@@ -335,7 +380,17 @@ export default function MarketAnalysisDashboard() {
                 <section className="grid grid-cols-1 gap-6 xl:grid-cols-2">
                     <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900">
                         {loading || !data ? (
-                            <Skeleton className="h-72 w-full" />
+                            <div className="flex flex-col items-center justify-center space-y-4 h-72">
+                                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                                <div className="text-center">
+                                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                        正在分析區域價格比較
+                                    </p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                                        計算各區域價格差異...
+                                    </p>
+                                </div>
+                            </div>
                         ) : (
                             <PriceComparisonChart
                                 data={data.price_comparison.districts}
@@ -344,7 +399,17 @@ export default function MarketAnalysisDashboard() {
                     </div>
                     <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900">
                         {loading || !data ? (
-                            <Skeleton className="h-72 w-full" />
+                            <div className="flex flex-col items-center justify-center space-y-4 h-72">
+                                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                                <div className="text-center">
+                                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                        正在分析價格分布
+                                    </p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                                        計算統計數據中...
+                                    </p>
+                                </div>
+                            </div>
                         ) : (
                             <PriceDistributionChart
                                 data={data.price_comparison.distribution}
@@ -356,7 +421,17 @@ export default function MarketAnalysisDashboard() {
                 <section className="grid grid-cols-1 gap-6 xl:grid-cols-2">
                     <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900">
                         {loading || !data ? (
-                            <Skeleton className="h-64 w-full" />
+                            <div className="flex flex-col items-center justify-center space-y-4 h-64">
+                                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                                <div className="text-center">
+                                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                        正在分析投資洞察
+                                    </p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                                        計算AI投資建議...
+                                    </p>
+                                </div>
+                            </div>
                         ) : (
                             <InvestmentInsightsComponent
                                 data={data.investment}
@@ -366,7 +441,17 @@ export default function MarketAnalysisDashboard() {
 
                     <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900">
                         {loading || !data ? (
-                            <Skeleton className="h-64 w-full" />
+                            <div className="flex flex-col items-center justify-center space-y-4 h-64">
+                                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                                <div className="text-center">
+                                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                        正在生成互動熱力圖
+                                    </p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                                        處理地理空間數據...
+                                    </p>
+                                </div>
+                            </div>
                         ) : (
                             <InteractiveHeatmap
                                 data={data.multi_dimensional.spatial}

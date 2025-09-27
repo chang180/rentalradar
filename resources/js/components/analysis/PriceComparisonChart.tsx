@@ -18,7 +18,7 @@ export function PriceComparisonChart({ data }: PriceComparisonChartProps) {
         return (
             <div className="flex h-64 items-center justify-center rounded-lg border border-dashed border-gray-200 dark:border-gray-700">
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Comparison data is not available yet.
+                    比較資料尚未提供。
                 </p>
             </div>
         );
@@ -33,10 +33,10 @@ export function PriceComparisonChart({ data }: PriceComparisonChartProps) {
             <div className="flex items-center justify-between">
                 <div>
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                        Average Rent by District
+                        各行政區平均租金
                     </h3>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Top districts ranked by average monthly rent.
+                        按平均月租金排序的頂尖行政區。
                     </p>
                 </div>
             </div>
@@ -65,16 +65,16 @@ export function PriceComparisonChart({ data }: PriceComparisonChartProps) {
                             formatter={(value, key) => {
                                 if (key === 'price_per_ping') {
                                     const label = value
-                                        ? `$${Number(value).toFixed(0)} / ping`
+                                        ? `$${Number(value).toFixed(0)} / 坪`
                                         : 'N/A';
-                                    return [label, 'Price Per Ping'];
+                                    return [label, '每坪價格'];
                                 }
 
                                 return [
                                     `$${Number(value).toLocaleString()}`,
                                     key === 'average_rent'
-                                        ? 'Average Rent'
-                                        : 'Median Rent',
+                                        ? '平均租金'
+                                        : '中位數租金',
                                 ];
                             }}
                         />
@@ -82,13 +82,13 @@ export function PriceComparisonChart({ data }: PriceComparisonChartProps) {
                             dataKey="average_rent"
                             fill="#6366f1"
                             radius={[4, 4, 4, 4]}
-                            name="Average Rent"
+                            name="平均租金"
                         />
                         <Bar
                             dataKey="median_rent"
                             fill="#22c55e"
                             radius={[4, 4, 4, 4]}
-                            name="Median Rent"
+                            name="中位數租金"
                         />
                     </BarChart>
                 </ResponsiveContainer>

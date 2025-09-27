@@ -18,8 +18,7 @@ export function PriceDistributionChart({ data }: PriceDistributionChartProps) {
         return (
             <div className="flex h-64 items-center justify-center rounded-lg border border-dashed border-gray-200 dark:border-gray-700">
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Price distribution data will appear once rentals are
-                    ingested.
+                    一旦租賃資料被導入，價格分布資料就會顯示。
                 </p>
             </div>
         );
@@ -35,15 +34,15 @@ export function PriceDistributionChart({ data }: PriceDistributionChartProps) {
             <div className="flex items-center justify-between">
                 <div>
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                        Price Distribution
+                        價格分布
                     </h3>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Rental inventory grouped by monthly price segment.
+                        租賃物件按月租金區間分組統計。
                     </p>
                 </div>
                 {data.median && (
                     <span className="text-sm text-gray-600 dark:text-gray-300">
-                        Median: ${data.median.toLocaleString()}
+                        中位數: ${data.median.toLocaleString()}
                     </span>
                 )}
             </div>
