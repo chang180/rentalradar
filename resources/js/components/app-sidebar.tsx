@@ -28,7 +28,7 @@ const mainNavItems: NavItem[] = [
         icon: Map,
     },
     {
-        title: 'Market Analysis',
+        title: '市場分析',
         href: '/analysis',
         icon: BarChart3,
     },

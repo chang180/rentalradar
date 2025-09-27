@@ -24,20 +24,20 @@ import { dashboard } from '@/routes';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Dashboard',
+        title: '儀表板',
         href: dashboard().url,
     },
     {
-        title: 'Market Analysis',
+        title: '市場分析',
         href: '/analysis',
     },
 ];
 
 const timeRanges = [
-    { value: '3m', label: 'Last 3 months' },
-    { value: '6m', label: 'Last 6 months' },
-    { value: '12m', label: 'Last 12 months' },
-    { value: '24m', label: 'Last 24 months' },
+    { value: '3m', label: '過去 3 個月' },
+    { value: '6m', label: '過去 6 個月' },
+    { value: '12m', label: '過去 12 個月' },
+    { value: '24m', label: '過去 24 個月' },
 ];
 
 export default function MarketAnalysisDashboard() {
@@ -74,27 +74,27 @@ export default function MarketAnalysisDashboard() {
 
     const summaryCards = [
         {
-            label: 'Average Rent',
+            label: '平均租金',
             value: summary?.current_average ? `$${summary.current_average.toLocaleString()}` : 'N/A',
             change: summary?.month_over_month_change,
             icon: TrendingUp,
         },
         {
-            label: 'Median Volume',
+            label: '交易量中位數',
             value: summary?.current_volume ? summary.current_volume.toLocaleString() : 'N/A',
             change: summary?.volume_trend,
             icon: Activity,
         },
         {
-            label: 'Year over Year',
+            label: '年度變化',
             value: summary?.year_over_year_change !== null && summary?.year_over_year_change !== undefined
                 ? `${summary.year_over_year_change.toFixed(2)}%`
                 : 'N/A',
-            badge: 'YoY change',
+            badge: '年增率',
             icon: BarChart3,
         },
         {
-            label: 'Confidence',
+            label: '信心指數',
             value: investment ? `${Math.round(investment.confidence * 100)}%` : 'N/A',
             icon: Sparkles,
         },
@@ -102,13 +102,13 @@ export default function MarketAnalysisDashboard() {
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Market Analysis" />
+            <Head title="市場分析" />
             <div className="flex h-full flex-1 flex-col gap-6 overflow-x-hidden rounded-xl p-6">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Market Analysis Dashboard</h1>
+                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">市場分析儀表板</h1>
                         <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
-                            Deep dive into rental market trends, pricing dynamics, and investment signals.
+                            深入分析租賃市場趨勢、價格動態和投資信號。
                         </p>
                     </div>
                     <div className="flex flex-wrap items-center gap-3">
@@ -119,7 +119,7 @@ export default function MarketAnalysisDashboard() {
                             }}
                         >
                             <SelectTrigger className="w-44">
-                                <SelectValue aria-label="time-range" placeholder="Select range" />
+                                <SelectValue aria-label="time-range" placeholder="選擇時間範圍" />
                             </SelectTrigger>
                             <SelectContent>
                                 {timeRanges.map((option) => (
@@ -141,10 +141,10 @@ export default function MarketAnalysisDashboard() {
                             }}
                         >
                             <SelectTrigger className="w-48">
-                                <SelectValue placeholder="All districts" />
+                                <SelectValue placeholder="所有區域" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="all">All districts</SelectItem>
+                                <SelectItem value="all">所有區域</SelectItem>
                                 {districts.map((district) => (
                                     <SelectItem key={district} value={district}>
                                         {district}
@@ -162,7 +162,7 @@ export default function MarketAnalysisDashboard() {
                             disabled={loading}
                         >
                             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                            Refresh
+                            重新整理
                         </Button>
 
                         <Button
@@ -173,14 +173,14 @@ export default function MarketAnalysisDashboard() {
                             disabled={reportLoading}
                         >
                             <Sparkles className={`h-4 w-4 ${reportLoading ? 'animate-pulse' : ''}`} />
-                            Generate Report
+                            生成報告
                         </Button>
                     </div>
                 </div>
 
                 {error && (
                     <Alert variant="destructive">
-                        <AlertTitle>Unable to load analysis</AlertTitle>
+                        <AlertTitle>無法載入分析資料</AlertTitle>
                         <AlertDescription>{error}</AlertDescription>
                     </Alert>
                 )}
@@ -210,7 +210,7 @@ export default function MarketAnalysisDashboard() {
                                           </div>
                                           {card.change !== undefined && card.change !== null && (
                                               <p className={`mt-3 text-xs font-medium ${(card.change ?? 0) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                                                  {card.change >= 0 ? '+' : ''}{card.change.toFixed(2)}% vs previous period
+                                                  {card.change >= 0 ? '+' : ''}{card.change.toFixed(2)}% 較上期
                                               </p>
                                           )}
                                       </div>
@@ -233,28 +233,28 @@ export default function MarketAnalysisDashboard() {
                         ) : (
                             <div className="flex h-full flex-col justify-between">
                                 <div>
-                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Key Market Stats</h3>
+                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">關鍵市場統計</h3>
                                     <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                                        Snapshot of current market health.
+                                        當前市場健康狀況快照。
                                     </p>
                                 </div>
                                 <dl className="mt-6 space-y-4 text-sm text-gray-700 dark:text-gray-200">
                                     <div className="flex items-center justify-between">
-                                        <dt>Generated</dt>
+                                        <dt>生成時間</dt>
                                         <dd>{meta?.generated_at ? new Date(meta.generated_at).toLocaleString() : 'N/A'}</dd>
                                     </div>
                                     <div className="flex items-center justify-between">
-                                        <dt>Listings analysed</dt>
+                                        <dt>分析物件數</dt>
                                         <dd>{typeof meta?.property_count === 'number' ? meta.property_count.toLocaleString() : 'N/A'}</dd>
                                     </div>
                                     <div className="flex items-center justify-between">
-                                        <dt>Signals</dt>
+                                        <dt>市場信號</dt>
                                         <dd>
-                                            {(investment?.signals.bullish.length ?? 0)} bullish · {(investment?.signals.bearish.length ?? 0)} bearish
+                                            {(investment?.signals.bullish.length ?? 0)} 看漲 · {(investment?.signals.bearish.length ?? 0)} 看跌
                                         </dd>
                                     </div>
                                     <div className="flex items-center justify-between">
-                                        <dt>Hotspots tracked</dt>
+                                        <dt>追蹤熱點</dt>
                                         <dd>{investment?.hotspots.length ?? 0}</dd>
                                     </div>
                                 </dl>
@@ -276,9 +276,9 @@ export default function MarketAnalysisDashboard() {
                     <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900">
                         <div className="mb-4 flex items-center justify-between">
                             <div>
-                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Investment Hotspots</h3>
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">投資熱點</h3>
                                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                                    Weighted score combining growth, volume, and affordability.
+                                    結合成長率、交易量和負擔能力的加權分數。
                                 </p>
                             </div>
                         </div>
@@ -286,7 +286,7 @@ export default function MarketAnalysisDashboard() {
                     </div>
 
                     <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Multi-dimensional Insights</h3>
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">多維度洞察</h3>
                         {loading || !data ? (
                             <div className="mt-4 space-y-3">
                                 <Skeleton className="h-12 w-full" />
@@ -296,26 +296,26 @@ export default function MarketAnalysisDashboard() {
                         ) : (
                             <div className="mt-4 space-y-5 text-sm text-gray-700 dark:text-gray-200">
                                 <div>
-                                    <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Temporal</h4>
+                                    <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">時間趨勢</h4>
                                     <p className="mt-1">
                                         {data.multi_dimensional.temporal.slice(-3).map((item) => `${item.period}: $${item.average_rent.toLocaleString()}`).join(' · ')}
                                     </p>
                                 </div>
                                 <div>
-                                    <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Spatial leaders</h4>
+                                    <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">區域領先</h4>
                                     <p className="mt-1">
                                         {data.multi_dimensional.spatial
                                             .slice(0, 3)
-                                            .map((item) => `${item.district} (${item.listings} listings)`)
+                                            .map((item) => `${item.district} (${item.listings} 物件)`)
                                             .join(' · ')}
                                     </p>
                                 </div>
                                 <div>
-                                    <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Segment highlight</h4>
+                                    <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">分段重點</h4>
                                     <p className="mt-1">
                                         {data.multi_dimensional.price_segments.by_room_type
                                             .slice(0, 2)
-                                            .map((item) => `${item.pattern ?? 'Unknown'}: ${item.average_rent ? `$${item.average_rent.toLocaleString()}` : 'N/A'}`)
+                                            .map((item) => `${item.pattern ?? '未知'}: ${item.average_rent ? `$${item.average_rent.toLocaleString()}` : 'N/A'}`)
                                             .join(' · ')}
                                     </p>
                                 </div>
@@ -325,9 +325,9 @@ export default function MarketAnalysisDashboard() {
                 </section>
 
                 <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Automated Market Report</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">自動化市場報告</h3>
                     <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                        Generate an executive summary with recommendations and shareable insights.
+                        生成包含建議和可分享洞察的執行摘要。
                     </p>
                     <div className="mt-6">
                         <ReportSummary report={report} isLoading={reportLoading} error={reportError} />
