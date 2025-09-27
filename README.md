@@ -168,6 +168,46 @@ npm run dev
   - 實現側邊欄縮進功能，提供更大的地圖顯示空間
   - 優化頁面布局和用戶體驗
 
+## 🔄 開發工作流程
+
+### 📋 Commit 前檢查清單
+在每次 commit 前，請檢查以下項目：
+
+1. **Linear 狀態更新**
+   - 檢查是否有完成的 Linear Issues 需要更新狀態
+   - 使用工具更新狀態：`node .ai-dev/core-tools/linear-issues.cjs update DEV-XX Done`
+   - 常用狀態 ID：
+     - In Progress: `a8c3ca26-39f0-4728-93ba-4130050d1abe`
+     - Done: `9fbe935a-aff3-4627-88a3-74353a55c221`
+
+2. **程式碼檢查**
+   - 執行 `npm run build` 確保建置成功
+   - 執行 `php artisan test` 確保測試通過
+   - 執行 `vendor/bin/pint --dirty` 確保程式碼格式正確
+
+3. **文檔更新**
+   - 更新 `.ai-dev/PROGRESS.md` 記錄完成的工作
+   - 更新 `README.md` 開發日誌（如需要）
+
+### 🚀 標準 Commit 流程
+```bash
+# 1. 檢查 Linear 狀態
+node .ai-dev/core-tools/linear-issues.cjs list
+
+# 2. 更新完成的 Issue 狀態
+node .ai-dev/core-tools/linear-issues.cjs update DEV-XX Done
+
+# 3. 檢查程式碼
+npm run build
+php artisan test
+vendor/bin/pint --dirty
+
+# 4. 提交變更
+git add .
+git commit -m "feat: 描述完成的功能"
+git push
+```
+
 ## 🤝 貢獻指南
 
 本專案採用 AI 主導開發模式，所有程式碼由 AI 生成和優化。歡迎提供回饋和建議！

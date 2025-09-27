@@ -6,7 +6,7 @@ const path = require('path');
 function loadToken() {
   try {
     // 優先使用上層目錄的 token 檔案
-    const parentTokenPath = path.join(__dirname, '../../.ai-dev-tools/linear-token.json');
+    const parentTokenPath = path.join(__dirname, '../.ai-dev-tools/linear-token.json');
     const localTokenPath = path.join(__dirname, 'linear-token.json');
     
     if (fs.existsSync(parentTokenPath)) {

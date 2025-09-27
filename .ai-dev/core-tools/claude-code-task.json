@@ -1,5 +1,0 @@
-{
-  "title": "Phase 3: 開發 Leaflet.js 地圖整合系統",
-  "description": "## 🗺️ 任務目標\n\n開發 RentalRadar 的互動式地圖系統，整合 Leaflet.js 與 Laravel 後端，提供租屋資料的視覺化展示。\n\n## 📋 具體任務\n\n### 1. 後端 API 開發\n- 建立地圖資料 API 端點\n- 實作地理編碼功能\n- 開發租屋資料查詢 API\n- 整合政府開放資料\n\n### 2. 前端地圖整合\n- 安裝並設定 Leaflet.js\n- 建立地圖組件 (MapComponent)\n- 實作地圖控制功能\n- 整合 React + Inertia.js\n\n### 3. 資料視覺化\n- 實作租屋標記顯示\n- 開發地圖篩選功能\n- 建立資料載入動畫\n- 優化地圖效能\n\n## 🎯 成功標準\n- 地圖載入速度 < 2秒\n- 支援 1000+ 租屋標記\n- 響應式設計適配\n- 無 JavaScript 錯誤\n\n## 📁 相關檔案\n- `app/Http/Controllers/MapController.php`\n- `resources/js/components/MapComponent.tsx`\n- `resources/js/pages/MapPage.tsx`\n- `routes/web.php` (地圖路由)\n\n## 🔗 技術參考\n- [Leaflet.js 官方文檔](https://leafletjs.com/)\n- [Laravel API 開發指南](https://laravel.com/docs/12.x/eloquent-resources)\n- [React + Inertia 整合](https://inertiajs.com/react)\n\n## ⏰ 預計時間\n2-3 小時\n\n## 🏷️ 標籤\n`phase-3`, `frontend`, `backend`, `map`, `leaflet`",
-  "teamId": "40b1bdfd-2caa-4306-9fc4-8c4f2d646cec"
-}
