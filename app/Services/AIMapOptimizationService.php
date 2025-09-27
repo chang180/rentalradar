@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Support\AdvancedPricePredictor;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -11,6 +12,8 @@ class AIMapOptimizationService
     private const CLUSTER_CACHE_TTL_SECONDS = 60;
     private const MAX_KMEANS_ITERATIONS = 15;
     private const CENTER_SHIFT_THRESHOLD_KM = 0.025; // 25 公尺內視為收斂
+
+    private ?AdvancedPricePredictor $pricePredictor = null;
 
     /**
      * 智慧標記聚合演算法 (PHP 實現)
@@ -300,51 +303,81 @@ class AIMapOptimizationService
     }
 
     /**
-     * 價格預測 (簡化版線性回歸)
+     * 價格預測 (進階啟發式模型)
      */
-    public function predictPrices(array $data): array
+    public function predictPrices(array $data, array $options = []): array
     {
+        $startedAt = microtime(true);
+        $baselineMemory = memory_get_usage(true);
+
         try {
-            $predictions = [];
-            
-            foreach ($data as $item) {
-                // 簡化的價格預測模型
-                $basePrice = 20000;
-                $areaFactor = ($item['area'] ?? 20) * 1000;
-                $locationFactor = $this->getLocationFactor($item['lat'] ?? 0, $item['lng'] ?? 0);
-                $floorFactor = ($item['floor'] ?? 1) * 500;
-                $ageFactor = max(0, (10 - ($item['age'] ?? 5)) * 1000);
-                
-                $predictedPrice = $basePrice + $areaFactor + $locationFactor + $floorFactor + $ageFactor;
-                
-                $predictions[] = [
-                    'price' => round($predictedPrice),
-                    'confidence' => 0.75, // 簡化版信心度
-                    'range' => [
-                        'min' => round($predictedPrice * 0.9),
-                        'max' => round($predictedPrice * 1.1)
-                    ]
-                ];
+            $payload = [];
+            foreach ($data as $index => $item) {
+                if (!is_array($item)) {
+                    continue;
+                }
+                $item['index'] = $item['index'] ?? $index;
+                $payload[] = $item;
             }
+
+            $predictor = $this->pricePredictor();
+            $predictions = $predictor->predictCollection($payload, $options);
+
+            $confidenceThreshold = isset($options['confidence_threshold'])
+                ? $this->sanitizeConfidenceThreshold($options['confidence_threshold'])
+                : null;
+
+            $alerts = [];
+            if ($confidenceThreshold !== null) {
+                foreach ($predictions as $prediction) {
+                    if (($prediction['confidence'] ?? 0) < $confidenceThreshold) {
+                        $alerts[] = [
+                            'index' => $prediction['index'],
+                            'id' => $prediction['id'] ?? null,
+                            'confidence' => $prediction['confidence'],
+                            'threshold' => $confidenceThreshold,
+                        ];
+                    }
+                }
+            }
+
+            $summary = $predictor->summarize($predictions);
+
+            $processingTimeMs = (microtime(true) - $startedAt) * 1000;
+            $memoryDeltaMb = (memory_get_peak_usage(true) - $baselineMemory) / 1048576;
 
             return [
                 'success' => true,
-                'predictions' => $predictions,
+                'predictions' => [
+                    'items' => $predictions,
+                    'summary' => $summary,
+                ],
                 'model_info' => [
-                    'version' => 'v1.0',
-                    'accuracy' => 0.75,
-                    'last_trained' => now()->toISOString()
+                    'version' => AdvancedPricePredictor::MODEL_VERSION,
+                    'trained_at' => AdvancedPricePredictor::TRAINED_AT,
+                    'feature_set' => AdvancedPricePredictor::FEATURE_SET,
                 ],
                 'performance_metrics' => [
-                    'processing_time' => 0.05,
-                    'memory_usage' => '10MB'
-                ]
+                    'processing_time_ms' => round($processingTimeMs, 2),
+                    'memory_peak_mb' => round(max(0, $memoryDeltaMb), 4),
+                    'predictions_per_second' => $processingTimeMs > 0
+                        ? round((count($predictions) / $processingTimeMs) * 1000, 2)
+                        : count($predictions),
+                ],
+                'alerts' => $alerts,
             ];
 
         } catch (\Exception $e) {
             Log::error('Price prediction error', ['error' => $e->getMessage()]);
             return ['success' => false, 'error' => $e->getMessage()];
         }
+    }
+
+    public function predictPrice(array $data, array $options = []): array
+    {
+        $prediction = $this->predictPrices([$data], $options);
+        $items = $prediction['predictions']['items'] ?? [];
+        return $items[0] ?? [];
     }
 
     /**
@@ -413,6 +446,15 @@ class AIMapOptimizationService
 
         // 距離市中心越近，價格因子越高
         return max(0, 10000 - $distance * 1000);
+    }
+
+    protected function pricePredictor(): AdvancedPricePredictor
+    {
+        if ($this->pricePredictor === null) {
+            $this->pricePredictor = new AdvancedPricePredictor();
+        }
+
+        return $this->pricePredictor;
     }
 
     protected function normalizeCoordinatePayload(array $data): array
@@ -590,5 +632,14 @@ class AIMapOptimizationService
 
         $dynamicSize = $range / max(1, sqrt($points));
         return max(0.0005, min(0.05, $dynamicSize));
+    }
+
+    private function sanitizeConfidenceThreshold($threshold): float
+    {
+        if (!is_numeric($threshold)) {
+            return 0.0;
+        }
+
+        return min(1.0, max(0.0, (float) $threshold));
     }
 }

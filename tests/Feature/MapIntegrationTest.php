@@ -47,12 +47,23 @@ class MapIntegrationTest extends TestCase
                                 'lat',
                                 'lng',
                                 'address'
+                            ],
+                            'price_prediction' => [
+                                'value',
+                                'confidence',
+                                'range' => [
+                                    'min',
+                                    'max'
+                                ],
+                                'model_version'
                             ]
                         ]
                     ],
                     'statistics' => [
                         'count',
-                        'districts'
+                        'districts',
+                        'average_predicted_price',
+                        'average_confidence'
                     ]
                 ],
                 'meta' => [
@@ -60,6 +71,12 @@ class MapIntegrationTest extends TestCase
                         'response_time',
                         'memory_usage',
                         'query_count'
+                    ],
+                    'models' => [
+                        'price_prediction' => [
+                            'version',
+                            'average_confidence'
+                        ]
                     ]
                 ]
             ]);
@@ -126,12 +143,31 @@ class MapIntegrationTest extends TestCase
                 'success',
                 'data' => [
                     'predictions' => [
-                        'price',
-                        'confidence',
-                        'range'
+                        'items' => [
+                            '*' => [
+                                'price',
+                                'confidence',
+                                'range' => [
+                                    'min',
+                                    'max'
+                                ],
+                                'model_version',
+                                'breakdown',
+                                'explanations'
+                            ]
+                        ],
+                        'summary' => [
+                            'count',
+                            'average_price',
+                            'median_price',
+                            'average_confidence',
+                            'min_price',
+                            'max_price'
+                        ]
                     ],
                     'model_info',
-                    'performance_metrics'
+                    'performance_metrics',
+                    'alerts'
                 ]
             ]);
     }
@@ -165,13 +201,20 @@ class MapIntegrationTest extends TestCase
                             'bounds'
                         ]
                     ],
-                    'algorithm_info'
+                    'algorithm_info',
+                    'price_summary'
                 ],
                 'meta' => [
                     'performance' => [
                         'response_time',
                         'memory_usage',
                         'query_count'
+                    ],
+                    'models' => [
+                        'price_prediction' => [
+                            'version',
+                            'average_confidence'
+                        ]
                     ]
                 ]
             ]);
@@ -274,6 +317,12 @@ class MapIntegrationTest extends TestCase
                         'response_time',
                         'memory_usage',
                         'query_count'
+                    ],
+                    'models' => [
+                        'price_prediction' => [
+                            'version',
+                            'average_confidence'
+                        ]
                     ]
                 ]
             ]);
@@ -283,5 +332,6 @@ class MapIntegrationTest extends TestCase
         $this->assertLessThan(1000, $data['meta']['performance']['response_time']);
         $this->assertLessThan(128, $data['meta']['performance']['memory_usage']);
         $this->assertGreaterThanOrEqual(1, $data['meta']['performance']['query_count']);
+        $this->assertArrayHasKey('price_prediction', $data['meta']['models']);
     }
 }

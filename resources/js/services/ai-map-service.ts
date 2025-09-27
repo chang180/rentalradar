@@ -192,31 +192,124 @@ export class AIMapService {
      * 價格預測演算法 (簡化版)
      */
     static predictPrice(data: {
-        lat: number;
-        lng: number;
+        lat?: number;
+        lng?: number;
         area?: number;
         floor?: number;
         age?: number;
-    }): { price: number; confidence: number; range: { min: number; max: number } } {
-        // 台北市中心座標
-        const centerLat = 25.0330;
-        const centerLng = 121.5654;
+        rent_per_month?: number;
+        building_type?: string;
+        rooms?: number;
+        pattern?: string;
+        district?: string;
+    }): {
+        price: number;
+        confidence: number;
+        range: { min: number; max: number };
+        modelVersion: string;
+        breakdown: Record<string, number>;
+        explanations: string[];
+    } {
+        const BASE_PRICE = 14500;
+        const area = typeof data.area === 'number' ? Math.max(data.area, 6) : undefined;
+        const rooms = this.resolveRooms(data.rooms, data.pattern);
+        const areaComponent = area ? Math.pow(area, 0.92) * 950 : 0;
+        const roomComponent = rooms ? Math.min(rooms, 4) * 1200 : 0;
 
-        const basePrice = 20000;
-        const areaFactor = (data.area || 20) * 1000;
-        const locationFactor = this.getLocationFactor(data.lat, data.lng, centerLat, centerLng);
-        const floorFactor = (data.floor || 1) * 500;
-        const ageFactor = Math.max(0, (10 - (data.age || 5)) * 1000);
+        let locationMultiplier = 1;
+        let distanceKm: number | undefined;
+        if (typeof data.lat === 'number' && typeof data.lng === 'number') {
+            distanceKm = this.haversine(data.lat, data.lng, 25.0423, 121.5651);
+            const locationBoost = 0.35 - Math.log(1 + distanceKm * 0.9) * 0.28;
+            locationMultiplier += this.clamp(locationBoost, -0.35, 0.45);
+            if (data.district) {
+                locationMultiplier += this.districtAdjustment(data.district);
+            }
+        }
 
-        const predictedPrice = basePrice + areaFactor + locationFactor + floorFactor + ageFactor;
+        let floorMultiplier = 1;
+        if (typeof data.floor === 'number') {
+            const normalizedFloor = Math.max(1, Math.min(data.floor, 25));
+            floorMultiplier += Math.min(Math.max(normalizedFloor - 1, 0), 14) * 0.015;
+            if (normalizedFloor <= 2) {
+                floorMultiplier -= 0.02;
+            }
+        }
+
+        let ageMultiplier = 1;
+        if (typeof data.age === 'number') {
+            const agePenalty = data.age <= 5 ? 0 : Math.min(0.45, (data.age - 5) * 0.012);
+            ageMultiplier = Math.max(0.55, 1 - agePenalty);
+        }
+
+        const amenityAdjustment = this.buildingTypeAdjustment(data.building_type);
+        const baseline = BASE_PRICE + areaComponent + roomComponent + amenityAdjustment.absolute;
+        const marketModifier = this.marketPressureModifier(
+            typeof data.rent_per_month === 'number' ? data.rent_per_month : undefined,
+            baseline
+        );
+
+        const rawPrice = baseline * locationMultiplier * floorMultiplier * ageMultiplier * (1 + amenityAdjustment.multiplier + marketModifier);
+        const price = Math.round(Math.max(6000, rawPrice));
+
+        const featureCount = [area, rooms, data.floor, data.age, data.building_type, distanceKm].filter(value => value !== undefined && value !== null).length;
+        let confidence = 0.58 + featureCount * 0.08;
+        if (typeof distanceKm === 'number' && distanceKm > 12) {
+            confidence -= 0.05;
+        }
+        confidence = this.clamp(confidence, 0.55, 0.95);
+
+        let volatility = Math.max(0.08, 0.18 - featureCount * 0.015);
+        if (typeof distanceKm === 'number') {
+            volatility += Math.min(0.06, distanceKm * 0.004);
+        }
+
+        const range = {
+            min: Math.round(price * (1 - volatility)),
+            max: Math.round(price * (1 + volatility)),
+        };
+
+        const breakdown = {
+            base: Math.round(BASE_PRICE),
+            area_component: Math.round(areaComponent),
+            room_component: Math.round(roomComponent),
+            amenity_absolute: Math.round(amenityAdjustment.absolute),
+            location_multiplier: parseFloat(locationMultiplier.toFixed(3)),
+            floor_multiplier: parseFloat(floorMultiplier.toFixed(3)),
+            age_multiplier: parseFloat(ageMultiplier.toFixed(3)),
+            amenity_multiplier: parseFloat(amenityAdjustment.multiplier.toFixed(3)),
+            market_modifier: parseFloat(marketModifier.toFixed(3)),
+        };
+
+        const explanations: string[] = [];
+        if (area) {
+            explanations.push(`面積 ${area.toFixed(1)} 坪提供主要估價基礎`);
+        }
+        if (rooms) {
+            explanations.push(`房數 ${rooms} 間提高租賃需求`);
+        }
+        if (floorMultiplier > 1) {
+            explanations.push('樓層高度帶來景觀加成');
+        }
+        if (ageMultiplier < 1) {
+            explanations.push('建物年齡產生折價影響');
+        }
+        if (typeof distanceKm === 'number') {
+            explanations.push(`距離市中心約 ${distanceKm.toFixed(1)} 公里`);
+        }
+        if (data.district) {
+            explanations.push(`行政區 ${data.district} 市場熱度已納入運算`);
+        }
+
+        explanations.push(`信心指數約 ${(confidence * 100).toFixed(1)}%`);
 
         return {
-            price: Math.round(predictedPrice),
-            confidence: 0.75,
-            range: {
-                min: Math.round(predictedPrice * 0.9),
-                max: Math.round(predictedPrice * 1.1),
-            },
+            price,
+            confidence: parseFloat(confidence.toFixed(2)),
+            range,
+            modelVersion: 'v2.0-hostinger',
+            breakdown,
+            explanations: Array.from(new Set(explanations)),
         };
     }
 
@@ -339,6 +432,67 @@ export class AIMapService {
     private static getLocationFactor(lat: number, lng: number, centerLat: number, centerLng: number): number {
         const distance = this.calculateDistance({ lat, lng }, { lat: centerLat, lng: centerLng });
         return Math.max(0, 10000 - distance * 1000);
+    }
+
+    private static marketPressureModifier(listedRent: number | undefined, baseline: number): number {
+        if (!listedRent || listedRent <= 0) return 0;
+        const delta = (listedRent - baseline) / Math.max(baseline, 1);
+        return this.clamp(delta * 0.45, -0.2, 0.35);
+    }
+
+    private static buildingTypeAdjustment(buildingType?: string): { absolute: number; multiplier: number } {
+        const type = (buildingType || '').toLowerCase();
+        if (!type) {
+            return { absolute: 0, multiplier: 0 };
+        }
+
+        if (type.includes('電梯')) return { absolute: 1200, multiplier: 0.06 };
+        if (type.includes('套房')) return { absolute: 800, multiplier: 0.03 };
+        if (type.includes('華廈')) return { absolute: 1500, multiplier: 0.05 };
+        if (type.includes('大樓')) return { absolute: 2000, multiplier: 0.07 };
+        return { absolute: 0, multiplier: 0 };
+    }
+
+    private static districtAdjustment(district: string): number {
+        const normalized = district.toLowerCase();
+        if (normalized.includes('信義')) return 0.08;
+        if (normalized.includes('大安')) return 0.07;
+        if (normalized.includes('中山')) return 0.05;
+        if (normalized.includes('內湖')) return 0.03;
+        if (normalized.includes('文山')) return -0.02;
+        if (normalized.includes('萬華')) return -0.015;
+        return 0;
+    }
+
+    private static resolveRooms(rooms?: number, pattern?: string): number | undefined {
+        if (typeof rooms === 'number' && rooms >= 0) {
+            return Math.floor(rooms);
+        }
+
+        if (typeof pattern === 'string') {
+            const match = pattern.match(/(\d+)房/u);
+            if (match) {
+                return parseInt(match[1], 10);
+            }
+        }
+
+        return undefined;
+    }
+
+    private static haversine(lat1: number, lng1: number, lat2: number, lng2: number): number {
+        const R = 6371.0088;
+        const dLat = this.deg2rad(lat2 - lat1);
+        const dLng = this.deg2rad(lng2 - lng1);
+        const lat1Rad = this.deg2rad(lat1);
+        const lat2Rad = this.deg2rad(lat2);
+
+        const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1Rad) * Math.cos(lat2Rad) * Math.sin(dLng / 2) ** 2;
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+    }
+
+    private static clamp(value: number, min: number, max: number): number {
+        return Math.min(max, Math.max(min, value));
     }
 
     private static getMaxPointsForZoom(zoom: number): number {

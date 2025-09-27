@@ -6,6 +6,7 @@ use App\Events\MapDataUpdated;
 use App\Events\RealTimeNotification;
 use App\Models\Property;
 use App\Services\AIMapOptimizationService;
+use App\Support\AdvancedPricePredictor;
 use App\Support\PerformanceMonitor;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\JsonResponse;
@@ -58,8 +59,19 @@ class MapController extends Controller
         $queryCount = count($connection->getQueryLog());
         $connection->disableQueryLog();
 
+        $predictionInput = $this->buildPredictionPayload($properties);
+        $predictionResult = $predictionInput === []
+            ? ['predictions' => ['items' => [], 'summary' => []], 'model_info' => []]
+            : $this->aiMapService->predictPrices($predictionInput);
+
+        $predictionLookup = $this->indexPredictions($predictionResult['predictions']['items'] ?? []);
+        $predictionSummary = $predictionResult['predictions']['summary'] ?? [];
+        $modelInfo = $predictionResult['model_info'] ?? [];
+
         $responseData = [
-            'rentals' => $properties->map(function ($property) {
+            'rentals' => $properties->values()->map(function ($property, $index) use ($predictionLookup) {
+                $prediction = $this->matchPrediction($predictionLookup, $property->id, $index);
+
                 return [
                     'id' => $property->id,
                     'title' => $property->full_address,
@@ -70,11 +82,14 @@ class MapController extends Controller
                         'lng' => (float) $property->longitude,
                         'address' => $property->full_address,
                     ],
+                    'price_prediction' => $this->formatPricePrediction($prediction),
                 ];
             }),
             'statistics' => [
                 'count' => $properties->count(),
                 'districts' => $properties->groupBy('district')->map->count(),
+                'average_predicted_price' => $predictionSummary['average_price'] ?? null,
+                'average_confidence' => $predictionSummary['average_confidence'] ?? null,
             ],
         ];
 
@@ -87,6 +102,12 @@ class MapController extends Controller
                 'performance' => $monitor->summary([
                     'query_count' => $queryCount,
                 ]),
+                'models' => [
+                    'price_prediction' => [
+                        'version' => $modelInfo['version'] ?? AdvancedPricePredictor::MODEL_VERSION,
+                        'average_confidence' => $predictionSummary['average_confidence'] ?? null,
+                    ],
+                ],
             ],
         ]);
     }
@@ -227,6 +248,9 @@ class MapController extends Controller
         $nClusters = (int) $request->get('clusters', 10);
 
         $serviceResult = $this->aiMapService->clusteringAlgorithm($data, $algorithm, $nClusters);
+        $predictionResult = $this->aiMapService->predictPrices($data);
+        $priceSummary = $predictionResult['predictions']['summary'] ?? [];
+        $modelInfo = $predictionResult['model_info'] ?? [];
 
         $monitor->mark('algorithm_complete');
         $queryCount = count($connection->getQueryLog());
@@ -235,6 +259,7 @@ class MapController extends Controller
         $responseData = [
             'clusters' => $serviceResult['clusters'] ?? [],
             'algorithm_info' => $serviceResult['algorithm_info'] ?? [],
+            'price_summary' => $priceSummary,
         ];
 
         broadcast(new MapDataUpdated($responseData, 'clusters'));
@@ -246,6 +271,12 @@ class MapController extends Controller
                 'performance' => $monitor->summary([
                     'query_count' => $queryCount,
                 ]),
+                'models' => [
+                    'price_prediction' => [
+                        'version' => $modelInfo['version'] ?? AdvancedPricePredictor::MODEL_VERSION,
+                        'average_confidence' => $priceSummary['average_confidence'] ?? null,
+                    ],
+                ],
             ],
         ]);
     }
@@ -350,11 +381,17 @@ class MapController extends Controller
                 return [
                     'lat' => (float) $property->latitude,
                     'lng' => (float) $property->longitude,
-                    'price' => (float) $property->total_rent,
+                    'area' => (float) $property->total_floor_area,
+                    'rent_per_month' => (float) $property->rent_per_month,
+                    'building_type' => $property->building_type,
+                    'district' => $property->district,
                 ];
             })->toArray();
 
             $clusters = $this->aiMapService->clusteringAlgorithm($data, 'grid', 20);
+            $predictionResult = $this->aiMapService->predictPrices($data);
+            $priceSummary = $predictionResult['predictions']['summary'] ?? [];
+            $modelInfo = $predictionResult['model_info'] ?? [];
 
             $monitor->mark('clusters_calculated');
             $queryCount = count($connection->getQueryLog());
@@ -370,11 +407,18 @@ class MapController extends Controller
                         'cluster_count' => count($clusters['clusters'] ?? []),
                         'reduction_ratio' => round((1 - count($clusters['clusters'] ?? []) / $properties->count()) * 100, 2)
                     ],
+                    'price_summary' => $priceSummary,
                 ],
                 'meta' => [
                     'performance' => $monitor->summary([
                         'query_count' => $queryCount,
                     ]),
+                    'models' => [
+                        'price_prediction' => [
+                            'version' => $modelInfo['version'] ?? AdvancedPricePredictor::MODEL_VERSION,
+                            'average_confidence' => $priceSummary['average_confidence'] ?? null,
+                        ],
+                    ],
                 ],
             ]);
         }
@@ -384,11 +428,21 @@ class MapController extends Controller
         $queryCount = count($connection->getQueryLog());
         $connection->disableQueryLog();
 
+        $predictionInput = $this->buildPredictionPayload($properties);
+        $predictionResult = $predictionInput === []
+            ? ['predictions' => ['items' => [], 'summary' => []], 'model_info' => []]
+            : $this->aiMapService->predictPrices($predictionInput);
+        $predictionLookup = $this->indexPredictions($predictionResult['predictions']['items'] ?? []);
+        $predictionSummary = $predictionResult['predictions']['summary'] ?? [];
+        $modelInfo = $predictionResult['model_info'] ?? [];
+
         return response()->json([
             'success' => true,
             'data' => [
                 'type' => 'properties',
-                'properties' => $properties->map(function ($property) {
+                'properties' => $properties->values()->map(function ($property, $index) use ($predictionLookup) {
+                    $prediction = $this->matchPrediction($predictionLookup, $property->id, $index);
+
                     return [
                         'id' => $property->id,
                         'position' => [
@@ -401,15 +455,23 @@ class MapController extends Controller
                             'area' => $property->total_floor_area,
                             'rent_per_month' => $property->rent_per_month,
                             'total_rent' => $property->total_rent,
-                        ]
+                        ],
+                        'price_prediction' => $this->formatPricePrediction($prediction),
                     ];
                 }),
                 'count' => $properties->count(),
+                'price_summary' => $predictionSummary,
             ],
             'meta' => [
                 'performance' => $monitor->summary([
                     'query_count' => $queryCount,
                 ]),
+                'models' => [
+                    'price_prediction' => [
+                        'version' => $modelInfo['version'] ?? AdvancedPricePredictor::MODEL_VERSION,
+                        'average_confidence' => $predictionSummary['average_confidence'] ?? null,
+                    ],
+                ],
             ],
         ]);
     }
@@ -481,6 +543,76 @@ class MapController extends Controller
         }
 
         return array_map('floatval', $validator->validated());
+    }
+
+    private function buildPredictionPayload($properties): array
+    {
+        if ($properties->isEmpty()) {
+            return [];
+        }
+
+        return $properties->values()->map(function ($property, $index) {
+            return [
+                'id' => $property->id ?? null,
+                'index' => $index,
+                'lat' => $property->latitude ?? null,
+                'lng' => $property->longitude ?? null,
+                'area' => $property->total_floor_area ?? null,
+                'floor' => $property->floor ?? null,
+                'age' => $property->age ?? null,
+                'rent_per_month' => $property->rent_per_month ?? null,
+                'building_type' => $property->building_type ?? null,
+                'pattern' => $property->compartment_pattern ?? null,
+                'rooms' => $property->rooms ?? null,
+                'district' => $property->district ?? null,
+            ];
+        })->all();
+    }
+
+    private function indexPredictions(array $items): array
+    {
+        $indexed = [];
+        foreach ($items as $item) {
+            $key = $item['id'] ?? $item['index'] ?? null;
+            if ($key === null) {
+                continue;
+            }
+            $indexed[$key] = $item;
+        }
+
+        return $indexed;
+    }
+
+    private function matchPrediction(array $lookup, $id, $index): ?array
+    {
+        if ($id !== null && array_key_exists($id, $lookup)) {
+            return $lookup[$id];
+        }
+
+        if ($index !== null && array_key_exists($index, $lookup)) {
+            return $lookup[$index];
+        }
+
+        return null;
+    }
+
+    private function formatPricePrediction(?array $prediction): array
+    {
+        if ($prediction === null) {
+            return [
+                'value' => null,
+                'range' => ['min' => null, 'max' => null],
+                'confidence' => null,
+                'model_version' => AdvancedPricePredictor::MODEL_VERSION,
+            ];
+        }
+
+        return [
+            'value' => $prediction['price'],
+            'range' => $prediction['range'] ?? ['min' => null, 'max' => null],
+            'confidence' => $prediction['confidence'] ?? null,
+            'model_version' => $prediction['model_version'] ?? AdvancedPricePredictor::MODEL_VERSION,
+        ];
     }
 
     public function sendNotification(Request $request): JsonResponse
