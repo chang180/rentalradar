@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\AIMapOptimizationService;
+use App\Support\PerformanceMonitor;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
@@ -22,6 +23,8 @@ class AIController extends Controller
      */
     public function analyze(Request $request): JsonResponse
     {
+        $monitor = PerformanceMonitor::start('ai.analyze');
+        
         $validator = Validator::make($request->all(), [
             'type' => 'required|string|in:anomaly_detection,price_prediction,heatmap,clustering',
             'data' => 'required|array',
@@ -43,37 +46,49 @@ class AIController extends Controller
         $data = $request->input('data');
         $parameters = $request->input('parameters', []);
 
+        $monitor->mark('validation_complete');
+
         // 建立快取鍵
         $cacheKey = 'ai_analysis_' . md5(json_encode($request->all()));
 
         // 檢查快取
         $cached = Cache::get($cacheKey);
         if ($cached) {
+            $monitor->mark('cache_hit');
             return response()->json([
                 'success' => true,
                 'data' => $cached,
-                'cached' => true
+                'cached' => true,
+                'performance' => $monitor->summary()
             ]);
         }
 
+        $monitor->mark('cache_miss');
+
         try {
-            $result = match ($type) {
-                'anomaly_detection' => $this->aiService->detectAnomalies($data, $parameters),
-                'price_prediction' => $this->aiService->predictPrices($data, $parameters),
-                'heatmap' => $this->aiService->generateHeatmap($data, $parameters),
-                'clustering' => $this->aiService->clusteringAlgorithm($data, $parameters['algorithm'] ?? 'kmeans'),
-                default => throw new \InvalidArgumentException('Unsupported analysis type')
-            };
+            $result = $monitor->trackModel($type, function () use ($type, $data, $parameters) {
+                return match ($type) {
+                    'anomaly_detection' => $this->aiService->detectAnomalies($data, $parameters),
+                    'price_prediction' => $this->aiService->predictPrices($data, $parameters),
+                    'heatmap' => $this->aiService->generateHeatmap($data, $parameters),
+                    'clustering' => $this->aiService->clusteringAlgorithm($data, $parameters['algorithm'] ?? 'kmeans'),
+                    default => throw new \InvalidArgumentException('Unsupported analysis type')
+                };
+            }, ['threshold_ms' => 500]);
 
             if (!$result['success']) {
+                $monitor->addWarning('AI service failed', ['error' => $result['error']]);
                 return response()->json([
                     'success' => false,
                     'error' => [
                         'code' => 'AI_SERVICE_ERROR',
                         'message' => $result['error']
-                    ]
+                    ],
+                    'performance' => $monitor->summary()
                 ], 500);
             }
+
+            $monitor->mark('analysis_complete');
 
             // 快取結果
             Cache::put($cacheKey, $result['data'], 3600); // 1小時快取
@@ -81,16 +96,18 @@ class AIController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $result['data'],
-                'performance' => $result['performance'] ?? $result['performance_metrics'] ?? null
+                'performance' => $monitor->summary()
             ]);
 
         } catch (\Exception $e) {
+            $monitor->addWarning('AI analysis exception', ['exception' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
                 'error' => [
                     'code' => 'AI_SERVICE_ERROR',
                     'message' => $e->getMessage()
-                ]
+                ],
+                'performance' => $monitor->summary()
             ], 500);
         }
     }
