@@ -5,6 +5,7 @@ interface LoadingIndicatorProps {
     color?: 'primary' | 'secondary' | 'success' | 'warning' | 'error';
     text?: string;
     className?: string;
+    showProgress?: boolean;
 }
 
 export const LoadingIndicator: React.FC<LoadingIndicatorProps> = ({
@@ -12,6 +13,7 @@ export const LoadingIndicator: React.FC<LoadingIndicatorProps> = ({
     color = 'primary',
     text,
     className = '',
+    showProgress = false,
 }) => {
     const getSizeClasses = () => {
         switch (size) {
@@ -42,17 +44,29 @@ export const LoadingIndicator: React.FC<LoadingIndicatorProps> = ({
     };
 
     return (
-        <div className={`flex items-center justify-center space-x-2 ${className}`}>
-            <div
-                className={`${getSizeClasses()} ${getColorClasses()} animate-spin`}
-                style={{
-                    border: '2px solid transparent',
-                    borderTop: '2px solid currentColor',
-                    borderRadius: '50%',
-                }}
-            />
+        <div className={`flex flex-col items-center justify-center space-y-2 ${className}`}>
+            <div className="relative">
+                <div
+                    className={`${getSizeClasses()} ${getColorClasses()} animate-spin`}
+                    style={{
+                        border: '2px solid transparent',
+                        borderTop: '2px solid currentColor',
+                        borderRadius: '50%',
+                    }}
+                />
+                {showProgress && (
+                    <div className="absolute inset-0">
+                        <div
+                            className={`${getSizeClasses()} border border-gray-200 dark:border-gray-600 animate-pulse`}
+                            style={{
+                                borderRadius: '50%',
+                            }}
+                        />
+                    </div>
+                )}
+            </div>
             {text && (
-                <span className={`text-sm ${getColorClasses()}`}>
+                <span className={`text-sm ${getColorClasses()} ${showProgress ? 'animate-pulse' : ''}`}>
                     {text}
                 </span>
             )}

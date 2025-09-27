@@ -47,7 +47,8 @@
       "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan government:test --full --no-interaction)",
       "Bash(rm:*)",
       "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan rental:process --no-interaction)",
-      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan properties:geocode --limit=50 --no-interaction)"
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan properties:geocode --limit=50 --no-interaction)",
+      "Read(//d/**)"
     ]
   },
   "enableAllProjectMcpServers": true,

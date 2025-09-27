@@ -1,8 +1,10 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback, useMemo, memo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, CircleMarker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useAIMap } from '../hooks/use-ai-map';
+import { LoadingIndicator } from './LoadingIndicator';
+import { PerformanceMonitor } from './PerformanceMonitor';
 
 // 修正 Leaflet 預設圖標問題
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -38,43 +40,83 @@ interface MapData {
     count: number;
 }
 
-// 地圖事件處理組件
-function MapEventHandler({ onViewportChange }: { onViewportChange: (viewport: any) => void }) {
+// 防抖動處理
+const debounce = (func: Function, wait: number) => {
+    let timeout: NodeJS.Timeout;
+    return function executedFunction(...args: any[]) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+};
+
+// 節流處理
+const throttle = (func: Function, limit: number) => {
+    let inThrottle: boolean;
+    return function(...args: any[]) {
+        if (!inThrottle) {
+            func.apply(this, args);
+            inThrottle = true;
+            setTimeout(() => inThrottle = false, limit);
+        }
+    };
+};
+
+// 優化的地圖事件處理組件
+const MapEventHandler = memo(({ onViewportChange }: { onViewportChange: (viewport: any) => void }) => {
+    const debouncedViewportChange = useMemo(
+        () => debounce((bounds: any, zoom: number) => {
+            onViewportChange({
+                north: bounds.getNorth(),
+                south: bounds.getSouth(),
+                east: bounds.getEast(),
+                west: bounds.getWest(),
+                zoom,
+            });
+        }, 100),
+        [onViewportChange]
+    );
+
     const map = useMapEvents({
         moveend: () => {
             const bounds = map.getBounds();
             const zoom = map.getZoom();
-            onViewportChange({
-                north: bounds.getNorth(),
-                south: bounds.getSouth(),
-                east: bounds.getEast(),
-                west: bounds.getWest(),
-                zoom,
-            });
+            debouncedViewportChange(bounds, zoom);
         },
         zoomend: () => {
             const bounds = map.getBounds();
             const zoom = map.getZoom();
-            onViewportChange({
-                north: bounds.getNorth(),
-                south: bounds.getSouth(),
-                east: bounds.getEast(),
-                west: bounds.getWest(),
-                zoom,
-            });
+            debouncedViewportChange(bounds, zoom);
         },
     });
 
     return null;
+});
+
+// 性能監控接口
+interface PerformanceMetrics {
+    loadTime: number;
+    renderTime: number;
+    memoryUsage: number;
+    markerCount: number;
 }
 
-export default function RentalMap() {
+// 優化的圖標緩存
+const iconCache = new Map<string, L.DivIcon>();
+
+const RentalMap = memo(() => {
     const [selectedDistrict, setSelectedDistrict] = useState<string>('');
     const [districts, setDistricts] = useState<{ district: string; property_count: number }[]>([]);
     const [viewMode, setViewMode] = useState<'properties' | 'clusters' | 'heatmap'>('properties');
     const [aiMode, setAIMode] = useState<'off' | 'clustering' | 'heatmap'>('off');
+    const [performanceMetrics, setPerformanceMetrics] = useState<PerformanceMetrics | null>(null);
+    const [isInitialLoad, setIsInitialLoad] = useState(true);
 
     const mapRef = useRef<L.Map | null>(null);
+    const loadStartTime = useRef<number>(0);
 
     // 使用 AI 地圖 Hook
     const {
@@ -100,17 +142,43 @@ export default function RentalMap() {
     const defaultCenter: [number, number] = [25.0330, 121.5654];
     const defaultZoom = 12;
 
+    // 性能監控
+    const updatePerformanceMetrics = useCallback(() => {
+        if (typeof performance !== 'undefined') {
+            const now = performance.now();
+            const memoryInfo = (performance as any).memory;
+
+            setPerformanceMetrics({
+                loadTime: loadStartTime.current > 0 ? now - loadStartTime.current : 0,
+                renderTime: now,
+                memoryUsage: memoryInfo ? Math.round(memoryInfo.usedJSHeapSize / 1024 / 1024) : 0,
+                markerCount: properties.length + clusters.length,
+            });
+        }
+    }, [properties.length, clusters.length]);
+
     useEffect(() => {
+        loadStartTime.current = performance.now();
         fetchDistricts();
-        // 初始載入資料
-        updateViewport({
-            north: 25.2,
-            south: 24.9,
-            east: 121.8,
-            west: 121.3,
-            zoom: defaultZoom,
-        }, selectedDistrict);
+
+        // 延遲初始載入以改善首次渲染性能
+        const timer = setTimeout(() => {
+            updateViewport({
+                north: 25.2,
+                south: 24.9,
+                east: 121.8,
+                west: 121.3,
+                zoom: defaultZoom,
+            }, selectedDistrict);
+            setIsInitialLoad(false);
+        }, 100);
+
+        return () => clearTimeout(timer);
     }, []);
+
+    useEffect(() => {
+        updatePerformanceMetrics();
+    }, [properties, clusters, heatmapData, updatePerformanceMetrics]);
 
     useEffect(() => {
         if (mapRef.current) {
@@ -138,22 +206,36 @@ export default function RentalMap() {
         }
     };
 
-    const handleViewportChange = useCallback((viewport: any) => {
-        updateViewport(viewport, selectedDistrict);
-    }, [updateViewport, selectedDistrict]);
+    // 優化的視口變更處理，加入節流
+    const handleViewportChange = useCallback(
+        throttle((viewport: any) => {
+            updateViewport(viewport, selectedDistrict);
+        }, 16), // 60fps
+        [updateViewport, selectedDistrict]
+    );
 
-    const createCustomIcon = (rentPerMonth: number) => {
-        // 根據租金創建不同顏色的標記
-        const color = rentPerMonth > 1000 ? '#ef4444' :
-                     rentPerMonth > 600 ? '#f97316' : '#22c55e';
+    // 優化的圖標創建，使用緩存
+    const createCustomIcon = useCallback((rentPerMonth: number) => {
+        const priceCategory = rentPerMonth > 1000 ? 'high' :
+                            rentPerMonth > 600 ? 'medium' : 'low';
 
-        return L.divIcon({
-            html: `<div style="background-color: ${color}; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
+        if (iconCache.has(priceCategory)) {
+            return iconCache.get(priceCategory)!;
+        }
+
+        const color = priceCategory === 'high' ? '#ef4444' :
+                     priceCategory === 'medium' ? '#f97316' : '#22c55e';
+
+        const icon = L.divIcon({
+            html: `<div class="marker-${priceCategory}" style="background-color: ${color}; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
             className: 'custom-marker',
             iconSize: [12, 12],
             iconAnchor: [6, 6],
         });
-    };
+
+        iconCache.set(priceCategory, icon);
+        return icon;
+    }, []);
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('zh-TW', {
@@ -163,13 +245,14 @@ export default function RentalMap() {
         }).format(amount);
     };
 
-    if (loading) {
+    if (loading && isInitialLoad) {
         return (
             <div className="h-full flex items-center justify-center">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                    <p className="mt-2 text-gray-600 dark:text-gray-400">載入地圖資料中...</p>
-                </div>
+                <LoadingIndicator
+                    size="lg"
+                    text="載入地圖資料中..."
+                    showProgress={true}
+                />
             </div>
         );
     }
@@ -389,4 +472,6 @@ export default function RentalMap() {
             </div>
         </div>
     );
-}
+});
+
+export default RentalMap;
