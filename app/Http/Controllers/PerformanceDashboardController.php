@@ -26,15 +26,19 @@ class PerformanceDashboardController extends Controller
         $behaviorStats = $this->behaviorTracking->getUserBehaviorStats($timeRange);
         $performanceMetrics = PerformanceMonitor::start('dashboard')->getCurrentMetrics();
 
+        // 生成模擬的歷史資料
+        $performanceHistory = $this->generateMockHistoryData($timeRange);
+        $errorLogs = $this->generateMockErrorLogs();
+        $userBehaviors = $this->generateMockUserBehaviors();
+
         return response()->json([
             'success' => true,
-            'data' => [
-                'time_range' => $timeRange,
-                'performance' => $performanceMetrics,
-                'errors' => $errorStats,
-                'user_behavior' => $behaviorStats,
-                'timestamp' => now()->timestamp,
-            ],
+            'metrics' => $performanceMetrics,
+            'errorLogs' => $errorLogs,
+            'userBehaviors' => $userBehaviors,
+            'performanceHistory' => $performanceHistory,
+            'time_range' => $timeRange,
+            'timestamp' => now()->timestamp,
         ]);
     }
 
@@ -265,5 +269,92 @@ class PerformanceDashboardController extends Controller
         } else {
             return 'critical';
         }
+    }
+
+    /**
+     * 生成模擬歷史資料
+     */
+    private function generateMockHistoryData(string $timeRange): array
+    {
+        $data = [];
+        $now = now();
+        $points = 24; // 24 個資料點
+        
+        for ($i = $points; $i >= 0; $i--) {
+            $timestamp = $now->copy()->subMinutes($i * 5)->timestamp;
+            $data[] = [
+                'timestamp' => $timestamp,
+                'responseTime' => rand(50, 300),
+                'memoryUsage' => rand(20, 120),
+                'queryCount' => rand(5, 50),
+                'cacheHitRate' => rand(70, 95),
+                'activeConnections' => rand(10, 100),
+                'errorRate' => rand(0, 5),
+                'throughput' => rand(100, 1000),
+            ];
+        }
+        
+        return $data;
+    }
+
+    /**
+     * 生成模擬錯誤日誌
+     */
+    private function generateMockErrorLogs(): array
+    {
+        $errors = [
+            'Database connection timeout',
+            'Memory limit exceeded',
+            'API rate limit exceeded',
+            'File not found: config.php',
+            'Invalid JSON response',
+            'WebSocket connection failed',
+            'Cache key not found',
+            'Authentication failed',
+        ];
+        
+        $logs = [];
+        for ($i = 0; $i < 10; $i++) {
+            $logs[] = [
+                'id' => $i + 1,
+                'message' => $errors[array_rand($errors)],
+                'level' => ['error', 'warning', 'info'][array_rand([0, 1, 2])],
+                'timestamp' => now()->subMinutes(rand(0, 1440))->toISOString(),
+                'count' => rand(1, 10),
+            ];
+        }
+        
+        return $logs;
+    }
+
+    /**
+     * 生成模擬使用者行為
+     */
+    private function generateMockUserBehaviors(): array
+    {
+        $actions = [
+            'page_view',
+            'map_interaction',
+            'search_performed',
+            'filter_applied',
+            'property_clicked',
+            'performance_viewed',
+        ];
+        
+        $behaviors = [];
+        for ($i = 0; $i < 15; $i++) {
+            $behaviors[] = [
+                'id' => $i + 1,
+                'action' => $actions[array_rand($actions)],
+                'user_id' => rand(1, 100),
+                'timestamp' => now()->subMinutes(rand(0, 1440))->toISOString(),
+                'metadata' => [
+                    'page' => ['/', '/map', '/performance'][array_rand([0, 1, 2])],
+                    'duration' => rand(5, 300),
+                ],
+            ];
+        }
+        
+        return $behaviors;
     }
 }
