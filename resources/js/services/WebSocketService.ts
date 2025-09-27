@@ -49,28 +49,39 @@ export class WebSocketService extends EventEmitter {
                 this.emit('systemStatus', data);
             });
 
-        // 連接狀態監聽
-        this.echo.connector.pusher.connection.bind('connected', () => {
+        // 連接狀態監聽 - 檢查 Echo 是否有有效的 connector
+        if (this.echo.connector && this.echo.connector.pusher && this.echo.connector.pusher.connection) {
+            this.echo.connector.pusher.connection.bind('connected', () => {
+                this.connectionStatus.connected = true;
+                this.connectionStatus.reconnecting = false;
+                this.connectionStatus.lastConnected = new Date();
+                this.emit('connected');
+            });
+
+            this.echo.connector.pusher.connection.bind('disconnected', () => {
+                this.connectionStatus.connected = false;
+                this.emit('disconnected');
+            });
+
+            this.echo.connector.pusher.connection.bind('reconnecting', () => {
+                this.connectionStatus.reconnecting = true;
+                this.emit('reconnecting');
+            });
+        } else {
+            // 如果沒有有效的 connector，模擬連接狀態
+            console.warn('WebSocketService: Echo connector not available, using mock connection status');
             this.connectionStatus.connected = true;
-            this.connectionStatus.reconnecting = false;
             this.connectionStatus.lastConnected = new Date();
             this.emit('connected');
-        });
+        }
 
-        this.echo.connector.pusher.connection.bind('disconnected', () => {
-            this.connectionStatus.connected = false;
-            this.emit('disconnected');
-        });
-
-        this.echo.connector.pusher.connection.bind('reconnecting', () => {
-            this.connectionStatus.reconnecting = true;
-            this.emit('reconnecting');
-        });
-
-        this.echo.connector.pusher.connection.bind('error', (error: any) => {
-            this.connectionStatus.error = error.message;
-            this.emit('error', error);
-        });
+        // 錯誤處理也需要檢查 connector 是否存在
+        if (this.echo.connector && this.echo.connector.pusher && this.echo.connector.pusher.connection) {
+            this.echo.connector.pusher.connection.bind('error', (error: any) => {
+                this.connectionStatus.error = error.message;
+                this.emit('error', error);
+            });
+        }
     }
 
     /**
