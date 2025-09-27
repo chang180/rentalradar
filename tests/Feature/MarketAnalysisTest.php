@@ -3,6 +3,7 @@
 use App\Models\Property;
 use Carbon\CarbonImmutable;
 use Illuminate\Testing\Fluent\AssertableJson;
+
 use function Pest\Laravel\getJson;
 use function Pest\Laravel\postJson;
 
@@ -141,7 +142,7 @@ it('generates market analysis report with narrative sections', function () {
         ->assertJsonPath('report.time_range', '6m')
         ->assertJson(fn (AssertableJson $json) => $json
             ->where('report.summary', fn ($summary) => is_string($summary) && $summary !== '')
-            ->where('report.sections.0.title', 'Market Overview')
+            ->where('report.sections.0.title', '市場總覽')
             ->whereType('report.recommendations', 'array')
             ->etc());
 });

@@ -14,6 +14,9 @@ import PriceComparisonChart from '@/components/analysis/PriceComparisonChart';
 import PriceDistributionChart from '@/components/analysis/PriceDistributionChart';
 import HotspotList from '@/components/analysis/HotspotList';
 import ReportSummary from '@/components/analysis/ReportSummary';
+import InteractiveHeatmap from '@/components/analysis/InteractiveHeatmap';
+import AdvancedTrendAnalysis from '@/components/analysis/AdvancedTrendAnalysis';
+import InvestmentInsightsComponent from '@/components/analysis/InvestmentInsights';
 import { useMarketAnalysis } from '@/hooks/use-market-analysis';
 import type { BreadcrumbItem } from '@/types';
 import { type MarketAnalysisFilters } from '@/types/analysis';
@@ -224,7 +227,10 @@ export default function MarketAnalysisDashboard() {
                         {loading || !data ? (
                             <Skeleton className="h-72 w-full" />
                         ) : (
-                            <TrendChart data={data.trends.timeseries} />
+                            <AdvancedTrendAnalysis 
+                                data={data.trends.timeseries} 
+                                forecast={data.trends.forecast}
+                            />
                         )}
                     </div>
                     <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900">
@@ -274,52 +280,18 @@ export default function MarketAnalysisDashboard() {
 
                 <section className="grid grid-cols-1 gap-6 xl:grid-cols-2">
                     <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900">
-                        <div className="mb-4 flex items-center justify-between">
-                            <div>
-                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">投資熱點</h3>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">
-                                    結合成長率、交易量和負擔能力的加權分數。
-                                </p>
-                            </div>
-                        </div>
-                        {loading || !data ? <Skeleton className="h-64 w-full" /> : <HotspotList data={data.investment.hotspots} />}
+                        {loading || !data ? (
+                            <Skeleton className="h-64 w-full" />
+                        ) : (
+                            <InvestmentInsightsComponent data={data.investment} />
+                        )}
                     </div>
 
                     <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">多維度洞察</h3>
                         {loading || !data ? (
-                            <div className="mt-4 space-y-3">
-                                <Skeleton className="h-12 w-full" />
-                                <Skeleton className="h-12 w-3/4" />
-                                <Skeleton className="h-12 w-5/6" />
-                            </div>
+                            <Skeleton className="h-64 w-full" />
                         ) : (
-                            <div className="mt-4 space-y-5 text-sm text-gray-700 dark:text-gray-200">
-                                <div>
-                                    <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">時間趨勢</h4>
-                                    <p className="mt-1">
-                                        {data.multi_dimensional.temporal.slice(-3).map((item) => `${item.period}: $${item.average_rent.toLocaleString()}`).join(' · ')}
-                                    </p>
-                                </div>
-                                <div>
-                                    <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">區域領先</h4>
-                                    <p className="mt-1">
-                                        {data.multi_dimensional.spatial
-                                            .slice(0, 3)
-                                            .map((item) => `${item.district} (${item.listings} 物件)`)
-                                            .join(' · ')}
-                                    </p>
-                                </div>
-                                <div>
-                                    <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">分段重點</h4>
-                                    <p className="mt-1">
-                                        {data.multi_dimensional.price_segments.by_room_type
-                                            .slice(0, 2)
-                                            .map((item) => `${item.pattern ?? '未知'}: ${item.average_rent ? `$${item.average_rent.toLocaleString()}` : 'N/A'}`)
-                                            .join(' · ')}
-                                    </p>
-                                </div>
-                            </div>
+                            <InteractiveHeatmap data={data.multi_dimensional.spatial} />
                         )}
                     </div>
                 </section>

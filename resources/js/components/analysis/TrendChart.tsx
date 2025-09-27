@@ -27,7 +27,7 @@ export function TrendChart({ data }: TrendChartProps) {
     if (!data || data.length === 0) {
         return (
             <div className="flex h-64 items-center justify-center rounded-lg border border-dashed border-gray-200 dark:border-gray-700">
-                <p className="text-sm text-gray-500 dark:text-gray-400">Add more rental records to unlock trend analysis.</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">新增更多租賃記錄以解鎖趨勢分析。</p>
             </div>
         );
     }
@@ -36,9 +36,9 @@ export function TrendChart({ data }: TrendChartProps) {
         <div className="space-y-4">
             <div className="flex items-center justify-between">
                 <div>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Market Trend</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">市場趨勢</h3>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Average rent, median rent, and 3-period moving average for the selected range.
+                        選定範圍內的平均租金、中位數租金和 3 期移動平均。
                     </p>
                 </div>
             </div>
@@ -75,10 +75,10 @@ export function TrendChart({ data }: TrendChartProps) {
                             itemStyle={{ color: 'white' }}
                             formatter={(value, key) => {
                                 if (key === 'volume') {
-                                    return [String(value), 'Listings'];
+                                    return [String(value), '物件數'];
                                 }
 
-                                return [currencyFormatter(Number(value)), key === 'moving_average' ? 'Moving Average' : 'Average Rent'];
+                                return [currencyFormatter(Number(value)), key === 'moving_average' ? '移動平均' : '平均租金'];
                             }}
                         />
                         <Area
@@ -87,7 +87,7 @@ export function TrendChart({ data }: TrendChartProps) {
                             stroke="#3b82f6"
                             fill="url(#trendAverage)"
                             strokeWidth={2}
-                            name="Average Rent"
+                            name="平均租金"
                         />
                         <Line
                             type="monotone"
@@ -95,7 +95,7 @@ export function TrendChart({ data }: TrendChartProps) {
                             stroke="#0ea5e9"
                             strokeWidth={2}
                             dot={false}
-                            name="Moving Average"
+                            name="移動平均"
                         />
                         <Line
                             type="monotone"
@@ -103,7 +103,7 @@ export function TrendChart({ data }: TrendChartProps) {
                             stroke="#f97316"
                             strokeWidth={2}
                             dot={false}
-                            name="Median Rent"
+                            name="中位數租金"
                         />
                     </AreaChart>
                 </ResponsiveContainer>

@@ -80,33 +80,33 @@ class MarketAnalysisService
             'highlights' => [
                 'pricing' => $latestTrend
                     ? sprintf(
-                        'Average rent is %s with median %s and %s listings this period.',
+                        '本期平均租金為 %s，中位數 %s，共計 %s 筆物件。',
                         $this->formatCurrency($latestTrend['average_rent']),
                         $this->formatCurrency($latestTrend['median_rent']),
                         $latestTrend['volume']
                     )
-                    : 'Insufficient data for pricing highlights.',
+                    : '資料不足，暫無價格重點可供參考。',
                 'top_market' => $topDistrict
                     ? sprintf(
-                        '%s leads the market with average rent %s and %d active listings.',
+                        '%s 以平均租金 %s 與 %d 筆有效物件領先市場。',
                         $topDistrict['district'],
                         $this->formatCurrency($topDistrict['average_rent']),
                         $topDistrict['listings']
                     )
-                    : 'No top performing district identified.',
+                    : '尚未找到表現最佳的行政區。',
                 'hotspot' => $emerging
                     ? sprintf(
-                        '%s shows strong potential with composite score %.2f and %s trend direction.',
+                        '%s 綜合評分 %.2f，趨勢判定為 %s，具備成長潛力。',
                         $emerging['district'],
                         $emerging['score'],
                         $emerging['trend_direction']
                     )
-                    : 'No investment hotspot identified.',
+                    : '尚未偵測到投資熱點。',
             ],
             'recommendations' => $this->buildRecommendations($investment, $priceComparison, $trends),
             'sections' => [
                 [
-                    'title' => 'Market Overview',
+                    'title' => '市場總覽',
                     'content' => $summary,
                     'metrics' => [
                         'average_rent' => $latestTrend['average_rent'] ?? null,
@@ -116,7 +116,7 @@ class MarketAnalysisService
                     ],
                 ],
                 [
-                    'title' => 'Regional Performance',
+                    'title' => '區域表現',
                     'content' => $this->buildRegionalNarrative($priceComparison),
                     'metrics' => [
                         'top_districts' => $priceComparison['summary']['top_districts'],
@@ -125,7 +125,7 @@ class MarketAnalysisService
                     ],
                 ],
                 [
-                    'title' => 'Investment Outlook',
+                    'title' => '投資展望',
                     'content' => $this->buildInvestmentNarrative($investment),
                     'metrics' => [
                         'hotspots' => $investment['hotspots'],
@@ -199,6 +199,7 @@ class MarketAnalysisService
     {
         $grouped = $properties->groupBy(function ($property) {
             $date = CarbonImmutable::parse($property->rent_date);
+
             return $date->format('Y-m');
         })->sortKeys();
 
@@ -207,6 +208,7 @@ class MarketAnalysisService
             $rentValues = $items->pluck('rent_per_month')->map(fn ($value) => (float) $value)->sort()->values();
             $areaValues = $items->pluck('total_floor_area')->map(function ($value) {
                 $numeric = $value !== null ? (float) $value : null;
+
                 return $numeric && $numeric > 0 ? $numeric : null;
             })->filter();
 
@@ -315,6 +317,7 @@ class MarketAnalysisService
             $rentValues = $group->pluck('rent_per_month')->map(fn ($value) => (float) $value)->sort()->values();
             $areaValues = $group->pluck('total_floor_area')->map(function ($value) {
                 $numeric = $value !== null ? (float) $value : null;
+
                 return $numeric && $numeric > 0 ? $numeric : null;
             })->filter();
 
@@ -415,6 +418,7 @@ class MarketAnalysisService
             return CarbonImmutable::parse($property->rent_date)->format('Y-m');
         })->map(function ($group, $period) {
             $values = $group->pluck('rent_per_month')->map(fn ($value) => (float) $value);
+
             return [
                 'period' => $period,
                 'average_rent' => round($values->avg() ?? 0.0, 2),
@@ -425,6 +429,7 @@ class MarketAnalysisService
 
         $spatial = collect($districts)->map(function ($district) use ($properties) {
             $count = $properties->where('district', $district['district'])->count();
+
             return [
                 'district' => $district['district'],
                 'listings' => $count,
@@ -453,12 +458,12 @@ class MarketAnalysisService
     private function buildReportSummary(?array $latestTrend, ?array $topDistrict, ?array $hotspot): string
     {
         if (! $latestTrend) {
-            return 'Market activity is limited. Additional rental data is required to produce a detailed summary.';
+            return '目前市場活動量不足，請補充租賃資料以產出完整摘要。';
         }
 
         $parts = [];
         $parts[] = sprintf(
-            'Average monthly rent is %s with median %s across %d recorded listings.',
+            '平均月租金為 %s，中位數 %s，共 %d 筆紀錄。',
             $this->formatCurrency($latestTrend['average_rent']),
             $this->formatCurrency($latestTrend['median_rent']),
             $latestTrend['volume']
@@ -466,7 +471,7 @@ class MarketAnalysisService
 
         if ($topDistrict) {
             $parts[] = sprintf(
-                '%s currently leads the market with average rent %s and %d active listings.',
+                '%s 以平均租金 %s 與 %d 筆物件保持領先。',
                 $topDistrict['district'],
                 $this->formatCurrency($topDistrict['average_rent']),
                 $topDistrict['listings']
@@ -475,7 +480,7 @@ class MarketAnalysisService
 
         if ($hotspot) {
             $parts[] = sprintf(
-                '%s is flagged as an investment hotspot with composite score %.2f and %s trend momentum.',
+                '%s 被標記為投資熱區，綜合評分 %.2f，趨勢動能為 %s。',
                 $hotspot['district'],
                 $hotspot['score'],
                 $hotspot['trend_direction']
@@ -491,22 +496,22 @@ class MarketAnalysisService
 
         if (! empty($investment['hotspots'])) {
             $recommendations[] = sprintf(
-                'Prioritize exploratory visits in %s to capture emerging demand.',
+                '建議優先拜訪 %s，以掌握新興需求。',
                 $investment['hotspots'][0]['district']
             );
         }
 
         if (! empty($priceComparison['summary']['most_affordable'])) {
             $districts = collect($priceComparison['summary']['most_affordable'])->pluck('district')->implode(', ');
-            $recommendations[] = sprintf('Promote value listings across %s to attract price sensitive renters.', $districts);
+            $recommendations[] = sprintf('可在 %s 推廣高 CP 值物件以吸引價格敏感客群。', $districts);
         }
 
         if (($trends['summary']['month_over_month_change'] ?? 0) > 5) {
-            $recommendations[] = 'Review pricing strategy to avoid over-extension as rents are climbing faster than usual.';
+            $recommendations[] = '近期租金加速上升，建議檢視定價策略以避免過度拉升。';
         }
 
         if (($trends['summary']['volume_trend'] ?? 0) < -5) {
-            $recommendations[] = 'Strengthen marketing campaigns to counteract the recent slowdown in listing volume.';
+            $recommendations[] = '物件量出現放緩，建議加強行銷曝光以維持流量。';
         }
 
         return $recommendations;
@@ -515,7 +520,7 @@ class MarketAnalysisService
     private function buildRegionalNarrative(array $priceComparison): string
     {
         if ($priceComparison['districts'] === []) {
-            return 'Regional comparison requires additional rental records.';
+            return '區域比較需更多租賃資料才能完成。';
         }
 
         $top = $priceComparison['summary']['top_districts'][0] ?? null;
@@ -524,7 +529,7 @@ class MarketAnalysisService
         $parts = [];
         if ($top) {
             $parts[] = sprintf(
-                '%s outperforms peers with average rent %s and %d active listings.',
+                '%s 表現優於同儕，平均租金 %s，物件數 %d。',
                 $top['district'],
                 $this->formatCurrency($top['average_rent']),
                 $top['listings']
@@ -533,7 +538,7 @@ class MarketAnalysisService
 
         if ($affordable) {
             $parts[] = sprintf(
-                '%s remains the most affordable district at %s per month, supporting %d listings.',
+                '%s 仍是最具價格優勢的區域，月租 %s，提供 %d 筆物件。',
                 $affordable['district'],
                 $this->formatCurrency($affordable['average_rent']),
                 $affordable['listings']
@@ -546,13 +551,13 @@ class MarketAnalysisService
     private function buildInvestmentNarrative(array $investment): string
     {
         if (empty($investment['hotspots'])) {
-            return 'No clear investment hotspots detected during this period. Maintain watchlist monitoring.';
+            return '此期間尚未發現明顯投資熱區，建議持續觀察。';
         }
 
         $top = $investment['hotspots'][0];
 
         return sprintf(
-            '%s is trending %s with a composite score of %.2f, indicating strong upside potential with %d active listings.',
+            '%s 呈現 %s 走勢，綜合評分 %.2f，擁有 %d 筆物件，顯示良好上升動能。',
             $top['district'],
             $top['trend_direction'],
             $top['score'],
@@ -618,11 +623,11 @@ class MarketAnalysisService
         $median = $this->median($values);
 
         $segments = [
-            ['label' => 'Under 10k', 'min' => 0, 'max' => 10000, 'count' => 0],
-            ['label' => '10k - 20k', 'min' => 10000, 'max' => 20000, 'count' => 0],
-            ['label' => '20k - 35k', 'min' => 20000, 'max' => 35000, 'count' => 0],
-            ['label' => '35k - 50k', 'min' => 35000, 'max' => 50000, 'count' => 0],
-            ['label' => '50k+', 'min' => 50000, 'max' => null, 'count' => 0],
+            ['label' => '10,000 以下', 'min' => 0, 'max' => 10000, 'count' => 0],
+            ['label' => '10,000 - 20,000', 'min' => 10000, 'max' => 20000, 'count' => 0],
+            ['label' => '20,000 - 35,000', 'min' => 20000, 'max' => 35000, 'count' => 0],
+            ['label' => '35,000 - 50,000', 'min' => 35000, 'max' => 50000, 'count' => 0],
+            ['label' => '50,000 以上', 'min' => 50000, 'max' => null, 'count' => 0],
         ];
 
         foreach ($values as $value) {
@@ -646,6 +651,7 @@ class MarketAnalysisService
 
         $segments['by_room_type'] = $properties->groupBy('compartment_pattern')->map(function ($group, $pattern) {
             $average = $group->pluck('rent_per_month')->avg();
+
             return [
                 'pattern' => $pattern,
                 'average_rent' => $average ? round($average, 2) : null,
@@ -655,6 +661,7 @@ class MarketAnalysisService
 
         $segments['by_building_type'] = $properties->groupBy('building_type')->map(function ($group, $type) {
             $average = $group->pluck('rent_per_month')->avg();
+
             return [
                 'building_type' => $type,
                 'average_rent' => $average ? round($average, 2) : null,
@@ -730,6 +737,7 @@ class MarketAnalysisService
         }
 
         $weight = $rank - $lowerIndex;
+
         return (float) (($values[$lowerIndex] * (1 - $weight)) + ($values[$upperIndex] * $weight));
     }
 
@@ -762,10 +770,9 @@ class MarketAnalysisService
     private function formatCurrency(?float $value): string
     {
         if ($value === null) {
-            return 'N/A';
+            return '—';
         }
 
-        return '$' . number_format($value, 0);
+        return 'NT$'.number_format($value, 0);
     }
 }
-

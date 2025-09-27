@@ -1,9 +1,13 @@
 <?php
 
 use App\Http\Controllers\AIController;
+use App\Http\Controllers\AIPredictionController;
+use App\Http\Controllers\AnomalyDetectionController;
 use App\Http\Controllers\MapController;
 use App\Http\Controllers\MarketAnalysisController;
 use App\Http\Controllers\PerformanceDashboardController;
+use App\Http\Controllers\RecommendationController;
+use App\Http\Controllers\RiskAssessmentController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -64,3 +68,31 @@ Route::prefix('analysis')->group(function () {
     Route::post('/report', [MarketAnalysisController::class, 'report']);
 });
 
+// AI Prediction API
+Route::prefix('ai-prediction')->group(function () {
+    Route::post('/predict', [AIPredictionController::class, 'predict']);
+    Route::get('/trends', [AIPredictionController::class, 'trends']);
+    Route::get('/dashboard', [AIPredictionController::class, 'dashboard']);
+});
+
+// Recommendation API
+Route::prefix('recommendations')->group(function () {
+    Route::get('/personalized', [RecommendationController::class, 'personalized']);
+    Route::get('/trending', [RecommendationController::class, 'trending']);
+    Route::get('/dashboard', [RecommendationController::class, 'dashboard']);
+});
+
+// Risk Assessment API
+Route::prefix('risk-assessment')->group(function () {
+    Route::post('/assess', [RiskAssessmentController::class, 'assess']);
+    Route::post('/batch-assess', [RiskAssessmentController::class, 'batchAssess']);
+    Route::get('/trends', [RiskAssessmentController::class, 'trends']);
+    Route::get('/dashboard', [RiskAssessmentController::class, 'dashboard']);
+});
+
+// Anomaly Detection API
+Route::prefix('anomaly-detection')->group(function () {
+    Route::get('/price-anomalies', [AnomalyDetectionController::class, 'detectPriceAnomalies']);
+    Route::get('/market-anomalies', [AnomalyDetectionController::class, 'detectMarketAnomalies']);
+    Route::get('/dashboard', [AnomalyDetectionController::class, 'dashboard']);
+});

@@ -2,14 +2,13 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
-use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class ErrorTrackingService
 {
     private const CACHE_KEY = 'error_tracking';
+
     private const CACHE_TTL = 3600; // 1 hour
 
     /**
@@ -48,8 +47,8 @@ class ErrorTrackingService
      */
     public function getErrorStats(string $timeRange = '24h'): array
     {
-        $cacheKey = self::CACHE_KEY . '_stats_' . $timeRange;
-        
+        $cacheKey = self::CACHE_KEY.'_stats_'.$timeRange;
+
         return Cache::remember($cacheKey, 300, function () use ($timeRange) {
             $startTime = $this->getTimeRangeStart($timeRange);
             $errors = $this->getErrorsFromCache($startTime);
@@ -73,23 +72,23 @@ class ErrorTrackingService
     public function getErrors(array $filters = []): array
     {
         $errors = $this->getErrorsFromCache();
-        
+
         // 應用過濾器
         if (isset($filters['level'])) {
-            $errors = array_filter($errors, fn($error) => $error['level'] === $filters['level']);
+            $errors = array_filter($errors, fn ($error) => $error['level'] === $filters['level']);
         }
-        
+
         if (isset($filters['since'])) {
             $since = is_string($filters['since']) ? strtotime($filters['since']) : $filters['since'];
-            $errors = array_filter($errors, fn($error) => $error['timestamp'] >= $since);
+            $errors = array_filter($errors, fn ($error) => $error['timestamp'] >= $since);
         }
-        
+
         if (isset($filters['user_id'])) {
-            $errors = array_filter($errors, fn($error) => $error['user_id'] === $filters['user_id']);
+            $errors = array_filter($errors, fn ($error) => $error['user_id'] === $filters['user_id']);
         }
 
         // 排序
-        usort($errors, fn($a, $b) => $b['timestamp'] - $a['timestamp']);
+        usort($errors, fn ($a, $b) => $b['timestamp'] - $a['timestamp']);
 
         return $errors;
     }
@@ -101,12 +100,12 @@ class ErrorTrackingService
     {
         $cutoffTime = now()->subDays($daysToKeep)->timestamp;
         $errors = $this->getErrorsFromCache();
-        
+
         $originalCount = count($errors);
-        $errors = array_filter($errors, fn($error) => $error['timestamp'] >= $cutoffTime);
-        
+        $errors = array_filter($errors, fn ($error) => $error['timestamp'] >= $cutoffTime);
+
         $this->storeErrorsInCache($errors);
-        
+
         return $originalCount - count($errors);
     }
 
@@ -115,7 +114,7 @@ class ErrorTrackingService
      */
     private function generateErrorId(): string
     {
-        return 'error_' . uniqid() . '_' . time();
+        return 'error_'.uniqid().'_'.time();
     }
 
     /**
@@ -148,26 +147,26 @@ class ErrorTrackingService
     {
         $errors = $this->getErrorsFromCache();
         $errors[] = $error;
-        
+
         // 只保留最新的 1000 個錯誤
         if (count($errors) > 1000) {
             $errors = array_slice($errors, -1000);
         }
-        
+
         $this->storeErrorsInCache($errors);
     }
 
     /**
      * 從快取獲取錯誤
      */
-    private function getErrorsFromCache(int $since = null): array
+    private function getErrorsFromCache(?int $since = null): array
     {
         $errors = Cache::get(self::CACHE_KEY, []);
-        
+
         if ($since) {
-            $errors = array_filter($errors, fn($error) => $error['timestamp'] >= $since);
+            $errors = array_filter($errors, fn ($error) => $error['timestamp'] >= $since);
         }
-        
+
         return $errors;
     }
 
@@ -205,7 +204,7 @@ class ErrorTrackingService
     {
         $totalRequests = $this->getTotalRequests();
         $errorCount = count($errors);
-        
+
         return $totalRequests > 0 ? ($errorCount / $totalRequests) * 100 : 0;
     }
 
@@ -219,6 +218,7 @@ class ErrorTrackingService
             $level = $error['level'];
             $groups[$level] = ($groups[$level] ?? 0) + 1;
         }
+
         return $groups;
     }
 
@@ -232,6 +232,7 @@ class ErrorTrackingService
             $hour = date('H', $error['timestamp']);
             $groups[$hour] = ($groups[$hour] ?? 0) + 1;
         }
+
         return $groups;
     }
 
@@ -245,8 +246,9 @@ class ErrorTrackingService
             $message = $error['message'];
             $errorCounts[$message] = ($errorCounts[$message] ?? 0) + 1;
         }
-        
+
         arsort($errorCounts);
+
         return array_slice($errorCounts, 0, $limit, true);
     }
 

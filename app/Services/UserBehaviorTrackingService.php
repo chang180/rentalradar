@@ -4,11 +4,11 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
-use Carbon\Carbon;
 
 class UserBehaviorTrackingService
 {
     private const CACHE_KEY = 'user_behavior';
+
     private const CACHE_TTL = 7200; // 2 hours
 
     /**
@@ -41,8 +41,8 @@ class UserBehaviorTrackingService
      */
     public function getUserBehaviorStats(string $timeRange = '24h'): array
     {
-        $cacheKey = self::CACHE_KEY . '_stats_' . $timeRange;
-        
+        $cacheKey = self::CACHE_KEY.'_stats_'.$timeRange;
+
         return Cache::remember($cacheKey, 600, function () use ($timeRange) {
             $startTime = $this->getTimeRangeStart($timeRange);
             $behaviors = $this->getBehaviorsFromCache($startTime);
@@ -66,27 +66,27 @@ class UserBehaviorTrackingService
     public function getBehaviors(array $filters = []): array
     {
         $behaviors = $this->getBehaviorsFromCache();
-        
+
         // 應用過濾器
         if (isset($filters['user_id'])) {
-            $behaviors = array_filter($behaviors, fn($behavior) => $behavior['user_id'] === $filters['user_id']);
+            $behaviors = array_filter($behaviors, fn ($behavior) => $behavior['user_id'] === $filters['user_id']);
         }
-        
+
         if (isset($filters['session_id'])) {
-            $behaviors = array_filter($behaviors, fn($behavior) => $behavior['session_id'] === $filters['session_id']);
+            $behaviors = array_filter($behaviors, fn ($behavior) => $behavior['session_id'] === $filters['session_id']);
         }
-        
+
         if (isset($filters['action'])) {
-            $behaviors = array_filter($behaviors, fn($behavior) => $behavior['action'] === $filters['action']);
+            $behaviors = array_filter($behaviors, fn ($behavior) => $behavior['action'] === $filters['action']);
         }
-        
+
         if (isset($filters['since'])) {
             $since = is_string($filters['since']) ? strtotime($filters['since']) : $filters['since'];
-            $behaviors = array_filter($behaviors, fn($behavior) => $behavior['timestamp'] >= $since);
+            $behaviors = array_filter($behaviors, fn ($behavior) => $behavior['timestamp'] >= $since);
         }
 
         // 排序
-        usort($behaviors, fn($a, $b) => $b['timestamp'] - $a['timestamp']);
+        usort($behaviors, fn ($a, $b) => $b['timestamp'] - $a['timestamp']);
 
         return $behaviors;
     }
@@ -97,7 +97,7 @@ class UserBehaviorTrackingService
     public function getSessionAnalysis(string $sessionId): array
     {
         $behaviors = $this->getBehaviors(['session_id' => $sessionId]);
-        
+
         if (empty($behaviors)) {
             return [];
         }
@@ -126,12 +126,12 @@ class UserBehaviorTrackingService
     {
         $cutoffTime = now()->subDays($daysToKeep)->timestamp;
         $behaviors = $this->getBehaviorsFromCache();
-        
+
         $originalCount = count($behaviors);
-        $behaviors = array_filter($behaviors, fn($behavior) => $behavior['timestamp'] >= $cutoffTime);
-        
+        $behaviors = array_filter($behaviors, fn ($behavior) => $behavior['timestamp'] >= $cutoffTime);
+
         $this->storeBehaviorsInCache($behaviors);
-        
+
         return $originalCount - count($behaviors);
     }
 
@@ -140,7 +140,7 @@ class UserBehaviorTrackingService
      */
     private function generateBehaviorId(): string
     {
-        return 'behavior_' . uniqid() . '_' . time();
+        return 'behavior_'.uniqid().'_'.time();
     }
 
     /**
@@ -148,7 +148,7 @@ class UserBehaviorTrackingService
      */
     private function generateSessionId(): string
     {
-        return 'session_' . uniqid() . '_' . time();
+        return 'session_'.uniqid().'_'.time();
     }
 
     /**
@@ -158,26 +158,26 @@ class UserBehaviorTrackingService
     {
         $behaviors = $this->getBehaviorsFromCache();
         $behaviors[] = $behavior;
-        
+
         // 只保留最新的 5000 個行為
         if (count($behaviors) > 5000) {
             $behaviors = array_slice($behaviors, -5000);
         }
-        
+
         $this->storeBehaviorsInCache($behaviors);
     }
 
     /**
      * 從快取獲取行為
      */
-    private function getBehaviorsFromCache(int $since = null): array
+    private function getBehaviorsFromCache(?int $since = null): array
     {
         $behaviors = Cache::get(self::CACHE_KEY, []);
-        
+
         if ($since) {
-            $behaviors = array_filter($behaviors, fn($behavior) => $behavior['timestamp'] >= $since);
+            $behaviors = array_filter($behaviors, fn ($behavior) => $behavior['timestamp'] >= $since);
         }
-        
+
         return $behaviors;
     }
 
@@ -227,6 +227,7 @@ class UserBehaviorTrackingService
     private function getUniqueSessions(array $behaviors): int
     {
         $sessions = array_unique(array_column($behaviors, 'session_id'));
+
         return count($sessions);
     }
 
@@ -236,6 +237,7 @@ class UserBehaviorTrackingService
     private function getUniqueUsers(array $behaviors): int
     {
         $users = array_unique(array_column($behaviors, 'user_id'));
+
         return count($users);
     }
 
@@ -247,7 +249,7 @@ class UserBehaviorTrackingService
         $sessions = [];
         foreach ($behaviors as $behavior) {
             $sessionId = $behavior['session_id'];
-            if (!isset($sessions[$sessionId])) {
+            if (! isset($sessions[$sessionId])) {
                 $sessions[$sessionId] = ['start' => $behavior['timestamp'], 'end' => $behavior['timestamp']];
             } else {
                 $sessions[$sessionId]['start'] = min($sessions[$sessionId]['start'], $behavior['timestamp']);
@@ -259,7 +261,8 @@ class UserBehaviorTrackingService
             return 0;
         }
 
-        $durations = array_map(fn($session) => $session['end'] - $session['start'], $sessions);
+        $durations = array_map(fn ($session) => $session['end'] - $session['start'], $sessions);
+
         return array_sum($durations) / count($durations);
     }
 
@@ -273,8 +276,9 @@ class UserBehaviorTrackingService
             $action = $behavior['action'];
             $actionCounts[$action] = ($actionCounts[$action] ?? 0) + 1;
         }
-        
+
         arsort($actionCounts);
+
         return array_slice($actionCounts, 0, $limit, true);
     }
 
@@ -288,8 +292,9 @@ class UserBehaviorTrackingService
             $page = $behavior['page'];
             $pageCounts[$page] = ($pageCounts[$page] ?? 0) + 1;
         }
-        
+
         arsort($pageCounts);
+
         return array_slice($pageCounts, 0, $limit, true);
     }
 
@@ -301,13 +306,14 @@ class UserBehaviorTrackingService
         $userActivity = [];
         foreach ($behaviors as $behavior) {
             $userId = $behavior['user_id'];
-            if (!isset($userActivity[$userId])) {
+            if (! isset($userActivity[$userId])) {
                 $userActivity[$userId] = 0;
             }
             $userActivity[$userId]++;
         }
-        
+
         arsort($userActivity);
+
         return $userActivity;
     }
 
@@ -321,8 +327,9 @@ class UserBehaviorTrackingService
             $hour = date('H', $behavior['timestamp']);
             $hourlyActivity[$hour] = ($hourlyActivity[$hour] ?? 0) + 1;
         }
-        
+
         ksort($hourlyActivity);
+
         return $hourlyActivity;
     }
 
@@ -333,15 +340,16 @@ class UserBehaviorTrackingService
     {
         $pages = array_column($behaviors, 'page');
         $flow = [];
-        
+
         for ($i = 0; $i < count($pages) - 1; $i++) {
             $from = $pages[$i];
             $to = $pages[$i + 1];
-            $key = $from . ' -> ' . $to;
+            $key = $from.' -> '.$to;
             $flow[$key] = ($flow[$key] ?? 0) + 1;
         }
-        
+
         arsort($flow);
+
         return $flow;
     }
 }
