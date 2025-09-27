@@ -27,7 +27,13 @@
       "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan test tests/Feature/RentalDataProcessingServiceTest.php)",
       "Bash(/c/Users/chang180/.config/herd/bin/php84.bat vendor/bin/pint --dirty)",
       "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan test tests/Feature/Auth/RegistrationTest.php)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "mcp__laravel-boost__database-schema",
+      "mcp__laravel-boost__get-absolute-url",
+      "Bash(curl -s \"https://rentalradar.test/api/map/districts\")",
+      "Bash(npm install:*)",
+      "Bash(composer require:*)",
+      "mcp__laravel-boost__list-artisan-commands"
     ]
   },
   "enableAllProjectMcpServers": true,

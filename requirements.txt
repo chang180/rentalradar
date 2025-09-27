@@ -1,0 +1,25 @@
+# RentalRadar AI 地圖系統 Python 套件需求
+
+# 核心資料處理
+numpy>=1.24.0
+pandas>=2.0.0
+
+# 機器學習
+scikit-learn>=1.3.0
+
+# 資料視覺化
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
+# 地理資料處理
+geopandas>=0.13.0
+shapely>=2.0.0
+
+# 效能優化
+numba>=0.57.0
+
+# 資料驗證
+jsonschema>=4.17.0
+
+# 日誌記錄
+loguru>=0.7.0
