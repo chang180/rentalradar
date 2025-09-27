@@ -3,6 +3,7 @@ import { useWebSocket } from '../hooks/useWebSocket';
 import { PerformanceMonitor } from '../components/PerformanceMonitor';
 import { ConnectionStatus } from '../components/ConnectionStatus';
 import { LoadingIndicator } from '../components/LoadingIndicator';
+import { PerformanceChart, MultiMetricChart } from '../components/PerformanceChart';
 import { PerformanceUtils } from '../utils/PerformanceUtils';
 
 interface DashboardMetrics {
@@ -42,6 +43,7 @@ export const PerformanceDashboard: React.FC = () => {
     const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
     const [errorLogs, setErrorLogs] = useState<ErrorLog[]>([]);
     const [userBehaviors, setUserBehaviors] = useState<UserBehavior[]>([]);
+    const [performanceHistory, setPerformanceHistory] = useState<DashboardMetrics[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [timeRange, setTimeRange] = useState<'1h' | '6h' | '24h' | '7d'>('1h');
     const [selectedTab, setSelectedTab] = useState<'overview' | 'errors' | 'users' | 'performance'>('overview');
@@ -66,6 +68,23 @@ export const PerformanceDashboard: React.FC = () => {
 
                 setMetrics(mockMetrics);
                 PerformanceUtils.recordMetrics(mockMetrics);
+                
+                // 生成歷史資料用於圖表
+                const historyData: DashboardMetrics[] = [];
+                for (let i = 0; i < 20; i++) {
+                    const timestamp = Date.now() - (i * 5 * 60 * 1000); // 每5分鐘一個資料點
+                    historyData.push({
+                        timestamp,
+                        responseTime: Math.random() * 200 + 50,
+                        memoryUsage: Math.random() * 100 + 20,
+                        queryCount: Math.floor(Math.random() * 50 + 10),
+                        cacheHitRate: Math.random() * 40 + 60,
+                        activeConnections: Math.floor(Math.random() * 100 + 10),
+                        errorRate: Math.random() * 5,
+                        throughput: Math.random() * 1000 + 500,
+                    });
+                }
+                setPerformanceHistory(historyData.reverse());
             } catch (error) {
                 console.error('載入效能資料失敗:', error);
             } finally {
@@ -456,13 +475,36 @@ export const PerformanceDashboard: React.FC = () => {
                     <div className="space-y-6">
                         <PerformanceMonitor showDetails={true} />
                         
-                        <div className="bg-white rounded-lg shadow p-6">
-                            <h3 className="text-lg font-semibold text-gray-900 mb-4">效能趨勢</h3>
-                            <div className="text-center py-8 text-gray-500">
-                                <p>效能趨勢圖表將在此處顯示</p>
-                                <p className="text-sm mt-2">需要整合圖表庫 (如 Chart.js 或 Recharts)</p>
-                            </div>
-                        </div>
+                        {/* 響應時間趨勢 */}
+                        <PerformanceChart
+                            data={performanceHistory}
+                            metric="responseTime"
+                            title="響應時間趨勢"
+                            color="#3B82F6"
+                            type="line"
+                        />
+                        
+                        {/* 記憶體使用趨勢 */}
+                        <PerformanceChart
+                            data={performanceHistory}
+                            metric="memoryUsage"
+                            title="記憶體使用趨勢"
+                            color="#10B981"
+                            type="area"
+                        />
+                        
+                        {/* 多指標綜合圖表 */}
+                        <MultiMetricChart
+                            data={performanceHistory}
+                            metrics={[
+                                { key: 'responseTime', title: '響應時間 (ms)', color: '#3B82F6' },
+                                { key: 'memoryUsage', title: '記憶體使用 (MB)', color: '#10B981' },
+                                { key: 'queryCount', title: '查詢次數', color: '#F59E0B' },
+                                { key: 'activeConnections', title: '活躍連接', color: '#EF4444' },
+                            ]}
+                            type="line"
+                            height={400}
+                        />
                     </div>
                 )}
             </div>

@@ -1,5 +1,5 @@
 import echo from '../echo';
-import { EventEmitter } from 'events';
+import { EventEmitter } from '../utils/EventEmitter';
 
 export interface WebSocketMessage {
     type: 'map_update' | 'notification' | 'system_status';
