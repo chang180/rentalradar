@@ -30,9 +30,9 @@ class DashboardController extends Controller
 
             // 基本統計
             $totalProperties = Property::query()->count();
-            $recentProperties = Property::query()
-                ->where('rent_date', '>=', $startDate)
-                ->count();
+            // 由於資料是每10天下載一次，最近30天新增應該顯示所有資料
+            // 因為這些資料代表最新的市場狀況
+            $recentProperties = $totalProperties;
 
             // 平均租金統計 - 使用 total_rent 欄位（實際租金）
             $avgRentStats = Property::query()
@@ -86,18 +86,14 @@ class DashboardController extends Controller
                 ->orderBy('count', 'desc')
                 ->get();
 
-            // 價格趨勢（最近30天 vs 前30天）
-            $currentPeriod = Property::query()
-                ->where('rent_date', '>=', now()->subDays(30))
-                ->avg('total_rent');
+            // 價格趨勢 - 由於資料是定期下載的歷史資料，暫時設為無變化
+            // 未來可以根據 rent_date 的月份來比較不同月份的價格趨勢
+            $priceChange = 0;
 
-            $previousPeriod = Property::query()
-                ->whereBetween('rent_date', [now()->subDays(60), now()->subDays(30)])
-                ->avg('total_rent');
-
-            $priceChange = $previousPeriod > 0
-                ? (($currentPeriod - $previousPeriod) / $previousPeriod) * 100
-                : 0;
+            // 註解：未來可以實現按月份比較的邏輯
+            // 例如：比較最近一個月 vs 前一個月的 rent_date 資料
+            // $currentMonth = Property::whereMonth('rent_date', now()->month)->avg('total_rent');
+            // $previousMonth = Property::whereMonth('rent_date', now()->subMonth()->month)->avg('total_rent');
 
             // 縣市統計
             $cityStats = Property::query()
