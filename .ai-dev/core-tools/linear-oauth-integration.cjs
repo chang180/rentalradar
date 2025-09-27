@@ -11,7 +11,7 @@ const LINEAR_API_URL = 'https://api.linear.app/graphql';
 const LINEAR_AUTH_URL = 'https://linear.app/oauth/authorize';
 
 // 儲存 token 的檔案路徑
-const PARENT_TOKEN_FILE = path.join(__dirname, '../../.ai-dev-tools/linear-token.json');
+const PARENT_TOKEN_FILE = path.join(__dirname, '../../../.ai-dev-tools/linear-token.json');
 const LOCAL_TOKEN_FILE = path.join(__dirname, 'linear-token.json');
 
 // 讀取儲存的 token
