@@ -28,9 +28,7 @@ export default function DeleteUser() {
             <div className="space-y-4 rounded-lg border border-red-100 bg-red-50 p-4 dark:border-red-200/10 dark:bg-red-700/10">
                 <div className="relative space-y-0.5 text-red-600 dark:text-red-100">
                     <p className="font-medium">警告</p>
-                    <p className="text-sm">
-                        請謹慎操作，此操作無法復原。
-                    </p>
+                    <p className="text-sm">請謹慎操作，此操作無法復原。</p>
                 </div>
 
                 <Dialog>
@@ -43,9 +41,7 @@ export default function DeleteUser() {
                         </Button>
                     </DialogTrigger>
                     <DialogContent>
-                        <DialogTitle>
-                            您確定要刪除您的帳號嗎？
-                        </DialogTitle>
+                        <DialogTitle>您確定要刪除您的帳號嗎？</DialogTitle>
                         <DialogDescription>
                             一旦您的帳號被刪除，其所有資源和資料也將被永久刪除。
                             請輸入您的密碼以確認您要永久刪除您的帳號。

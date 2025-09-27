@@ -1,4 +1,4 @@
-﻿import React from 'react';
+﻿import type { MarketTrendPoint } from '@/types/analysis';
 import {
     Area,
     AreaChart,
@@ -9,7 +9,6 @@ import {
     XAxis,
     YAxis,
 } from 'recharts';
-import type { MarketTrendPoint } from '@/types/analysis';
 
 interface TrendChartProps {
     data: MarketTrendPoint[];
@@ -27,7 +26,9 @@ export function TrendChart({ data }: TrendChartProps) {
     if (!data || data.length === 0) {
         return (
             <div className="flex h-64 items-center justify-center rounded-lg border border-dashed border-gray-200 dark:border-gray-700">
-                <p className="text-sm text-gray-500 dark:text-gray-400">新增更多租賃記錄以解鎖趨勢分析。</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                    新增更多租賃記錄以解鎖趨勢分析。
+                </p>
             </div>
         );
     }
@@ -36,7 +37,9 @@ export function TrendChart({ data }: TrendChartProps) {
         <div className="space-y-4">
             <div className="flex items-center justify-between">
                 <div>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">市場趨勢</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                        市場趨勢
+                    </h3>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
                         選定範圍內的平均租金、中位數租金和 3 期移動平均。
                     </p>
@@ -44,25 +47,53 @@ export function TrendChart({ data }: TrendChartProps) {
             </div>
             <div className="h-72 w-full">
                 <ResponsiveContainer>
-                    <AreaChart data={data} margin={{ top: 20, right: 16, bottom: 8, left: 0 }}>
+                    <AreaChart
+                        data={data}
+                        margin={{ top: 20, right: 16, bottom: 8, left: 0 }}
+                    >
                         <defs>
-                            <linearGradient id="trendAverage" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.25} />
-                                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                            <linearGradient
+                                id="trendAverage"
+                                x1="0"
+                                y1="0"
+                                x2="0"
+                                y2="1"
+                            >
+                                <stop
+                                    offset="5%"
+                                    stopColor="#3b82f6"
+                                    stopOpacity={0.25}
+                                />
+                                <stop
+                                    offset="95%"
+                                    stopColor="#3b82f6"
+                                    stopOpacity={0}
+                                />
                             </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="4 4" stroke="var(--grid-color, #e5e7eb)" />
+                        <CartesianGrid
+                            strokeDasharray="4 4"
+                            stroke="var(--grid-color, #e5e7eb)"
+                        />
                         <XAxis
                             dataKey="period"
                             tickLine={false}
                             axisLine={false}
-                            tick={{ fill: 'var(--axis-color, #6b7280)', fontSize: 12 }}
+                            tick={{
+                                fill: 'var(--axis-color, #6b7280)',
+                                fontSize: 12,
+                            }}
                         />
                         <YAxis
                             tickLine={false}
                             axisLine={false}
-                            tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
-                            tick={{ fill: 'var(--axis-color, #6b7280)', fontSize: 12 }}
+                            tickFormatter={(value) =>
+                                `$${(value / 1000).toFixed(0)}k`
+                            }
+                            tick={{
+                                fill: 'var(--axis-color, #6b7280)',
+                                fontSize: 12,
+                            }}
                         />
                         <Tooltip
                             contentStyle={{
@@ -78,7 +109,12 @@ export function TrendChart({ data }: TrendChartProps) {
                                     return [String(value), '物件數'];
                                 }
 
-                                return [currencyFormatter(Number(value)), key === 'moving_average' ? '移動平均' : '平均租金'];
+                                return [
+                                    currencyFormatter(Number(value)),
+                                    key === 'moving_average'
+                                        ? '移動平均'
+                                        : '平均租金',
+                                ];
                             }}
                         />
                         <Area

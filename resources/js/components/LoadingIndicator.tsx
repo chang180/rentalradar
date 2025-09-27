@@ -44,7 +44,9 @@ export const LoadingIndicator: React.FC<LoadingIndicatorProps> = ({
     };
 
     return (
-        <div className={`flex flex-col items-center justify-center space-y-2 ${className}`}>
+        <div
+            className={`flex flex-col items-center justify-center space-y-2 ${className}`}
+        >
             <div className="relative">
                 <div
                     className={`${getSizeClasses()} ${getColorClasses()} animate-spin`}
@@ -57,7 +59,7 @@ export const LoadingIndicator: React.FC<LoadingIndicatorProps> = ({
                 {showProgress && (
                     <div className="absolute inset-0">
                         <div
-                            className={`${getSizeClasses()} border border-gray-200 dark:border-gray-600 animate-pulse`}
+                            className={`${getSizeClasses()} animate-pulse border border-gray-200 dark:border-gray-600`}
                             style={{
                                 borderRadius: '50%',
                             }}
@@ -66,7 +68,9 @@ export const LoadingIndicator: React.FC<LoadingIndicatorProps> = ({
                 )}
             </div>
             {text && (
-                <span className={`text-sm ${getColorClasses()} ${showProgress ? 'animate-pulse' : ''}`}>
+                <span
+                    className={`text-sm ${getColorClasses()} ${showProgress ? 'animate-pulse' : ''}`}
+                >
                     {text}
                 </span>
             )}

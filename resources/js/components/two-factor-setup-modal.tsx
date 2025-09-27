@@ -261,8 +261,7 @@ export default function TwoFactorSetupModal({
         if (showVerificationStep) {
             return {
                 title: '驗證驗證碼',
-                description:
-                    '請輸入您驗證器應用程式中的 6 位數代碼',
+                description: '請輸入您驗證器應用程式中的 6 位數代碼',
                 buttonText: '繼續',
             };
         }

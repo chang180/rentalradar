@@ -6,6 +6,7 @@ use App\Events\MapDataUpdated;
 use App\Events\RealTimeNotification;
 use App\Models\Property;
 use App\Services\AIMapOptimizationService;
+use App\Services\GeoAggregationService;
 use App\Support\AdvancedPricePredictor;
 use App\Support\PerformanceMonitor;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -16,7 +17,10 @@ use Illuminate\Support\Facades\Validator;
 
 class MapController extends Controller
 {
-    public function __construct(private AIMapOptimizationService $aiMapService) {}
+    public function __construct(
+        private AIMapOptimizationService $aiMapService,
+        private GeoAggregationService $geoAggregationService
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -25,79 +29,46 @@ class MapController extends Controller
         $connection->flushQueryLog();
         $connection->enableQueryLog();
 
-        $query = Property::query()->geocoded();
-        $this->applyBounds($request, $query);
+        // 使用聚合服務取得地理中心點資料
+        $filters = $this->buildFilters($request);
+        $aggregatedData = $this->geoAggregationService->getAggregatedProperties($filters);
 
-        if ($request->has('city')) {
-            $query->byCity($request->city);
-        }
-
-        if ($request->has('district')) {
-            $query->byDistrict($request->district);
-        }
-
-        if ($request->has(['start_date', 'end_date'])) {
-            $query->rentDateBetween($request->start_date, $request->end_date);
-        }
-
-        $properties = $query->select([
-            'id',
-            'city',
-            'district',
-            'building_type',
-            'area_ping',
-            'rent_per_ping',
-            'total_rent',
-            'rent_date',
-            'latitude',
-            'longitude',
-            'full_address',
-            'compartment_pattern',
-            'rental_type',
-        ])
-            ->limit($request->get('limit', 1000))
-            ->get();
+        // 只回傳有座標的資料
+        $properties = $aggregatedData->filter(function ($item) {
+            return $item['has_coordinates'];
+        })->values();
 
         $monitor->mark('query_loaded');
         $queryCount = count($connection->getQueryLog());
         $connection->disableQueryLog();
 
-        $predictionInput = $this->buildPredictionPayload($properties);
-        $predictionResult = $predictionInput === []
-            ? ['predictions' => ['items' => [], 'summary' => []], 'model_info' => []]
-            : $monitor->trackModel('price_prediction', function () use ($predictionInput) {
-                return $this->aiMapService->predictPrices($predictionInput);
-            }, ['threshold_ms' => 300]);
-
-        $predictionLookup = $this->indexPredictions($predictionResult['predictions']['items'] ?? []);
-        $predictionSummary = $predictionResult['predictions']['summary'] ?? [];
-        $modelInfo = $predictionResult['model_info'] ?? [];
-
         $responseData = [
-            'rentals' => $properties->values()->map(function ($property, $index) use ($predictionLookup) {
-                $prediction = $this->matchPrediction($predictionLookup, $property->id, $index);
-
+            'rentals' => $properties->map(function ($item) {
                 return [
-                    'id' => $property->id,
-                    'title' => $property->full_address,
-                    'price' => $property->rent_per_ping,
-                    'area' => $property->area_ping,
+                    'id' => $item['city'].'_'.$item['district'],
+                    'title' => $item['city'].$item['district'],
+                    'price' => $item['avg_rent_per_ping'],
+                    'area' => $item['avg_area_ping'],
                     'location' => [
-                        'lat' => (float) $property->latitude,
-                        'lng' => (float) $property->longitude,
-                        'address' => $property->full_address,
+                        'lat' => (float) $item['latitude'],
+                        'lng' => (float) $item['longitude'],
+                        'address' => $item['city'].$item['district'],
                     ],
-                    'price_prediction' => $this->formatPricePrediction($prediction),
+                    'property_count' => $item['property_count'],
+                    'avg_rent' => $item['avg_rent'],
+                    'min_rent' => $item['min_rent'],
+                    'max_rent' => $item['max_rent'],
+                    'elevator_ratio' => $item['elevator_ratio'],
+                    'management_ratio' => $item['management_ratio'],
+                    'furniture_ratio' => $item['furniture_ratio'],
                 ];
             }),
             'statistics' => [
                 'count' => $properties->count(),
                 'cities' => $properties->groupBy('city')->map->count(),
                 'districts' => $properties->groupBy('district')->map->count(),
-                'average_predicted_price' => $predictionSummary['average_price'] ?? null,
-                'average_confidence' => $predictionSummary['average_confidence'] ?? null,
-                'confidence_distribution' => $predictionSummary['confidence_distribution'] ?? null,
-                'confidence_percentiles' => $predictionSummary['confidence_percentiles'] ?? null,
+                'total_properties' => $properties->sum('property_count'),
+                'avg_rent_per_ping' => $properties->avg('avg_rent_per_ping'),
             ],
         ];
 
@@ -110,148 +81,19 @@ class MapController extends Controller
                 'performance' => $monitor->summary([
                     'query_count' => $queryCount,
                 ]),
-                'models' => [
-                    'price_prediction' => [
-                        'version' => $modelInfo['version'] ?? AdvancedPricePredictor::MODEL_VERSION,
-                        'average_confidence' => $predictionSummary['average_confidence'] ?? null,
-                    ],
-                ],
+                'aggregation_type' => 'geo_center',
             ],
         ]);
     }
 
-    public function statistics(Request $request): JsonResponse
+    public function optimizedData(Request $request): JsonResponse
     {
-        $monitor = PerformanceMonitor::start('map.statistics');
-        $connection = DB::connection();
-        $connection->flushQueryLog();
-        $connection->enableQueryLog();
-
-        $query = Property::query()->geocoded();
-        $this->applyBounds($request, $query);
-
-        if ($request->has('city')) {
-            $query->byCity($request->city);
-        }
-
-        if ($request->has('district')) {
-            $query->byDistrict($request->district);
-        }
-
-        $stats = [
-            'total_properties' => $query->count(),
-            'avg_rent_per_ping' => $query->avg('rent_per_ping'),
-            'avg_total_rent' => $query->avg('total_rent'),
-            'avg_area_ping' => $query->avg('area_ping'),
-            'city_stats' => $query->selectRaw('
-                city,
-                COUNT(*) as count,
-                AVG(rent_per_ping) as avg_rent_per_ping,
-                AVG(total_rent) as avg_total_rent,
-                MIN(rent_per_ping) as min_rent_per_ping,
-                MAX(rent_per_ping) as max_rent_per_ping
-            ')
-                ->groupBy('city')
-                ->get(),
-            'district_stats' => $query->selectRaw('
-                city,
-                district,
-                COUNT(*) as count,
-                AVG(rent_per_ping) as avg_rent_per_ping,
-                AVG(total_rent) as avg_total_rent,
-                MIN(rent_per_ping) as min_rent_per_ping,
-                MAX(rent_per_ping) as max_rent_per_ping
-            ')
-                ->groupBy('city', 'district')
-                ->get(),
-            'building_type_stats' => $query->selectRaw('
-                building_type,
-                COUNT(*) as count,
-                AVG(rent_per_ping) as avg_rent_per_ping
-            ')
-                ->groupBy('building_type')
-                ->get(),
-            'rental_type_stats' => $query->selectRaw('
-                rental_type,
-                COUNT(*) as count,
-                AVG(rent_per_ping) as avg_rent_per_ping
-            ')
-                ->groupBy('rental_type')
-                ->get(),
-        ];
-
-        $monitor->mark('stats_ready');
-        $queryCount = count($connection->getQueryLog());
-        $connection->disableQueryLog();
-
-        return response()->json([
-            'success' => true,
-            'data' => $stats,
-            'meta' => [
-                'performance' => $monitor->summary([
-                    'query_count' => $queryCount,
-                ]),
-            ],
-        ]);
-    }
-
-    public function heatmapData(Request $request): JsonResponse
-    {
-        $monitor = PerformanceMonitor::start('map.heatmap');
-        $connection = DB::connection();
-        $connection->flushQueryLog();
-        $connection->enableQueryLog();
-
-        $query = Property::query()->geocoded();
-        $this->applyBounds($request, $query);
-
-        if ($request->has('city')) {
-            $query->byCity($request->city);
-        }
-
-        if ($request->has('district')) {
-            $query->byDistrict($request->district);
-        }
-
-        $properties = $query->select('latitude', 'longitude', 'rent_per_ping')
-            ->limit($request->get('limit', 2000))
-            ->get();
-
-        $heatmapData = $properties->map(function ($property) {
-            return [
-                (float) $property->latitude,
-                (float) $property->longitude,
-                (float) $property->rent_per_ping / 100, // 正規化強度值
-            ];
-        });
-
-        $monitor->mark('transform_complete');
-        $queryCount = count($connection->getQueryLog());
-        $connection->disableQueryLog();
-
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'heatmap_points' => $heatmapData,
-                'count' => $properties->count(),
-            ],
-            'meta' => [
-                'performance' => $monitor->summary([
-                    'query_count' => $queryCount,
-                ]),
-            ],
-        ]);
+        return $this->index($request);
     }
 
     public function cities(): JsonResponse
     {
-        $cities = Property::query()
-            ->select('city')
-            ->selectRaw('COUNT(*) as property_count')
-            ->selectRaw('AVG(rent_per_ping) as avg_rent_per_ping')
-            ->groupBy('city')
-            ->orderBy('property_count', 'desc')
-            ->get();
+        $cities = $this->geoAggregationService->getCities();
 
         return response()->json([
             'success' => true,
@@ -259,15 +101,17 @@ class MapController extends Controller
         ]);
     }
 
-    public function districts(): JsonResponse
+    public function districts(Request $request): JsonResponse
     {
-        $districts = Property::query()
-            ->select('city', 'district')
-            ->selectRaw('COUNT(*) as property_count')
-            ->selectRaw('AVG(rent_per_ping) as avg_rent_per_ping')
-            ->groupBy('city', 'district')
-            ->orderBy('property_count', 'desc')
-            ->get();
+        $city = $request->get('city');
+        if (!$city) {
+            return response()->json([
+                'success' => false,
+                'message' => '請指定縣市',
+            ], 400);
+        }
+
+        $districts = $this->geoAggregationService->getDistrictsByCity($city);
 
         return response()->json([
             'success' => true,
@@ -275,553 +119,21 @@ class MapController extends Controller
         ]);
     }
 
-    public function districtBounds(Request $request): JsonResponse
+    /**
+     * 建立篩選條件
+     */
+    private function buildFilters(Request $request): array
     {
-        $city = $request->get('city');
-        $district = $request->get('district');
-
-        if (! $city || ! $district) {
-            return response()->json([
-                'success' => false,
-                'message' => 'City and district parameters are required',
-            ], 400);
-        }
-
-        $bounds = Property::query()
-            ->where('city', $city)
-            ->where('district', $district)
-            ->whereNotNull('latitude')
-            ->whereNotNull('longitude')
-            ->selectRaw('
-                MIN(latitude) as south,
-                MAX(latitude) as north,
-                MIN(longitude) as west,
-                MAX(longitude) as east
-            ')
-            ->first();
-
-        if (! $bounds || ! $bounds->north) {
-            return response()->json([
-                'success' => false,
-                'message' => "No bounds found for {$city}{$district}",
-            ], 404);
-        }
-
-        return response()->json([
-            'success' => true,
-            'bounds' => [
-                'north' => (float) $bounds->north,
-                'south' => (float) $bounds->south,
-                'east' => (float) $bounds->east,
-                'west' => (float) $bounds->west,
-            ],
-        ]);
-    }
-
-    public function clusters(Request $request): JsonResponse
-    {
-        $monitor = PerformanceMonitor::start('map.clusters');
-        $connection = DB::connection();
-        $connection->flushQueryLog();
-        $connection->enableQueryLog();
-
-        $query = Property::query()->geocoded();
-        $this->applyBounds($request, $query);
+        $filters = [];
 
         if ($request->has('city')) {
-            $query->byCity($request->city);
+            $filters['city'] = $request->city;
         }
 
         if ($request->has('district')) {
-            $query->byDistrict($request->district);
+            $filters['district'] = $request->district;
         }
 
-        $properties = $query->select('latitude', 'longitude')->get();
-
-        $monitor->mark('query_loaded');
-
-        $data = $properties->map(function ($property) {
-            return [
-                'lat' => (float) $property->latitude,
-                'lng' => (float) $property->longitude,
-            ];
-        })->toArray();
-
-        $monitor->mark('payload_normalized');
-
-        $algorithm = $request->get('algorithm', 'kmeans');
-        $nClusters = (int) $request->get('clusters', 10);
-
-        $serviceResult = $this->aiMapService->clusteringAlgorithm($data, $algorithm, $nClusters);
-        $predictionResult = $monitor->trackModel('price_prediction', function () use ($data) {
-            return $this->aiMapService->predictPrices($data);
-        }, ['threshold_ms' => 300]);
-        $priceSummary = $predictionResult['predictions']['summary'] ?? [];
-        $modelInfo = $predictionResult['model_info'] ?? [];
-
-        $monitor->mark('algorithm_complete');
-        $queryCount = count($connection->getQueryLog());
-        $connection->disableQueryLog();
-
-        $responseData = [
-            'clusters' => $serviceResult['clusters'] ?? [],
-            'algorithm_info' => $serviceResult['algorithm_info'] ?? [],
-            'price_summary' => $priceSummary,
-        ];
-
-        broadcast(new MapDataUpdated($responseData, 'clusters'));
-
-        return response()->json([
-            'success' => $serviceResult['success'] ?? true,
-            'data' => $responseData,
-            'meta' => [
-                'performance' => $monitor->summary([
-                    'query_count' => $queryCount,
-                ]),
-                'models' => [
-                    'price_prediction' => [
-                        'version' => $modelInfo['version'] ?? AdvancedPricePredictor::MODEL_VERSION,
-                        'average_confidence' => $priceSummary['average_confidence'] ?? null,
-                    ],
-                ],
-            ],
-        ]);
-    }
-
-    public function aiHeatmap(Request $request): JsonResponse
-    {
-        $monitor = PerformanceMonitor::start('map.ai_heatmap');
-        $connection = DB::connection();
-        $connection->flushQueryLog();
-        $connection->enableQueryLog();
-
-        $query = Property::query()->geocoded();
-        $this->applyBounds($request, $query);
-
-        if ($request->has('city')) {
-            $query->byCity($request->city);
-        }
-
-        if ($request->has('district')) {
-            $query->byDistrict($request->district);
-        }
-
-        $properties = $query->select('latitude', 'longitude', 'rent_per_ping')->get();
-
-        $monitor->mark('query_loaded');
-
-        $data = $properties->map(function ($property) {
-            return [
-                'lat' => (float) $property->latitude,
-                'lng' => (float) $property->longitude,
-                'price' => (float) $property->rent_per_ping,
-            ];
-        })->toArray();
-
-        $monitor->mark('payload_normalized');
-
-        $resolution = $request->get('resolution', 'medium');
-        $serviceResult = $this->aiMapService->generateHeatmap($data, $resolution);
-
-        $monitor->mark('heatmap_ready');
-        $queryCount = count($connection->getQueryLog());
-        $connection->disableQueryLog();
-
-        return response()->json([
-            'success' => $serviceResult['success'] ?? true,
-            'data' => [
-                'heatmap_points' => $serviceResult['heatmap_points'] ?? [],
-                'color_scale' => $serviceResult['color_scale'] ?? [],
-                'statistics' => $serviceResult['statistics'] ?? [],
-            ],
-            'meta' => [
-                'performance' => $monitor->summary([
-                    'query_count' => $queryCount,
-                ]),
-            ],
-        ]);
-    }
-
-    public function predictPrices(Request $request): JsonResponse
-    {
-        $monitor = PerformanceMonitor::start('map.predict_prices');
-        $connection = DB::connection();
-        $connection->flushQueryLog();
-        $connection->enableQueryLog();
-
-        $inputData = $request->validate([
-            'properties' => 'required|array',
-            'properties.*.lat' => 'required|numeric',
-            'properties.*.lng' => 'required|numeric',
-            'properties.*.area' => 'numeric',
-            'properties.*.floor' => 'numeric',
-            'properties.*.age' => 'numeric',
-        ]);
-
-        $result = $monitor->trackModel('price_prediction', function () use ($inputData) {
-            return $this->aiMapService->predictPrices($inputData['properties']);
-        }, ['threshold_ms' => 300]);
-
-        $monitor->mark('prediction_ready');
-        $queryCount = count($connection->getQueryLog());
-        $connection->disableQueryLog();
-
-        $result['meta'] = [
-            'performance' => $monitor->summary([
-                'query_count' => $queryCount,
-            ]),
-        ];
-
-        return response()->json($result);
-    }
-
-    public function optimizedData(Request $request): JsonResponse
-    {
-        $monitor = PerformanceMonitor::start('map.optimized');
-        $connection = DB::connection();
-        $connection->flushQueryLog();
-        $connection->enableQueryLog();
-
-        $query = Property::query()->geocoded();
-        $this->applyBounds($request, $query);
-
-        if ($request->has('city')) {
-            $query->byCity($request->city);
-        }
-
-        if ($request->has('district')) {
-            $query->byDistrict($request->district);
-        }
-
-        $zoom = (int) $request->get('zoom', 12);
-        $limit = $this->calculateOptimalLimit($zoom);
-
-        $properties = $query->select([
-            'id',
-            'city',
-            'district',
-            'building_type',
-            'area_ping',
-            'rent_per_ping',
-            'total_rent',
-            'latitude',
-            'longitude',
-            'bedrooms',
-            'living_rooms',
-            'bathrooms',
-            'has_elevator',
-            'has_management_organization',
-            'has_furniture',
-        ])
-            ->limit($limit)
-            ->get();
-
-        $monitor->mark('query_loaded');
-
-        // 如果資料點太多，使用 AI 聚合演算法
-        if ($properties->count() > 100) {
-            $data = $properties->map(function ($property) {
-                return [
-                    'lat' => (float) $property->latitude,
-                    'lng' => (float) $property->longitude,
-                    'area' => (float) $property->area_ping,
-                    'rent_per_ping' => (float) $property->rent_per_ping,
-                    'building_type' => $property->building_type,
-                    'city' => $property->city,
-                    'district' => $property->district,
-                ];
-            })->toArray();
-
-            $clusters = $this->aiMapService->clusteringAlgorithm($data, 'grid', 20);
-            $predictionResult = $monitor->trackModel('price_prediction', function () use ($data) {
-                return $this->aiMapService->predictPrices($data);
-            }, ['threshold_ms' => 300]);
-            $priceSummary = $predictionResult['predictions']['summary'] ?? [];
-            $modelInfo = $predictionResult['model_info'] ?? [];
-
-            $monitor->mark('clusters_calculated');
-            $queryCount = count($connection->getQueryLog());
-            $connection->disableQueryLog();
-
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'type' => 'clusters',
-                    'clusters' => $clusters['clusters'] ?? [],
-                    'optimization_info' => [
-                        'original_count' => $properties->count(),
-                        'cluster_count' => count($clusters['clusters'] ?? []),
-                        'reduction_ratio' => round((1 - count($clusters['clusters'] ?? []) / $properties->count()) * 100, 2),
-                    ],
-                    'price_summary' => $priceSummary,
-                ],
-                'meta' => [
-                    'performance' => $monitor->summary([
-                        'query_count' => $queryCount,
-                    ]),
-                    'models' => [
-                        'price_prediction' => [
-                            'version' => $modelInfo['version'] ?? AdvancedPricePredictor::MODEL_VERSION,
-                            'average_confidence' => $priceSummary['average_confidence'] ?? null,
-                        ],
-                    ],
-                ],
-            ]);
-        }
-
-        // 資料點較少時直接返回
-        $monitor->mark('payload_transformed');
-        $queryCount = count($connection->getQueryLog());
-        $connection->disableQueryLog();
-
-        $predictionInput = $this->buildPredictionPayload($properties);
-        $predictionResult = $predictionInput === []
-            ? ['predictions' => ['items' => [], 'summary' => []], 'model_info' => []]
-            : $monitor->trackModel('price_prediction', function () use ($predictionInput) {
-                return $this->aiMapService->predictPrices($predictionInput);
-            }, ['threshold_ms' => 300]);
-        $predictionLookup = $this->indexPredictions($predictionResult['predictions']['items'] ?? []);
-        $predictionSummary = $predictionResult['predictions']['summary'] ?? [];
-        $modelInfo = $predictionResult['model_info'] ?? [];
-
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'type' => 'properties',
-                'properties' => $properties->values()->map(function ($property, $index) use ($predictionLookup) {
-                    $prediction = $this->matchPrediction($predictionLookup, $property->id, $index);
-
-                    return [
-                        'id' => $property->id,
-                        'position' => [
-                            'lat' => (float) $property->latitude,
-                            'lng' => (float) $property->longitude,
-                        ],
-                        'info' => [
-                            'city' => $property->city,
-                            'district' => $property->district,
-                            'building_type' => $property->building_type,
-                            'area' => $property->area_ping,
-                            'rent_per_ping' => $property->rent_per_ping,
-                            'total_rent' => $property->total_rent,
-                        ],
-                        'price_prediction' => $this->formatPricePrediction($prediction),
-                    ];
-                }),
-                'count' => $properties->count(),
-                'price_summary' => $predictionSummary,
-            ],
-            'meta' => [
-                'performance' => $monitor->summary([
-                    'query_count' => $queryCount,
-                ]),
-                'models' => [
-                    'price_prediction' => [
-                        'version' => $modelInfo['version'] ?? AdvancedPricePredictor::MODEL_VERSION,
-                        'average_confidence' => $predictionSummary['average_confidence'] ?? null,
-                    ],
-                ],
-            ],
-        ]);
-    }
-
-    private function calculateOptimalLimit(int $zoom): int
-    {
-        // 根據縮放級別優化資料載入量
-        return match (true) {
-            $zoom <= 10 => 50,
-            $zoom <= 12 => 200,
-            $zoom <= 14 => 500,
-            default => 1000
-        };
-    }
-
-    private function applyBounds(Request $request, $query): void
-    {
-        $bounds = $this->extractBounds($request);
-        if ($bounds === null) {
-            return;
-        }
-
-        $query->withinBounds($bounds['north'], $bounds['south'], $bounds['east'], $bounds['west']);
-    }
-
-    private function extractBounds(Request $request): ?array
-    {
-        $incoming = $request->get('bounds');
-        $hasDirect = $request->has(['north', 'south', 'east', 'west']);
-
-        if ($incoming === null && ! $hasDirect) {
-            return null;
-        }
-
-        $candidate = [
-            'north' => is_array($incoming) ? ($incoming['north'] ?? $incoming['top'] ?? null) : null,
-            'south' => is_array($incoming) ? ($incoming['south'] ?? $incoming['bottom'] ?? null) : null,
-            'east' => is_array($incoming) ? ($incoming['east'] ?? $incoming['right'] ?? null) : null,
-            'west' => is_array($incoming) ? ($incoming['west'] ?? $incoming['left'] ?? null) : null,
-        ];
-
-        if ($hasDirect) {
-            $candidate['north'] = $candidate['north'] ?? $request->get('north');
-            $candidate['south'] = $candidate['south'] ?? $request->get('south');
-            $candidate['east'] = $candidate['east'] ?? $request->get('east');
-            $candidate['west'] = $candidate['west'] ?? $request->get('west');
-        }
-
-        if (! array_filter($candidate, static fn ($value) => $value !== null)) {
-            return null;
-        }
-
-        $validator = Validator::make($candidate, [
-            'north' => ['required', 'numeric'],
-            'south' => ['required', 'numeric'],
-            'east' => ['required', 'numeric'],
-            'west' => ['required', 'numeric'],
-        ]);
-
-        if ($validator->fails()) {
-            throw new HttpResponseException(response()->json([
-                'success' => false,
-                'error' => [
-                    'code' => 'invalid_bounds',
-                    'message' => 'Invalid map bounds provided.',
-                    'details' => $validator->errors()->toArray(),
-                ],
-            ], 422));
-        }
-
-        return array_map('floatval', $validator->validated());
-    }
-
-    // Legacy route aliases
-    public function getRentals(Request $request): JsonResponse
-    {
-        return $this->index($request);
-    }
-
-    public function getHeatmap(Request $request): JsonResponse
-    {
-        return $this->heatmapData($request);
-    }
-
-    public function getClusters(Request $request): JsonResponse
-    {
-        return $this->clusters($request);
-    }
-
-    public function getStatistics(Request $request): JsonResponse
-    {
-        return $this->statistics($request);
-    }
-
-    public function getDistricts(): JsonResponse
-    {
-        return $this->districts();
-    }
-
-    public function getAIHeatmap(Request $request): JsonResponse
-    {
-        return $this->aiHeatmap($request);
-    }
-
-    public function getOptimizedData(Request $request): JsonResponse
-    {
-        return $this->optimizedData($request);
-    }
-
-    private function buildPredictionPayload($properties): array
-    {
-        if ($properties->isEmpty()) {
-            return [];
-        }
-
-        return $properties->values()->map(function ($property, $index) {
-            return [
-                'id' => $property->id ?? null,
-                'index' => $index,
-                'lat' => $property->latitude ?? null,
-                'lng' => $property->longitude ?? null,
-                'area' => $property->area_ping ?? null,
-                'floor' => $property->total_floors ?? null,
-                'age' => $property->building_age ?? null,
-                'rent_per_ping' => $property->rent_per_ping ?? null,
-                'building_type' => $property->building_type ?? null,
-                'pattern' => $property->compartment_pattern ?? null,
-                'rooms' => $property->bedrooms ?? null,
-                'city' => $property->city ?? null,
-                'district' => $property->district ?? null,
-            ];
-        })->all();
-    }
-
-    private function indexPredictions(array $items): array
-    {
-        $indexed = [];
-        foreach ($items as $item) {
-            $key = $item['id'] ?? $item['index'] ?? null;
-            if ($key === null) {
-                continue;
-            }
-            $indexed[$key] = $item;
-        }
-
-        return $indexed;
-    }
-
-    private function matchPrediction(array $lookup, $id, $index): ?array
-    {
-        if ($id !== null && array_key_exists($id, $lookup)) {
-            return $lookup[$id];
-        }
-
-        if ($index !== null && array_key_exists($index, $lookup)) {
-            return $lookup[$index];
-        }
-
-        return null;
-    }
-
-    private function formatPricePrediction(?array $prediction): array
-    {
-        if ($prediction === null) {
-            return [
-                'value' => null,
-                'range' => ['min' => null, 'max' => null],
-                'confidence' => null,
-                'model_version' => AdvancedPricePredictor::MODEL_VERSION,
-            ];
-        }
-
-        return [
-            'value' => $prediction['price'],
-            'range' => $prediction['range'] ?? ['min' => null, 'max' => null],
-            'confidence' => $prediction['confidence'] ?? null,
-            'model_version' => $prediction['model_version'] ?? AdvancedPricePredictor::MODEL_VERSION,
-        ];
-    }
-
-    public function sendNotification(Request $request): JsonResponse
-    {
-        $validated = $request->validate([
-            'message' => 'required|string|max:255',
-            'type' => 'string|in:info,success,warning,error',
-            'user_id' => 'nullable|exists:users,id',
-            'data' => 'nullable|array',
-        ]);
-
-        $notification = new RealTimeNotification(
-            message: $validated['message'],
-            type: $validated['type'] ?? 'info',
-            data: $validated['data'] ?? null,
-            userId: $validated['user_id'] ?? null
-        );
-
-        broadcast($notification);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Notification sent successfully',
-        ]);
+        return $filters;
     }
 }

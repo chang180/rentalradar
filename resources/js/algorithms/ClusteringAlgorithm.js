@@ -19,23 +19,26 @@ class ClusteringAlgorithm {
         if (pointCount === 0) return [];
 
         const maxIterations = options.maxIterations || this.maxIterations;
-        const shiftTolerance = options.centerShiftToleranceKm || this.centerShiftToleranceKm;
+        const shiftTolerance =
+            options.centerShiftToleranceKm || this.centerShiftToleranceKm;
         const clusterCount = Math.max(1, Math.min(k, pointCount));
 
         const centers = this.initializeCentroids(coordinates, clusterCount);
-        const centerRadians = centers.map(center => [
+        const centerRadians = centers.map((center) => [
             this.toRadians(center[0]),
-            this.toRadians(center[1])
+            this.toRadians(center[1]),
         ]);
 
-        const latRadians = coordinates.map(point => this.toRadians(point[0]));
-        const lngRadians = coordinates.map(point => this.toRadians(point[1]));
+        const latRadians = coordinates.map((point) => this.toRadians(point[0]));
+        const lngRadians = coordinates.map((point) => this.toRadians(point[1]));
 
         const assignments = new Array(pointCount).fill(-1);
         const clusters = [];
 
         for (let iter = 0; iter < maxIterations; iter++) {
-            const newCenters = Array.from({ length: clusterCount }, () => [0, 0]);
+            const newCenters = Array.from({ length: clusterCount }, () => [
+                0, 0,
+            ]);
             const counts = new Array(clusterCount).fill(0);
             const errors = new Array(pointCount).fill(0);
             let assignmentChanged = false;
@@ -49,7 +52,7 @@ class ClusteringAlgorithm {
                         latRadians[index],
                         lngRadians[index],
                         centerRadians[candidate][0],
-                        centerRadians[candidate][1]
+                        centerRadians[candidate][1],
                     );
 
                     if (distance < minDistance) {
@@ -70,20 +73,34 @@ class ClusteringAlgorithm {
             }
 
             let maxShift = 0;
-            for (let clusterIndex = 0; clusterIndex < clusterCount; clusterIndex++) {
+            for (
+                let clusterIndex = 0;
+                clusterIndex < clusterCount;
+                clusterIndex++
+            ) {
                 if (counts[clusterIndex] === 0) {
-                    const reseed = this.findReseedCandidate(errors, assignments, clusterIndex);
+                    const reseed = this.findReseedCandidate(
+                        errors,
+                        assignments,
+                        clusterIndex,
+                    );
                     if (!reseed) continue;
 
                     const { index, previousCluster } = reseed;
                     if (previousCluster !== null && previousCluster >= 0) {
-                        counts[previousCluster] = Math.max(0, counts[previousCluster] - 1);
+                        counts[previousCluster] = Math.max(
+                            0,
+                            counts[previousCluster] - 1,
+                        );
                         newCenters[previousCluster][0] -= coordinates[index][0];
                         newCenters[previousCluster][1] -= coordinates[index][1];
                     }
 
                     centers[clusterIndex] = coordinates[index];
-                    centerRadians[clusterIndex] = [latRadians[index], lngRadians[index]];
+                    centerRadians[clusterIndex] = [
+                        latRadians[index],
+                        lngRadians[index],
+                    ];
                     assignments[index] = clusterIndex;
                     newCenters[clusterIndex] = [...coordinates[index]];
                     counts[clusterIndex] = 1;
@@ -92,17 +109,22 @@ class ClusteringAlgorithm {
                     continue;
                 }
 
-                const newLat = newCenters[clusterIndex][0] / counts[clusterIndex];
-                const newLng = newCenters[clusterIndex][1] / counts[clusterIndex];
+                const newLat =
+                    newCenters[clusterIndex][0] / counts[clusterIndex];
+                const newLng =
+                    newCenters[clusterIndex][1] / counts[clusterIndex];
                 const shift = this.haversineFromRadians(
                     centerRadians[clusterIndex][0],
                     centerRadians[clusterIndex][1],
                     this.toRadians(newLat),
-                    this.toRadians(newLng)
+                    this.toRadians(newLng),
                 );
 
                 centers[clusterIndex] = [newLat, newLng];
-                centerRadians[clusterIndex] = [this.toRadians(newLat), this.toRadians(newLng)];
+                centerRadians[clusterIndex] = [
+                    this.toRadians(newLat),
+                    this.toRadians(newLng),
+                ];
                 maxShift = Math.max(maxShift, shift);
             }
 
@@ -120,7 +142,9 @@ class ClusteringAlgorithm {
 
         memberPoints.forEach((points, clusterIndex) => {
             if (points.length === 0) return;
-            clusters.push(this.formatCluster(clusterIndex, centers[clusterIndex], points));
+            clusters.push(
+                this.formatCluster(clusterIndex, centers[clusterIndex], points),
+            );
         });
 
         return clusters;
@@ -136,11 +160,17 @@ class ClusteringAlgorithm {
         const bounds = this.calculateBounds(coordinates);
         const latRange = Math.max(0.0001, bounds.north - bounds.south);
         const lngRange = Math.max(0.0001, bounds.east - bounds.west);
-        const dynamicSize = this.resolveGridSize(Math.max(latRange, lngRange), coordinates.length, gridSizeKm);
+        const dynamicSize = this.resolveGridSize(
+            Math.max(latRange, lngRange),
+            coordinates.length,
+            gridSizeKm,
+        );
 
         const grid = new Map();
-        coordinates.forEach(point => {
-            const latIndex = Math.floor((point[0] - bounds.south) / dynamicSize);
+        coordinates.forEach((point) => {
+            const latIndex = Math.floor(
+                (point[0] - bounds.south) / dynamicSize,
+            );
             const lngIndex = Math.floor((point[1] - bounds.west) / dynamicSize);
             const key = `${latIndex}_${lngIndex}`;
 
@@ -154,9 +184,15 @@ class ClusteringAlgorithm {
         let clusterId = 0;
         for (const points of grid.values()) {
             if (points.length === 0) continue;
-            const centerLat = points.reduce((sum, point) => sum + point[0], 0) / points.length;
-            const centerLng = points.reduce((sum, point) => sum + point[1], 0) / points.length;
-            clusters.push(this.formatCluster(clusterId++, [centerLat, centerLng], points));
+            const centerLat =
+                points.reduce((sum, point) => sum + point[0], 0) /
+                points.length;
+            const centerLng =
+                points.reduce((sum, point) => sum + point[1], 0) /
+                points.length;
+            clusters.push(
+                this.formatCluster(clusterId++, [centerLat, centerLng], points),
+            );
         }
 
         return clusters;
@@ -171,12 +207,15 @@ class ClusteringAlgorithm {
 
         const dLat = this.toRadians(lat2 - lat1);
         const dLng = this.toRadians(lng2 - lng1);
-        
-        const a = Math.sin(dLat/2) * Math.sin(dLat/2) + 
-                  Math.cos(this.toRadians(lat1)) * Math.cos(this.toRadians(lat2)) * 
-                  Math.sin(dLng/2) * Math.sin(dLng/2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        
+
+        const a =
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(this.toRadians(lat1)) *
+                Math.cos(this.toRadians(lat2)) *
+                Math.sin(dLng / 2) *
+                Math.sin(dLng / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
         return this.earthRadius * c;
     }
 
@@ -188,14 +227,14 @@ class ClusteringAlgorithm {
             return { north: 0, south: 0, east: 0, west: 0 };
         }
 
-        const lats = points.map(point => point[0]);
-        const lngs = points.map(point => point[1]);
+        const lats = points.map((point) => point[0]);
+        const lngs = points.map((point) => point[1]);
 
         return {
             north: Math.max(...lats),
             south: Math.min(...lats),
             east: Math.max(...lngs),
-            west: Math.min(...lngs)
+            west: Math.min(...lngs),
         };
     }
 
@@ -212,7 +251,9 @@ class ClusteringAlgorithm {
     haversineFromRadians(lat1, lng1, lat2, lng2) {
         const dLat = lat2 - lat1;
         const dLng = lng2 - lng1;
-        const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+        const a =
+            Math.sin(dLat / 2) ** 2 +
+            Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return this.earthRadius * c;
     }
@@ -223,20 +264,27 @@ class ClusteringAlgorithm {
     formatCluster(id, center, points) {
         const bounds = this.calculateBounds(points);
         const radius = this.calculateClusterRadius(center, points);
-        const density = radius > 0 ? points.length / (Math.PI * radius ** 2) : null;
+        const density =
+            radius > 0 ? points.length / (Math.PI * radius ** 2) : null;
 
         // 計算價格統計
-        const prices = points.map(point => point.price || point.rent_per_month || 0).filter(p => p > 0);
+        const prices = points
+            .map((point) => point.price || point.rent_per_month || 0)
+            .filter((p) => p > 0);
         const priceStats = this.calculatePriceStats(prices);
 
         // 計算視覺等級（用於前端顯示大小和顏色）
-        const visualLevel = this.calculateVisualLevel(points.length, density, priceStats.avg);
+        const visualLevel = this.calculateVisualLevel(
+            points.length,
+            density,
+            priceStats.avg,
+        );
 
         return {
             id: `cluster_${id}`,
             center: {
                 lat: Number(center[0].toFixed(6)),
-                lng: Number(center[1].toFixed(6))
+                lng: Number(center[1].toFixed(6)),
             },
             count: points.length,
             bounds,
@@ -244,7 +292,7 @@ class ClusteringAlgorithm {
             density: density === null ? null : Number(density.toFixed(4)),
             price_stats: priceStats,
             visual_level: visualLevel,
-            points: points // 包含原始點數據用於詳細顯示
+            points: points, // 包含原始點數據用於詳細顯示
         };
     }
 
@@ -259,14 +307,15 @@ class ClusteringAlgorithm {
         const sorted = [...prices].sort((a, b) => a - b);
         const min = sorted[0];
         const max = sorted[sorted.length - 1];
-        const avg = prices.reduce((sum, price) => sum + price, 0) / prices.length;
+        const avg =
+            prices.reduce((sum, price) => sum + price, 0) / prices.length;
         const median = this.median(sorted);
 
         return {
             min: Number(min.toFixed(0)),
             max: Number(max.toFixed(0)),
             avg: Number(avg.toFixed(0)),
-            median: Number(median.toFixed(0))
+            median: Number(median.toFixed(0)),
         };
     }
 
@@ -297,7 +346,7 @@ class ClusteringAlgorithm {
      */
     normalizePoints(points) {
         return points
-            .map(point => {
+            .map((point) => {
                 if (Array.isArray(point)) {
                     return [Number(point[0]), Number(point[1])];
                 }
@@ -308,14 +357,21 @@ class ClusteringAlgorithm {
                 }
                 return null;
             })
-            .filter(point => Array.isArray(point) && isFinite(point[0]) && isFinite(point[1]));
+            .filter(
+                (point) =>
+                    Array.isArray(point) &&
+                    isFinite(point[0]) &&
+                    isFinite(point[1]),
+            );
     }
 
     /**
      * 決定性初始化中心點（依緯度排序取樣）
      */
     initializeCentroids(coordinates, k) {
-        const sorted = [...coordinates].sort((a, b) => (a[0] - b[0]) || (a[1] - b[1]));
+        const sorted = [...coordinates].sort(
+            (a, b) => a[0] - b[0] || a[1] - b[1],
+        );
         const step = Math.max(1, Math.floor(sorted.length / k));
         const centers = [];
         for (let i = 0; i < k; i++) {
@@ -354,12 +410,12 @@ class ClusteringAlgorithm {
         const lngCenter = this.toRadians(center[1]);
         let maxDistance = 0;
 
-        points.forEach(point => {
+        points.forEach((point) => {
             const distance = this.haversineFromRadians(
                 latCenter,
                 lngCenter,
                 this.toRadians(point[0]),
-                this.toRadians(point[1])
+                this.toRadians(point[1]),
             );
             maxDistance = Math.max(maxDistance, distance);
         });
@@ -390,19 +446,25 @@ class ClusteringAlgorithm {
             return {
                 clusterCount: 0,
                 avgRadiusKm: 0,
-                medianDensity: 0
+                medianDensity: 0,
             };
         }
 
-        const radii = clusters.map(cluster => cluster.radius_km || 0);
+        const radii = clusters.map((cluster) => cluster.radius_km || 0);
         const densities = clusters
-            .map(cluster => cluster.density)
-            .filter(value => typeof value === 'number');
+            .map((cluster) => cluster.density)
+            .filter((value) => typeof value === 'number');
 
         return {
             clusterCount: clusters.length,
-            avgRadiusKm: Number((radii.reduce((sum, value) => sum + value, 0) / radii.length).toFixed(4)),
-            medianDensity: densities.length ? Number(this.median(densities).toFixed(4)) : 0
+            avgRadiusKm: Number(
+                (
+                    radii.reduce((sum, value) => sum + value, 0) / radii.length
+                ).toFixed(4),
+            ),
+            medianDensity: densities.length
+                ? Number(this.median(densities).toFixed(4))
+                : 0,
         };
     }
 
@@ -420,7 +482,7 @@ class ClusteringAlgorithm {
         const CBD_LNG = 121.5651;
         const BASE_PRICE = 14500.0;
 
-        const numberOrNull = value => {
+        const numberOrNull = (value) => {
             if (value === null || value === undefined || value === '') {
                 return null;
             }
@@ -433,14 +495,21 @@ class ClusteringAlgorithm {
         const area = numberOrNull(data.area);
         const floor = numberOrNull(data.floor);
         const age = numberOrNull(data.age);
-        const listedRent = numberOrNull(data.rent_per_month ?? data.rentPerMonth);
-        const buildingType = (data.building_type ?? data.buildingType ?? '').toLowerCase();
+        const listedRent = numberOrNull(
+            data.rent_per_month ?? data.rentPerMonth,
+        );
+        const buildingType = (
+            data.building_type ??
+            data.buildingType ??
+            ''
+        ).toLowerCase();
         const pattern = data.pattern ?? data.room_type ?? data.roomType;
         const rooms = this.resolveRoomsStatic(data.rooms, pattern);
         const district = data.district ?? null;
 
         const normalizedArea = area !== null ? Math.max(area, 6) : null;
-        const areaComponent = normalizedArea !== null ? Math.pow(normalizedArea, 0.92) * 950 : 0;
+        const areaComponent =
+            normalizedArea !== null ? Math.pow(normalizedArea, 0.92) * 950 : 0;
         const roomComponent = rooms !== null ? Math.min(rooms, 4) * 1200 : 0;
 
         let distanceKm = null;
@@ -457,7 +526,8 @@ class ClusteringAlgorithm {
         let floorMultiplier = 1.0;
         if (floor !== null) {
             const normalizedFloor = Math.max(1, Math.min(floor, 25));
-            floorMultiplier += Math.min(Math.max(normalizedFloor - 1, 0), 14) * 0.015;
+            floorMultiplier +=
+                Math.min(Math.max(normalizedFloor - 1, 0), 14) * 0.015;
             if (normalizedFloor <= 2) {
                 floorMultiplier -= 0.02;
             }
@@ -472,19 +542,29 @@ class ClusteringAlgorithm {
         const amenityAdjustment = this.buildingTypeAdjustment(buildingType);
         const baseForMarket = BASE_PRICE + areaComponent + roomComponent;
         const baseline = baseForMarket + amenityAdjustment.absolute;
-        const marketModifier = this.marketPressureModifier(listedRent, baseForMarket);
+        const marketModifier = this.marketPressureModifier(
+            listedRent,
+            baseForMarket,
+        );
 
-        const rawPrice = baseline
-            * locationMultiplier
-            * floorMultiplier
-            * ageMultiplier
-            * (1 + amenityAdjustment.multiplier + marketModifier);
+        const rawPrice =
+            baseline *
+            locationMultiplier *
+            floorMultiplier *
+            ageMultiplier *
+            (1 + amenityAdjustment.multiplier + marketModifier);
 
         const price = Math.round(Math.max(6000, rawPrice));
 
-        const featureCount = [normalizedArea, rooms, floor, age, buildingType ? 1 : null, lat, lng]
-            .filter(value => value !== null)
-            .length;
+        const featureCount = [
+            normalizedArea,
+            rooms,
+            floor,
+            age,
+            buildingType ? 1 : null,
+            lat,
+            lng,
+        ].filter((value) => value !== null).length;
 
         let confidence = 0.58 + featureCount * 0.08;
         if (distanceKm !== null && distanceKm > 12) {
@@ -516,7 +596,9 @@ class ClusteringAlgorithm {
 
         const explanations = [];
         if (normalizedArea !== null) {
-            explanations.push(`面積 ${normalizedArea.toFixed(1)} 坪作為主要估價基礎`);
+            explanations.push(
+                `面積 ${normalizedArea.toFixed(1)} 坪作為主要估價基礎`,
+            );
         }
         if (rooms !== null) {
             explanations.push(`房數 ${rooms} 間帶來額外租金需求`);
@@ -525,7 +607,9 @@ class ClusteringAlgorithm {
             explanations.push('樓層偏高帶來景觀與通風加成');
         }
         if (ageMultiplier < 1) {
-            explanations.push(`建物年齡造成折價，同步反映於乘數 ${ageMultiplier.toFixed(2)}`);
+            explanations.push(
+                `建物年齡造成折價，同步反映於乘數 ${ageMultiplier.toFixed(2)}`,
+            );
         }
         if (distanceKm !== null) {
             explanations.push(`距離市中心約 ${distanceKm.toFixed(1)} 公里`);
@@ -569,7 +653,9 @@ class ClusteringAlgorithm {
     static resolveRoomsStatic(rooms, pattern) {
         if (rooms !== null && rooms !== undefined && rooms !== '') {
             const numeric = Number(rooms);
-            return Number.isFinite(numeric) ? Math.max(0, Math.trunc(numeric)) : null;
+            return Number.isFinite(numeric)
+                ? Math.max(0, Math.trunc(numeric))
+                : null;
         }
 
         if (typeof pattern === 'string') {
@@ -598,12 +684,14 @@ class ClusteringAlgorithm {
 
     static haversine(lat1, lng1, lat2, lng2) {
         const R = 6371.0088;
-        const toRad = value => value * (Math.PI / 180);
+        const toRad = (value) => value * (Math.PI / 180);
         const dLat = toRad(lat2 - lat1);
         const dLng = toRad(lng2 - lng1);
         const lat1Rad = toRad(lat1);
         const lat2Rad = toRad(lat2);
-        const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1Rad) * Math.cos(lat2Rad) * Math.sin(dLng / 2) ** 2;
+        const a =
+            Math.sin(dLat / 2) ** 2 +
+            Math.cos(lat1Rad) * Math.cos(lat2Rad) * Math.sin(dLng / 2) ** 2;
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return R * c;
     }

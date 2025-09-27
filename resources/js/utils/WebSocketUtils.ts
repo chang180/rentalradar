@@ -49,7 +49,10 @@ export class WebSocketUtils {
     /**
      * 等待連接建立
      */
-    static waitForConnection(ws: WebSocket, timeout: number = 5000): Promise<boolean> {
+    static waitForConnection(
+        ws: WebSocket,
+        timeout: number = 5000,
+    ): Promise<boolean> {
         return new Promise((resolve) => {
             if (ws.readyState === WebSocket.OPEN) {
                 resolve(true);
@@ -60,10 +63,14 @@ export class WebSocketUtils {
                 resolve(false);
             }, timeout);
 
-            ws.addEventListener('open', () => {
-                clearTimeout(timer);
-                resolve(true);
-            }, { once: true });
+            ws.addEventListener(
+                'open',
+                () => {
+                    clearTimeout(timer);
+                    resolve(true);
+                },
+                { once: true },
+            );
         });
     }
 
@@ -91,7 +98,7 @@ export class WebSocketUtils {
     static parseMessage(data: string): WebSocketMessage | null {
         try {
             const parsed = JSON.parse(data);
-            
+
             // 驗證訊息格式
             if (typeof parsed.type === 'string' && parsed.data !== undefined) {
                 return {
@@ -101,7 +108,7 @@ export class WebSocketUtils {
                     id: parsed.id,
                 };
             }
-            
+
             return null;
         } catch (error) {
             console.error('解析 WebSocket 訊息失敗:', error);
@@ -119,7 +126,7 @@ export class WebSocketUtils {
             maxAttempts?: number;
             onReconnect?: (attempt: number) => void;
             onMaxAttemptsReached?: () => void;
-        } = {}
+        } = {},
     ) {
         const {
             interval = 5000,
@@ -142,7 +149,7 @@ export class WebSocketUtils {
 
             reconnectTimer = setTimeout(() => {
                 const ws = createConnection();
-                
+
                 ws.addEventListener('open', () => {
                     reconnectAttempts = 0;
                     reconnectTimer = null;
@@ -178,7 +185,7 @@ export class WebSocketUtils {
             type: 'ping',
             data: {},
             timestamp: Date.now(),
-        }
+        },
     ) {
         const heartbeatTimer = setInterval(() => {
             if (this.isConnected(ws)) {
@@ -198,7 +205,7 @@ export class WebSocketUtils {
      */
     static debounce<T extends (...args: any[]) => any>(
         func: T,
-        wait: number
+        wait: number,
     ): (...args: Parameters<T>) => void {
         let timeout: NodeJS.Timeout | null = null;
 
@@ -218,7 +225,7 @@ export class WebSocketUtils {
      */
     static throttle<T extends (...args: any[]) => any>(
         func: T,
-        limit: number
+        limit: number,
     ): (...args: Parameters<T>) => void {
         let inThrottle: boolean = false;
 
@@ -248,7 +255,10 @@ export class WebSocketUtils {
     /**
      * 檢查訊息大小
      */
-    static checkMessageSize(message: WebSocketMessage, maxSize: number = 1024 * 1024): boolean {
+    static checkMessageSize(
+        message: WebSocketMessage,
+        maxSize: number = 1024 * 1024,
+    ): boolean {
         const messageString = JSON.stringify(message);
         return messageString.length <= maxSize;
     }

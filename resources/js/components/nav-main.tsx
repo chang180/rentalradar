@@ -18,16 +18,23 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
                     <SidebarMenuItem key={item.title}>
                         <SidebarMenuButton
                             asChild
-                            isActive={!item.external && page.url.startsWith(
-                                typeof item.href === 'string'
-                                    ? item.href
-                                    : item.href.url,
-                            )}
+                            isActive={
+                                !item.external &&
+                                page.url.startsWith(
+                                    typeof item.href === 'string'
+                                        ? item.href
+                                        : item.href.url,
+                                )
+                            }
                             tooltip={{ children: item.title }}
                         >
                             {item.external ? (
-                                <a 
-                                    href={typeof item.href === 'string' ? item.href : item.href.url}
+                                <a
+                                    href={
+                                        typeof item.href === 'string'
+                                            ? item.href
+                                            : item.href.url
+                                    }
                                     target="_blank"
                                     rel="noopener noreferrer"
                                 >

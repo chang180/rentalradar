@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import webSocketService from '../services/WebSocketService';
 
 interface PerformanceMetrics {
@@ -28,7 +28,8 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
     metrics: propMetrics,
     compact = false,
 }) => {
-    const [websocketMetrics, setWebsocketMetrics] = useState<PerformanceMetrics | null>(null);
+    const [websocketMetrics, setWebsocketMetrics] =
+        useState<PerformanceMetrics | null>(null);
     const [isVisible, setIsVisible] = useState(false);
 
     // Use prop metrics if provided, otherwise use websocket metrics
@@ -68,7 +69,10 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
         return `${(ms / 1000).toFixed(2)}s`;
     };
 
-    const getPerformanceColor = (value: number, thresholds: { good: number; warning: number }): string => {
+    const getPerformanceColor = (
+        value: number,
+        thresholds: { good: number; warning: number },
+    ): string => {
         if (value <= thresholds.good) return 'text-green-600';
         if (value <= thresholds.warning) return 'text-yellow-600';
         return 'text-red-600';
@@ -82,12 +86,16 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
         return (
             <div className={`flex items-center space-x-4 text-xs ${className}`}>
                 {metrics.loadTime && (
-                    <span className={`${getPerformanceColor(metrics.loadTime || 0, { good: 1000, warning: 2000 })}`}>
+                    <span
+                        className={`${getPerformanceColor(metrics.loadTime || 0, { good: 1000, warning: 2000 })}`}
+                    >
                         載入: {formatTime(metrics.loadTime)}
                     </span>
                 )}
                 {metrics.memoryUsage && (
-                    <span className={`${getPerformanceColor(metrics.memoryUsage || 0, { good: 50, warning: 100 })}`}>
+                    <span
+                        className={`${getPerformanceColor(metrics.memoryUsage || 0, { good: 50, warning: 100 })}`}
+                    >
                         記憶體: {metrics.memoryUsage}MB
                     </span>
                 )}
@@ -101,8 +109,8 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
     }
 
     return (
-        <div className={`bg-white rounded-lg shadow-md p-4 ${className}`}>
-            <div className="flex items-center justify-between mb-2">
+        <div className={`rounded-lg bg-white p-4 shadow-md ${className}`}>
+            <div className="mb-2 flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-gray-700">
                     效能監控
                 </h3>
@@ -116,32 +124,42 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
 
             <div className="space-y-2">
                 {metrics.loadTime && (
-                    <div className="flex justify-between items-center">
+                    <div className="flex items-center justify-between">
                         <span className="text-xs text-gray-600">載入時間:</span>
-                        <span className={`text-xs font-medium ${getPerformanceColor(metrics.loadTime, { good: 1000, warning: 2000 })}`}>
+                        <span
+                            className={`text-xs font-medium ${getPerformanceColor(metrics.loadTime, { good: 1000, warning: 2000 })}`}
+                        >
                             {formatTime(metrics.loadTime)}
                         </span>
                     </div>
                 )}
 
                 {(metrics.responseTime || metrics.responseTime === 0) && (
-                    <div className="flex justify-between items-center">
+                    <div className="flex items-center justify-between">
                         <span className="text-xs text-gray-600">響應時間:</span>
-                        <span className={`text-xs font-medium ${getPerformanceColor(metrics.responseTime, { good: 100, warning: 500 })}`}>
+                        <span
+                            className={`text-xs font-medium ${getPerformanceColor(metrics.responseTime, { good: 100, warning: 500 })}`}
+                        >
                             {formatTime(metrics.responseTime)}
                         </span>
                     </div>
                 )}
 
-                <div className="flex justify-between items-center">
+                <div className="flex items-center justify-between">
                     <span className="text-xs text-gray-600">記憶體使用:</span>
-                    <span className={`text-xs font-medium ${getPerformanceColor(metrics.memoryUsage || 0, { good: 50, warning: 100 })}`}>
-                        {metrics.memoryUsage ? `${metrics.memoryUsage}MB` : formatBytes((metrics.memoryUsage || 0) * 1024 * 1024)}
+                    <span
+                        className={`text-xs font-medium ${getPerformanceColor(metrics.memoryUsage || 0, { good: 50, warning: 100 })}`}
+                    >
+                        {metrics.memoryUsage
+                            ? `${metrics.memoryUsage}MB`
+                            : formatBytes(
+                                  (metrics.memoryUsage || 0) * 1024 * 1024,
+                              )}
                     </span>
                 </div>
 
                 {metrics.markerCount && (
-                    <div className="flex justify-between items-center">
+                    <div className="flex items-center justify-between">
                         <span className="text-xs text-gray-600">標記數量:</span>
                         <span className="text-xs font-medium text-gray-800">
                             {metrics.markerCount}
@@ -150,7 +168,7 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
                 )}
 
                 {(metrics.queryCount || metrics.queryCount === 0) && (
-                    <div className="flex justify-between items-center">
+                    <div className="flex items-center justify-between">
                         <span className="text-xs text-gray-600">查詢次數:</span>
                         <span className="text-xs font-medium text-gray-800">
                             {metrics.queryCount}
@@ -160,26 +178,37 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
 
                 {showDetails && isVisible && (
                     <>
-                        {(metrics.cacheHitRate || metrics.cacheHitRate === 0) && (
-                            <div className="flex justify-between items-center">
-                                <span className="text-xs text-gray-600">快取命中率:</span>
-                                <span className={`text-xs font-medium ${getPerformanceColor(100 - metrics.cacheHitRate, { good: 20, warning: 50 })}`}>
+                        {(metrics.cacheHitRate ||
+                            metrics.cacheHitRate === 0) && (
+                            <div className="flex items-center justify-between">
+                                <span className="text-xs text-gray-600">
+                                    快取命中率:
+                                </span>
+                                <span
+                                    className={`text-xs font-medium ${getPerformanceColor(100 - metrics.cacheHitRate, { good: 20, warning: 50 })}`}
+                                >
                                     {metrics.cacheHitRate.toFixed(1)}%
                                 </span>
                             </div>
                         )}
 
-                        {(metrics.activeConnections || metrics.activeConnections === 0) && (
-                            <div className="flex justify-between items-center">
-                                <span className="text-xs text-gray-600">活躍連接:</span>
+                        {(metrics.activeConnections ||
+                            metrics.activeConnections === 0) && (
+                            <div className="flex items-center justify-between">
+                                <span className="text-xs text-gray-600">
+                                    活躍連接:
+                                </span>
                                 <span className="text-xs font-medium text-gray-800">
                                     {metrics.activeConnections}
                                 </span>
                             </div>
                         )}
 
-                        <div className="text-xs text-gray-500 mt-2">
-                            更新時間: {new Date(metrics.timestamp || Date.now()).toLocaleTimeString()}
+                        <div className="mt-2 text-xs text-gray-500">
+                            更新時間:{' '}
+                            {new Date(
+                                metrics.timestamp || Date.now(),
+                            ).toLocaleTimeString()}
                         </div>
                     </>
                 )}

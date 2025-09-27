@@ -30,7 +30,10 @@ export class NotificationUtils {
     /**
      * 格式化通知訊息
      */
-    static formatMessage(message: string, variables: Record<string, any> = {}): string {
+    static formatMessage(
+        message: string,
+        variables: Record<string, any> = {},
+    ): string {
         return message.replace(/\{(\w+)\}/g, (match, key) => {
             return variables[key]?.toString() || match;
         });
@@ -81,7 +84,9 @@ export class NotificationUtils {
     /**
      * 建立系統通知
      */
-    static createSystemNotification(options: NotificationOptions): Notification | null {
+    static createSystemNotification(
+        options: NotificationOptions,
+    ): Notification | null {
         if (!('Notification' in window)) {
             console.warn('此瀏覽器不支援系統通知');
             return null;
@@ -154,13 +159,18 @@ export class NotificationUtils {
             .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
             .slice(0, 50);
 
-        localStorage.setItem('notifications', JSON.stringify(recentNotifications));
+        localStorage.setItem(
+            'notifications',
+            JSON.stringify(recentNotifications),
+        );
     }
 
     /**
      * 從本地儲存獲取通知
      */
-    static getFromLocalStorage(): (NotificationOptions & { timestamp?: number })[] {
+    static getFromLocalStorage(): (NotificationOptions & {
+        timestamp?: number;
+    })[] {
         try {
             const stored = localStorage.getItem('notifications');
             return stored ? JSON.parse(stored) : [];
@@ -182,7 +192,7 @@ export class NotificationUtils {
      */
     static createNotificationGroup(
         notifications: NotificationOptions[],
-        groupTitle: string = '通知群組'
+        groupTitle: string = '通知群組',
     ): NotificationOptions {
         return {
             id: this.generateId(),
@@ -203,18 +213,24 @@ export class NotificationUtils {
             type?: string;
             since?: number;
             until?: number;
-        }
+        },
     ): NotificationOptions[] {
-        return notifications.filter(notification => {
+        return notifications.filter((notification) => {
             if (filter.type && notification.type !== filter.type) {
                 return false;
             }
 
-            if (filter.since && (notification as any).timestamp < filter.since) {
+            if (
+                filter.since &&
+                (notification as any).timestamp < filter.since
+            ) {
                 return false;
             }
 
-            if (filter.until && (notification as any).timestamp > filter.until) {
+            if (
+                filter.until &&
+                (notification as any).timestamp > filter.until
+            ) {
                 return false;
             }
 
@@ -238,7 +254,7 @@ export class NotificationUtils {
 
         const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
 
-        notifications.forEach(notification => {
+        notifications.forEach((notification) => {
             // 統計類型
             const type = notification.type || 'info';
             stats.byType[type] = (stats.byType[type] || 0) + 1;

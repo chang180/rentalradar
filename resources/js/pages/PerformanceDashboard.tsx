@@ -1,9 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { useWebSocket } from '../hooks/useWebSocket';
-import { PerformanceMonitor } from '../components/PerformanceMonitor';
+import React, { useEffect, useState } from 'react';
 import { ConnectionStatus } from '../components/ConnectionStatus';
 import { LoadingIndicator } from '../components/LoadingIndicator';
-import { PerformanceChart, MultiMetricChart } from '../components/PerformanceChartSimple';
+import {
+    MultiMetricChart,
+    PerformanceChart,
+} from '../components/PerformanceChartSimple';
+import { PerformanceMonitor } from '../components/PerformanceMonitor';
+import { useWebSocket } from '../hooks/useWebSocket';
 import { PerformanceUtils } from '../utils/PerformanceUtils';
 
 interface DashboardMetrics {
@@ -43,26 +46,35 @@ export const PerformanceDashboard: React.FC = () => {
     const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
     const [errorLogs, setErrorLogs] = useState<ErrorLog[]>([]);
     const [userBehaviors, setUserBehaviors] = useState<UserBehavior[]>([]);
-    const [performanceHistory, setPerformanceHistory] = useState<DashboardMetrics[]>([]);
+    const [performanceHistory, setPerformanceHistory] = useState<
+        DashboardMetrics[]
+    >([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [timeRange, setTimeRange] = useState<'1h' | '6h' | '24h' | '7d'>('1h');
-    const [selectedTab, setSelectedTab] = useState<'overview' | 'errors' | 'users' | 'performance'>('overview');
+    const [timeRange, setTimeRange] = useState<'1h' | '6h' | '24h' | '7d'>(
+        '1h',
+    );
+    const [selectedTab, setSelectedTab] = useState<
+        'overview' | 'errors' | 'users' | 'performance'
+    >('overview');
 
     // 載入效能資料
     useEffect(() => {
         const loadPerformanceData = async () => {
             try {
                 setIsLoading(true);
-                
+
                 // 嘗試從 API 載入真實資料
                 try {
-                    const response = await fetch(`/api/dashboard/overview?timeRange=${timeRange}`, {
-                        headers: {
-                            'Accept': 'application/json',
-                            'Content-Type': 'application/json',
-                            'X-Requested-With': 'XMLHttpRequest',
+                    const response = await fetch(
+                        `/api/dashboard/overview?timeRange=${timeRange}`,
+                        {
+                            headers: {
+                                Accept: 'application/json',
+                                'Content-Type': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest',
+                            },
                         },
-                    });
+                    );
 
                     if (response.ok) {
                         const data = await response.json();
@@ -90,11 +102,11 @@ export const PerformanceDashboard: React.FC = () => {
 
                 setMetrics(mockMetrics);
                 PerformanceUtils.recordMetrics(mockMetrics);
-                
+
                 // 生成歷史資料用於圖表
                 const historyData: DashboardMetrics[] = [];
                 for (let i = 0; i < 20; i++) {
-                    const timestamp = Date.now() - (i * 5 * 60 * 1000); // 每5分鐘一個資料點
+                    const timestamp = Date.now() - i * 5 * 60 * 1000; // 每5分鐘一個資料點
                     historyData.push({
                         timestamp,
                         responseTime: Math.random() * 200 + 50,
@@ -115,7 +127,7 @@ export const PerformanceDashboard: React.FC = () => {
         };
 
         loadPerformanceData();
-        
+
         // 定期更新資料
         const interval = setInterval(loadPerformanceData, 5000);
         return () => clearInterval(interval);
@@ -168,7 +180,15 @@ export const PerformanceDashboard: React.FC = () => {
                         action: 'map_view',
                         page: '/map',
                         duration: 45000,
-                        metadata: { zoom: 12, bounds: { north: 25.1, south: 25.0, east: 121.6, west: 121.5 } },
+                        metadata: {
+                            zoom: 12,
+                            bounds: {
+                                north: 25.1,
+                                south: 25.0,
+                                east: 121.6,
+                                west: 121.5,
+                            },
+                        },
                     },
                     {
                         userId: 'user-2',
@@ -198,7 +218,7 @@ export const PerformanceDashboard: React.FC = () => {
         const seconds = Math.floor(ms / 1000);
         const minutes = Math.floor(seconds / 60);
         const hours = Math.floor(minutes / 60);
-        
+
         if (hours > 0) return `${hours}h ${minutes % 60}m`;
         if (minutes > 0) return `${minutes}m ${seconds % 60}s`;
         return `${seconds}s`;
@@ -206,25 +226,33 @@ export const PerformanceDashboard: React.FC = () => {
 
     const getErrorLevelColor = (level: string): string => {
         switch (level) {
-            case 'error': return 'text-red-600 bg-red-50 border-red-200';
-            case 'warning': return 'text-yellow-600 bg-yellow-50 border-yellow-200';
-            case 'info': return 'text-blue-600 bg-blue-50 border-blue-200';
-            default: return 'text-gray-600 bg-gray-50 border-gray-200';
+            case 'error':
+                return 'text-red-600 bg-red-50 border-red-200';
+            case 'warning':
+                return 'text-yellow-600 bg-yellow-50 border-yellow-200';
+            case 'info':
+                return 'text-blue-600 bg-blue-50 border-blue-200';
+            default:
+                return 'text-gray-600 bg-gray-50 border-gray-200';
         }
     };
 
     const getErrorLevelIcon = (level: string): string => {
         switch (level) {
-            case 'error': return '❌';
-            case 'warning': return '⚠️';
-            case 'info': return 'ℹ️';
-            default: return '📝';
+            case 'error':
+                return '❌';
+            case 'warning':
+                return '⚠️';
+            case 'info':
+                return 'ℹ️';
+            default:
+                return '📝';
         }
     };
 
     if (isLoading) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+            <div className="flex min-h-screen items-center justify-center bg-gray-50">
                 <LoadingIndicator size="lg" text="載入效能監控儀表板..." />
             </div>
         );
@@ -233,9 +261,9 @@ export const PerformanceDashboard: React.FC = () => {
     return (
         <div className="min-h-screen bg-gray-50">
             {/* 標題列 */}
-            <div className="bg-white shadow-sm border-b">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex items-center justify-between h-16">
+            <div className="border-b bg-white shadow-sm">
+                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                    <div className="flex h-16 items-center justify-between">
                         <div className="flex items-center">
                             <h1 className="text-xl font-semibold text-gray-900">
                                 效能監控儀表板
@@ -244,22 +272,24 @@ export const PerformanceDashboard: React.FC = () => {
                                 <ConnectionStatus showDetails={false} />
                             </div>
                         </div>
-                        
+
                         <div className="flex items-center space-x-4">
                             <select
                                 value={timeRange}
-                                onChange={(e) => setTimeRange(e.target.value as any)}
-                                className="px-3 py-1 border border-gray-300 rounded-md text-sm"
+                                onChange={(e) =>
+                                    setTimeRange(e.target.value as any)
+                                }
+                                className="rounded-md border border-gray-300 px-3 py-1 text-sm"
                             >
                                 <option value="1h">過去 1 小時</option>
                                 <option value="6h">過去 6 小時</option>
                                 <option value="24h">過去 24 小時</option>
                                 <option value="7d">過去 7 天</option>
                             </select>
-                            
+
                             <button
                                 onClick={() => window.location.reload()}
-                                className="px-3 py-1 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700"
+                                className="rounded-md bg-blue-600 px-3 py-1 text-sm text-white hover:bg-blue-700"
                             >
                                 重新整理
                             </button>
@@ -269,8 +299,8 @@ export const PerformanceDashboard: React.FC = () => {
             </div>
 
             {/* 標籤導航 */}
-            <div className="bg-white border-b">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="border-b bg-white">
+                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                     <nav className="flex space-x-8">
                         {[
                             { id: 'overview', label: '總覽', icon: '📊' },
@@ -281,10 +311,10 @@ export const PerformanceDashboard: React.FC = () => {
                             <button
                                 key={tab.id}
                                 onClick={() => setSelectedTab(tab.id as any)}
-                                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                                className={`border-b-2 px-1 py-4 text-sm font-medium ${
                                     selectedTab === tab.id
                                         ? 'border-blue-500 text-blue-600'
-                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                        : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
                                 }`}
                             >
                                 <span className="mr-2">{tab.icon}</span>
@@ -296,52 +326,69 @@ export const PerformanceDashboard: React.FC = () => {
             </div>
 
             {/* 主要內容 */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
                 {selectedTab === 'overview' && (
                     <div className="space-y-6">
                         {/* 關鍵指標卡片 */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                            <div className="bg-white rounded-lg shadow p-6">
+                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+                            <div className="rounded-lg bg-white p-6 shadow">
                                 <div className="flex items-center">
                                     <div className="flex-shrink-0">
-                                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                                            <span className="text-blue-600 text-sm">⚡</span>
+                                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100">
+                                            <span className="text-sm text-blue-600">
+                                                ⚡
+                                            </span>
                                         </div>
                                     </div>
                                     <div className="ml-4">
-                                        <p className="text-sm font-medium text-gray-500">響應時間</p>
+                                        <p className="text-sm font-medium text-gray-500">
+                                            響應時間
+                                        </p>
                                         <p className="text-2xl font-semibold text-gray-900">
-                                            {metrics?.responseTime?.toFixed(0) || '0'}ms
+                                            {metrics?.responseTime?.toFixed(
+                                                0,
+                                            ) || '0'}
+                                            ms
                                         </p>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="bg-white rounded-lg shadow p-6">
+                            <div className="rounded-lg bg-white p-6 shadow">
                                 <div className="flex items-center">
                                     <div className="flex-shrink-0">
-                                        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                                            <span className="text-green-600 text-sm">💾</span>
+                                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100">
+                                            <span className="text-sm text-green-600">
+                                                💾
+                                            </span>
                                         </div>
                                     </div>
                                     <div className="ml-4">
-                                        <p className="text-sm font-medium text-gray-500">記憶體使用</p>
+                                        <p className="text-sm font-medium text-gray-500">
+                                            記憶體使用
+                                        </p>
                                         <p className="text-2xl font-semibold text-gray-900">
-                                            {metrics?.memoryUsage?.toFixed(1) || '0'}MB
+                                            {metrics?.memoryUsage?.toFixed(1) ||
+                                                '0'}
+                                            MB
                                         </p>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="bg-white rounded-lg shadow p-6">
+                            <div className="rounded-lg bg-white p-6 shadow">
                                 <div className="flex items-center">
                                     <div className="flex-shrink-0">
-                                        <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
-                                            <span className="text-yellow-600 text-sm">🔗</span>
+                                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-yellow-100">
+                                            <span className="text-sm text-yellow-600">
+                                                🔗
+                                            </span>
                                         </div>
                                     </div>
                                     <div className="ml-4">
-                                        <p className="text-sm font-medium text-gray-500">活躍連接</p>
+                                        <p className="text-sm font-medium text-gray-500">
+                                            活躍連接
+                                        </p>
                                         <p className="text-2xl font-semibold text-gray-900">
                                             {metrics?.activeConnections || 0}
                                         </p>
@@ -349,17 +396,23 @@ export const PerformanceDashboard: React.FC = () => {
                                 </div>
                             </div>
 
-                            <div className="bg-white rounded-lg shadow p-6">
+                            <div className="rounded-lg bg-white p-6 shadow">
                                 <div className="flex items-center">
                                     <div className="flex-shrink-0">
-                                        <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-                                            <span className="text-red-600 text-sm">❌</span>
+                                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-100">
+                                            <span className="text-sm text-red-600">
+                                                ❌
+                                            </span>
                                         </div>
                                     </div>
                                     <div className="ml-4">
-                                        <p className="text-sm font-medium text-gray-500">錯誤率</p>
+                                        <p className="text-sm font-medium text-gray-500">
+                                            錯誤率
+                                        </p>
                                         <p className="text-2xl font-semibold text-gray-900">
-                                            {metrics?.errorRate?.toFixed(2) || '0.00'}%
+                                            {metrics?.errorRate?.toFixed(2) ||
+                                                '0.00'}
+                                            %
                                         </p>
                                     </div>
                                 </div>
@@ -367,33 +420,50 @@ export const PerformanceDashboard: React.FC = () => {
                         </div>
 
                         {/* 效能監控組件 */}
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                             <PerformanceMonitor showDetails={true} />
-                            <div className="bg-white rounded-lg shadow p-6">
-                                <h3 className="text-lg font-semibold text-gray-900 mb-4">系統狀態</h3>
+                            <div className="rounded-lg bg-white p-6 shadow">
+                                <h3 className="mb-4 text-lg font-semibold text-gray-900">
+                                    系統狀態
+                                </h3>
                                 <div className="space-y-3">
                                     <div className="flex justify-between">
-                                        <span className="text-sm text-gray-600">WebSocket 連接</span>
-                                        <span className={`text-sm font-medium ${isConnected ? 'text-green-600' : 'text-red-600'}`}>
+                                        <span className="text-sm text-gray-600">
+                                            WebSocket 連接
+                                        </span>
+                                        <span
+                                            className={`text-sm font-medium ${isConnected ? 'text-green-600' : 'text-red-600'}`}
+                                        >
                                             {isConnected ? '已連接' : '已斷線'}
                                         </span>
                                     </div>
                                     <div className="flex justify-between">
-                                        <span className="text-sm text-gray-600">快取命中率</span>
+                                        <span className="text-sm text-gray-600">
+                                            快取命中率
+                                        </span>
                                         <span className="text-sm font-medium text-gray-900">
-                                            {metrics?.cacheHitRate?.toFixed(1) || '0.0'}%
+                                            {metrics?.cacheHitRate?.toFixed(
+                                                1,
+                                            ) || '0.0'}
+                                            %
                                         </span>
                                     </div>
                                     <div className="flex justify-between">
-                                        <span className="text-sm text-gray-600">查詢次數</span>
+                                        <span className="text-sm text-gray-600">
+                                            查詢次數
+                                        </span>
                                         <span className="text-sm font-medium text-gray-900">
                                             {metrics?.queryCount || 0}
                                         </span>
                                     </div>
                                     <div className="flex justify-between">
-                                        <span className="text-sm text-gray-600">吞吐量</span>
+                                        <span className="text-sm text-gray-600">
+                                            吞吐量
+                                        </span>
                                         <span className="text-sm font-medium text-gray-900">
-                                            {metrics?.throughput?.toFixed(0) || '0'} req/min
+                                            {metrics?.throughput?.toFixed(0) ||
+                                                '0'}{' '}
+                                            req/min
                                         </span>
                                     </div>
                                 </div>
@@ -404,9 +474,11 @@ export const PerformanceDashboard: React.FC = () => {
 
                 {selectedTab === 'errors' && (
                     <div className="space-y-6">
-                        <div className="bg-white rounded-lg shadow">
-                            <div className="px-6 py-4 border-b border-gray-200">
-                                <h3 className="text-lg font-semibold text-gray-900">錯誤日誌</h3>
+                        <div className="rounded-lg bg-white shadow">
+                            <div className="border-b border-gray-200 px-6 py-4">
+                                <h3 className="text-lg font-semibold text-gray-900">
+                                    錯誤日誌
+                                </h3>
                             </div>
                             <div className="divide-y divide-gray-200">
                                 {errorLogs.map((error) => (
@@ -414,27 +486,37 @@ export const PerformanceDashboard: React.FC = () => {
                                         <div className="flex items-start justify-between">
                                             <div className="flex items-start space-x-3">
                                                 <span className="text-lg">
-                                                    {getErrorLevelIcon(error.level)}
+                                                    {getErrorLevelIcon(
+                                                        error.level,
+                                                    )}
                                                 </span>
                                                 <div className="flex-1">
                                                     <div className="flex items-center space-x-2">
-                                                        <span className={`px-2 py-1 rounded text-xs font-medium ${getErrorLevelColor(error.level)}`}>
+                                                        <span
+                                                            className={`rounded px-2 py-1 text-xs font-medium ${getErrorLevelColor(error.level)}`}
+                                                        >
                                                             {error.level.toUpperCase()}
                                                         </span>
                                                         <span className="text-sm text-gray-500">
-                                                            {formatTime(error.timestamp)}
+                                                            {formatTime(
+                                                                error.timestamp,
+                                                            )}
                                                         </span>
                                                     </div>
-                                                    <p className="mt-1 text-sm text-gray-900">{error.message}</p>
+                                                    <p className="mt-1 text-sm text-gray-900">
+                                                        {error.message}
+                                                    </p>
                                                     {error.url && (
-                                                        <p className="mt-1 text-xs text-gray-500">URL: {error.url}</p>
+                                                        <p className="mt-1 text-xs text-gray-500">
+                                                            URL: {error.url}
+                                                        </p>
                                                     )}
                                                     {error.stack && (
                                                         <details className="mt-2">
-                                                            <summary className="text-xs text-gray-500 cursor-pointer">
+                                                            <summary className="cursor-pointer text-xs text-gray-500">
                                                                 查看堆疊追蹤
                                                             </summary>
-                                                            <pre className="mt-2 text-xs text-gray-600 bg-gray-50 p-2 rounded overflow-x-auto">
+                                                            <pre className="mt-2 overflow-x-auto rounded bg-gray-50 p-2 text-xs text-gray-600">
                                                                 {error.stack}
                                                             </pre>
                                                         </details>
@@ -451,39 +533,54 @@ export const PerformanceDashboard: React.FC = () => {
 
                 {selectedTab === 'users' && (
                     <div className="space-y-6">
-                        <div className="bg-white rounded-lg shadow">
-                            <div className="px-6 py-4 border-b border-gray-200">
-                                <h3 className="text-lg font-semibold text-gray-900">使用者行為分析</h3>
+                        <div className="rounded-lg bg-white shadow">
+                            <div className="border-b border-gray-200 px-6 py-4">
+                                <h3 className="text-lg font-semibold text-gray-900">
+                                    使用者行為分析
+                                </h3>
                             </div>
                             <div className="divide-y divide-gray-200">
                                 {userBehaviors.map((behavior, index) => (
                                     <div key={index} className="p-6">
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center space-x-3">
-                                                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                                                    <span className="text-blue-600 text-sm">👤</span>
+                                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100">
+                                                    <span className="text-sm text-blue-600">
+                                                        👤
+                                                    </span>
                                                 </div>
                                                 <div>
                                                     <p className="text-sm font-medium text-gray-900">
                                                         使用者 {behavior.userId}
                                                     </p>
                                                     <p className="text-sm text-gray-500">
-                                                        {behavior.action} - {behavior.page}
+                                                        {behavior.action} -{' '}
+                                                        {behavior.page}
                                                     </p>
                                                 </div>
                                             </div>
                                             <div className="text-right">
                                                 <p className="text-sm text-gray-900">
-                                                    {formatDuration(behavior.duration)}
+                                                    {formatDuration(
+                                                        behavior.duration,
+                                                    )}
                                                 </p>
                                                 <p className="text-xs text-gray-500">
-                                                    {formatTime(behavior.timestamp)}
+                                                    {formatTime(
+                                                        behavior.timestamp,
+                                                    )}
                                                 </p>
                                             </div>
                                         </div>
                                         {behavior.metadata && (
-                                            <div className="mt-2 text-xs text-gray-600 bg-gray-50 p-2 rounded">
-                                                <pre>{JSON.stringify(behavior.metadata, null, 2)}</pre>
+                                            <div className="mt-2 rounded bg-gray-50 p-2 text-xs text-gray-600">
+                                                <pre>
+                                                    {JSON.stringify(
+                                                        behavior.metadata,
+                                                        null,
+                                                        2,
+                                                    )}
+                                                </pre>
                                             </div>
                                         )}
                                     </div>
@@ -496,7 +593,7 @@ export const PerformanceDashboard: React.FC = () => {
                 {selectedTab === 'performance' && (
                     <div className="space-y-6">
                         <PerformanceMonitor showDetails={true} />
-                        
+
                         {/* 響應時間趨勢 */}
                         <PerformanceChart
                             data={performanceHistory}
@@ -505,7 +602,7 @@ export const PerformanceDashboard: React.FC = () => {
                             color="#3B82F6"
                             type="line"
                         />
-                        
+
                         {/* 記憶體使用趨勢 */}
                         <PerformanceChart
                             data={performanceHistory}
@@ -514,15 +611,31 @@ export const PerformanceDashboard: React.FC = () => {
                             color="#10B981"
                             type="area"
                         />
-                        
+
                         {/* 多指標綜合圖表 */}
                         <MultiMetricChart
                             data={performanceHistory}
                             metrics={[
-                                { key: 'responseTime', title: '響應時間 (ms)', color: '#3B82F6' },
-                                { key: 'memoryUsage', title: '記憶體使用 (MB)', color: '#10B981' },
-                                { key: 'queryCount', title: '查詢次數', color: '#F59E0B' },
-                                { key: 'activeConnections', title: '活躍連接', color: '#EF4444' },
+                                {
+                                    key: 'responseTime',
+                                    title: '響應時間 (ms)',
+                                    color: '#3B82F6',
+                                },
+                                {
+                                    key: 'memoryUsage',
+                                    title: '記憶體使用 (MB)',
+                                    color: '#10B981',
+                                },
+                                {
+                                    key: 'queryCount',
+                                    title: '查詢次數',
+                                    color: '#F59E0B',
+                                },
+                                {
+                                    key: 'activeConnections',
+                                    title: '活躍連接',
+                                    color: '#EF4444',
+                                },
                             ]}
                             type="line"
                             height={400}

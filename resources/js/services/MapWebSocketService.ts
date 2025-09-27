@@ -60,7 +60,9 @@ export class MapWebSocketService {
     /**
      * 取消訂閱地圖更新
      */
-    unsubscribeFromMapUpdates(callback: (data: MapUpdateResponse) => void): void {
+    unsubscribeFromMapUpdates(
+        callback: (data: MapUpdateResponse) => void,
+    ): void {
         this.webSocketService.off('mapUpdate', callback);
     }
 
@@ -103,7 +105,7 @@ export class MapWebSocketService {
     async requestPropertiesData(
         bounds: MapBounds,
         zoom: number,
-        filters?: MapUpdateRequest['filters']
+        filters?: MapUpdateRequest['filters'],
     ): Promise<void> {
         await this.requestMapUpdate({
             bounds,
@@ -149,7 +151,10 @@ export class MapWebSocketService {
     /**
      * 請求地圖優化建議
      */
-    async requestOptimizationSuggestions(bounds: MapBounds, zoom: number): Promise<void> {
+    async requestOptimizationSuggestions(
+        bounds: MapBounds,
+        zoom: number,
+    ): Promise<void> {
         await this.requestMapUpdate({
             bounds,
             zoom,

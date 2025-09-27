@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import webSocketService from '../services/WebSocketService';
 
 interface Notification {
@@ -34,12 +34,16 @@ export const RealtimeNotifications: React.FC<RealtimeNotificationsProps> = ({
                 title: data.title || '通知',
                 message: data.message || data.content || '',
                 timestamp: data.timestamp || Date.now(),
-                autoClose: data.autoClose !== undefined ? data.autoClose : autoClose,
+                autoClose:
+                    data.autoClose !== undefined ? data.autoClose : autoClose,
                 duration: data.duration || defaultDuration,
             };
 
-            setNotifications(prev => {
-                const newNotifications = [notification, ...prev].slice(0, maxNotifications);
+            setNotifications((prev) => {
+                const newNotifications = [notification, ...prev].slice(
+                    0,
+                    maxNotifications,
+                );
                 return newNotifications;
             });
 
@@ -65,7 +69,9 @@ export const RealtimeNotifications: React.FC<RealtimeNotificationsProps> = ({
     }, [maxNotifications, autoClose, defaultDuration]);
 
     const removeNotification = (id: string) => {
-        setNotifications(prev => prev.filter(notification => notification.id !== id));
+        setNotifications((prev) =>
+            prev.filter((notification) => notification.id !== id),
+        );
     };
 
     const getNotificationIcon = (type: string) => {
@@ -83,8 +89,9 @@ export const RealtimeNotifications: React.FC<RealtimeNotificationsProps> = ({
     };
 
     const getNotificationStyles = (type: string) => {
-        const baseStyles = 'p-4 rounded-lg shadow-lg border-l-4 mb-2 transition-all duration-300';
-        
+        const baseStyles =
+            'p-4 rounded-lg shadow-lg border-l-4 mb-2 transition-all duration-300';
+
         switch (type) {
             case 'success':
                 return `${baseStyles} bg-green-50 border-green-500 text-green-800`;
@@ -119,7 +126,7 @@ export const RealtimeNotifications: React.FC<RealtimeNotificationsProps> = ({
     return (
         <div className={getPositionStyles()}>
             <div className="space-y-2">
-                {notifications.map(notification => (
+                {notifications.map((notification) => (
                     <div
                         key={notification.id}
                         className={getNotificationStyles(notification.type)}
@@ -133,20 +140,24 @@ export const RealtimeNotifications: React.FC<RealtimeNotificationsProps> = ({
                                     {getNotificationIcon(notification.type)}
                                 </span>
                                 <div className="flex-1">
-                                    <h4 className="font-semibold text-sm">
+                                    <h4 className="text-sm font-semibold">
                                         {notification.title}
                                     </h4>
-                                    <p className="text-sm mt-1">
+                                    <p className="mt-1 text-sm">
                                         {notification.message}
                                     </p>
-                                    <p className="text-xs text-gray-500 mt-1">
-                                        {new Date(notification.timestamp).toLocaleTimeString()}
+                                    <p className="mt-1 text-xs text-gray-500">
+                                        {new Date(
+                                            notification.timestamp,
+                                        ).toLocaleTimeString()}
                                     </p>
                                 </div>
                             </div>
                             <button
-                                onClick={() => removeNotification(notification.id)}
-                                className="ml-2 text-gray-400 hover:text-gray-600 transition-colors"
+                                onClick={() =>
+                                    removeNotification(notification.id)
+                                }
+                                className="ml-2 text-gray-400 transition-colors hover:text-gray-600"
                             >
                                 ✕
                             </button>

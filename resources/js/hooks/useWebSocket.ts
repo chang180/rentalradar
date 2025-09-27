@@ -1,5 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
-import webSocketService, { ConnectionStatus } from '../services/WebSocketService';
+import { useCallback, useEffect, useState } from 'react';
+import webSocketService, {
+    ConnectionStatus,
+} from '../services/WebSocketService';
 
 export interface UseWebSocketReturn {
     connectionStatus: ConnectionStatus;
@@ -14,7 +16,7 @@ export interface UseWebSocketReturn {
 
 export const useWebSocket = (): UseWebSocketReturn => {
     const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>(
-        webSocketService.getConnectionStatus()
+        webSocketService.getConnectionStatus(),
     );
 
     // 監聽連接狀態變化

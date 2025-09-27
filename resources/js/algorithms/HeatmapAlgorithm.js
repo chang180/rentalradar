@@ -8,7 +8,7 @@ export class HeatmapAlgorithm {
         this.colorScale = {
             min: 0.1,
             max: 1.0,
-            colors: ['#00ff00', '#ffff00', '#ff0000']
+            colors: ['#00ff00', '#ffff00', '#ff0000'],
         };
     }
 
@@ -29,7 +29,7 @@ export class HeatmapAlgorithm {
         const grid = {};
         const allPrices = [];
 
-        data.forEach(item => {
+        data.forEach((item) => {
             const lat = item.lat;
             const lng = item.lng;
             const price = item.price || item.rent_per_month || 0;
@@ -49,7 +49,7 @@ export class HeatmapAlgorithm {
                     count: 0,
                     maxPrice: 0,
                     minPrice: Number.MAX_SAFE_INTEGER,
-                    prices: []
+                    prices: [],
                 };
             }
 
@@ -65,11 +65,18 @@ export class HeatmapAlgorithm {
 
         // 轉換為熱力圖點
         const heatmapPoints = Object.values(grid)
-            .filter(cell => cell.count > 0)
-            .map(cell => {
+            .filter((cell) => cell.count > 0)
+            .map((cell) => {
                 const avgPrice = cell.totalPrice / cell.count;
-                const weight = this.normalizeWeightAdvanced(avgPrice, globalPriceStats);
-                const intensity = this.calculateIntensity(cell.count, cell.prices, options);
+                const weight = this.normalizeWeightAdvanced(
+                    avgPrice,
+                    globalPriceStats,
+                );
+                const intensity = this.calculateIntensity(
+                    cell.count,
+                    cell.prices,
+                    options,
+                );
 
                 return {
                     lat: cell.lat,
@@ -80,7 +87,10 @@ export class HeatmapAlgorithm {
                     count: cell.count,
                     avg_price: Math.round(avgPrice),
                     max_price: cell.maxPrice,
-                    min_price: cell.minPrice === Number.MAX_SAFE_INTEGER ? 0 : cell.minPrice,
+                    min_price:
+                        cell.minPrice === Number.MAX_SAFE_INTEGER
+                            ? 0
+                            : cell.minPrice,
                     color: this.getAdvancedColor(weight, intensity),
                     radius: this.calculateRadius(cell.count, intensity),
                 };
@@ -94,14 +104,14 @@ export class HeatmapAlgorithm {
             statistics: {
                 total_points: heatmapPoints.length,
                 density_range: {
-                    min: Math.min(...heatmapPoints.map(p => p.weight)),
-                    max: Math.max(...heatmapPoints.map(p => p.weight))
+                    min: Math.min(...heatmapPoints.map((p) => p.weight)),
+                    max: Math.max(...heatmapPoints.map((p) => p.weight)),
                 },
                 intensity_range: {
-                    min: Math.min(...heatmapPoints.map(p => p.intensity)),
-                    max: Math.max(...heatmapPoints.map(p => p.intensity))
-                }
-            }
+                    min: Math.min(...heatmapPoints.map((p) => p.intensity)),
+                    max: Math.max(...heatmapPoints.map((p) => p.intensity)),
+                },
+            },
         };
     }
 
@@ -110,13 +120,21 @@ export class HeatmapAlgorithm {
      */
     calculateGlobalPriceStats(prices) {
         if (prices.length === 0) {
-            return { min: 0, max: 100000, avg: 25000, median: 25000, p25: 15000, p75: 35000 };
+            return {
+                min: 0,
+                max: 100000,
+                avg: 25000,
+                median: 25000,
+                p25: 15000,
+                p75: 35000,
+            };
         }
 
         const sorted = [...prices].sort((a, b) => a - b);
         const min = sorted[0];
         const max = sorted[sorted.length - 1];
-        const avg = prices.reduce((sum, price) => sum + price, 0) / prices.length;
+        const avg =
+            prices.reduce((sum, price) => sum + price, 0) / prices.length;
         const median = this.median(sorted);
         const p25 = this.percentile(sorted, 25);
         const p75 = this.percentile(sorted, 75);
@@ -133,7 +151,8 @@ export class HeatmapAlgorithm {
         const upper = Math.ceil(index);
         const weight = index % 1;
 
-        if (upper >= sortedArray.length) return sortedArray[sortedArray.length - 1];
+        if (upper >= sortedArray.length)
+            return sortedArray[sortedArray.length - 1];
         if (lower === upper) return sortedArray[lower];
 
         return sortedArray[lower] * (1 - weight) + sortedArray[upper] * weight;
@@ -145,7 +164,10 @@ export class HeatmapAlgorithm {
     normalizeWeightAdvanced(price, stats) {
         // 使用四分位距進行更準確的標準化
         const iqr = stats.p75 - stats.p25;
-        const normalizedPrice = Math.max(0, Math.min(1, (price - stats.p25) / iqr));
+        const normalizedPrice = Math.max(
+            0,
+            Math.min(1, (price - stats.p25) / iqr),
+        );
 
         // 應用非線性轉換突出差異
         return Math.pow(normalizedPrice, 0.7);
@@ -165,7 +187,9 @@ export class HeatmapAlgorithm {
         let priceVariationIntensity = 0.5;
         if (prices.length > 1) {
             const avg = prices.reduce((sum, p) => sum + p, 0) / prices.length;
-            const variance = prices.reduce((sum, p) => sum + Math.pow(p - avg, 2), 0) / prices.length;
+            const variance =
+                prices.reduce((sum, p) => sum + Math.pow(p - avg, 2), 0) /
+                prices.length;
             const cv = Math.sqrt(variance) / avg; // 變異係數
             priceVariationIntensity = Math.min(1, cv / 0.5); // 標準化變異係數
         }
@@ -210,40 +234,40 @@ export class HeatmapAlgorithm {
      */
     densityAnalysis(data, radius = 0.01) {
         const densityPoints = [];
-        
-        data.forEach(item => {
+
+        data.forEach((item) => {
             const lat = item.lat;
             const lng = item.lng;
             const price = item.price || 0;
-            
+
             // 計算周圍點的密度
             let density = 0;
             let nearbyCount = 0;
-            
-            data.forEach(otherItem => {
+
+            data.forEach((otherItem) => {
                 if (otherItem !== item) {
                     const distance = this.calculateDistance(
                         [lat, lng],
-                        [otherItem.lat, otherItem.lng]
+                        [otherItem.lat, otherItem.lng],
                     );
-                    
+
                     if (distance <= radius) {
                         density += otherItem.price || 0;
                         nearbyCount++;
                     }
                 }
             });
-            
+
             const avgDensity = nearbyCount > 0 ? density / nearbyCount : 0;
             const weight = this.normalizeWeight(avgDensity);
-            
+
             densityPoints.push({
                 lat: lat,
                 lng: lng,
                 weight: weight,
                 density: avgDensity,
                 nearby_count: nearbyCount,
-                price_range: this.getPriceRange(price)
+                price_range: this.getPriceRange(price),
             });
         });
 
@@ -253,8 +277,10 @@ export class HeatmapAlgorithm {
             color_scale: this.colorScale,
             statistics: {
                 total_points: densityPoints.length,
-                average_density: densityPoints.reduce((sum, p) => sum + p.density, 0) / densityPoints.length
-            }
+                average_density:
+                    densityPoints.reduce((sum, p) => sum + p.density, 0) /
+                    densityPoints.length,
+            },
         };
     }
 
@@ -266,14 +292,14 @@ export class HeatmapAlgorithm {
             return { north: 0, south: 0, east: 0, west: 0 };
         }
 
-        const lats = data.map(item => item.lat);
-        const lngs = data.map(item => item.lng);
+        const lats = data.map((item) => item.lat);
+        const lngs = data.map((item) => item.lng);
 
         return {
             north: Math.max(...lats),
             south: Math.min(...lats),
             east: Math.max(...lngs),
-            west: Math.min(...lngs)
+            west: Math.min(...lngs),
         };
     }
 
@@ -284,7 +310,10 @@ export class HeatmapAlgorithm {
         // 將價格標準化到 0.1-1.0 範圍
         const minPrice = 10000;
         const maxPrice = 100000;
-        const normalized = Math.max(0.1, Math.min(1.0, (price - minPrice) / (maxPrice - minPrice)));
+        const normalized = Math.max(
+            0.1,
+            Math.min(1.0, (price - minPrice) / (maxPrice - minPrice)),
+        );
         return Math.round(normalized * 100) / 100;
     }
 
@@ -308,12 +337,15 @@ export class HeatmapAlgorithm {
         const earthRadius = 6371; // 地球半徑 (km)
         const dLat = this.toRadians(lat2 - lat1);
         const dLng = this.toRadians(lng2 - lng1);
-        
-        const a = Math.sin(dLat/2) * Math.sin(dLat/2) + 
-                  Math.cos(this.toRadians(lat1)) * Math.cos(this.toRadians(lat2)) * 
-                  Math.sin(dLng/2) * Math.sin(dLng/2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        
+
+        const a =
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(this.toRadians(lat1)) *
+                Math.cos(this.toRadians(lat2)) *
+                Math.sin(dLng / 2) *
+                Math.sin(dLng / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
         return earthRadius * c;
     }
 
@@ -330,16 +362,20 @@ export class HeatmapAlgorithm {
     getColor(weight) {
         const { min, max, colors } = this.colorScale;
         const normalizedWeight = (weight - min) / (max - min);
-        
+
         if (normalizedWeight <= 0) return colors[0];
         if (normalizedWeight >= 1) return colors[colors.length - 1];
-        
+
         const colorIndex = normalizedWeight * (colors.length - 1);
         const lowerIndex = Math.floor(colorIndex);
         const upperIndex = Math.ceil(colorIndex);
         const ratio = colorIndex - lowerIndex;
-        
-        return this.interpolateColor(colors[lowerIndex], colors[upperIndex], ratio);
+
+        return this.interpolateColor(
+            colors[lowerIndex],
+            colors[upperIndex],
+            ratio,
+        );
     }
 
     /**
@@ -348,19 +384,19 @@ export class HeatmapAlgorithm {
     interpolateColor(color1, color2, ratio) {
         const hex1 = color1.replace('#', '');
         const hex2 = color2.replace('#', '');
-        
+
         const r1 = parseInt(hex1.substr(0, 2), 16);
         const g1 = parseInt(hex1.substr(2, 2), 16);
         const b1 = parseInt(hex1.substr(4, 2), 16);
-        
+
         const r2 = parseInt(hex2.substr(0, 2), 16);
         const g2 = parseInt(hex2.substr(2, 2), 16);
         const b2 = parseInt(hex2.substr(4, 2), 16);
-        
+
         const r = Math.round(r1 + (r2 - r1) * ratio);
         const g = Math.round(g1 + (g2 - g1) * ratio);
         const b = Math.round(b1 + (b2 - b1) * ratio);
-        
+
         return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
     }
 }

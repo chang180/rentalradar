@@ -46,7 +46,7 @@ export class AIMapService {
         // 初始化中心點
         const centers: { lat: number; lng: number }[] = [];
         const indices = this.getRandomIndices(points.length, k);
-        indices.forEach(index => {
+        indices.forEach((index) => {
             centers.push({ lat: points[index].lat, lng: points[index].lng });
         });
 
@@ -57,10 +57,12 @@ export class AIMapService {
             const assignments: number[] = [];
             const newCenters: { lat: number; lng: number }[] = [];
             const counts: number[] = new Array(k).fill(0);
-            const sums: { lat: number; lng: number }[] = new Array(k).fill(null).map(() => ({ lat: 0, lng: 0 }));
+            const sums: { lat: number; lng: number }[] = new Array(k)
+                .fill(null)
+                .map(() => ({ lat: 0, lng: 0 }));
 
             // 分配點到最近的中心
-            points.forEach(point => {
+            points.forEach((point) => {
                 let minDistance = Infinity;
                 let closestCenter = 0;
 
@@ -106,7 +108,9 @@ export class AIMapService {
         clusters = [];
         for (let i = 0; i < k; i++) {
             if (counts[i] > 0) {
-                const clusterPoints = points.filter((_, index) => assignments[index] === i);
+                const clusterPoints = points.filter(
+                    (_, index) => assignments[index] === i,
+                );
                 const bounds = this.calculateBounds(clusterPoints);
 
                 clusters.push({
@@ -128,8 +132,8 @@ export class AIMapService {
         if (points.length === 0) return [];
 
         // 計算邊界
-        const lats = points.map(p => p.lat);
-        const lngs = points.map(p => p.lng);
+        const lats = points.map((p) => p.lat);
+        const lngs = points.map((p) => p.lng);
         const minLat = Math.min(...lats);
         const maxLat = Math.max(...lats);
         const minLng = Math.min(...lngs);
@@ -138,7 +142,7 @@ export class AIMapService {
         // 建立網格
         const grid: { [key: string]: MapPoint[] } = {};
 
-        points.forEach(point => {
+        points.forEach((point) => {
             const latIndex = Math.floor((point.lat - minLat) / gridSize);
             const lngIndex = Math.floor((point.lng - minLng) / gridSize);
             const key = `${latIndex}_${lngIndex}`;
@@ -155,8 +159,12 @@ export class AIMapService {
 
         Object.entries(grid).forEach(([key, cellPoints]) => {
             if (cellPoints.length > 0) {
-                const centerLat = cellPoints.reduce((sum, p) => sum + p.lat, 0) / cellPoints.length;
-                const centerLng = cellPoints.reduce((sum, p) => sum + p.lng, 0) / cellPoints.length;
+                const centerLat =
+                    cellPoints.reduce((sum, p) => sum + p.lat, 0) /
+                    cellPoints.length;
+                const centerLng =
+                    cellPoints.reduce((sum, p) => sum + p.lng, 0) /
+                    cellPoints.length;
 
                 clusters.push({
                     id: `cluster_${clusterId}`,
@@ -175,7 +183,7 @@ export class AIMapService {
      * 生成熱力圖資料
      */
     static generateHeatmapData(points: MapPoint[]): HeatmapPoint[] {
-        return points.map(point => {
+        return points.map((point) => {
             const price = point.price || 0;
             const weight = Math.min(price / 50000, 1.0); // 標準化權重
 
@@ -211,7 +219,8 @@ export class AIMapService {
         explanations: string[];
     } {
         const BASE_PRICE = 14500;
-        const area = typeof data.area === 'number' ? Math.max(data.area, 6) : undefined;
+        const area =
+            typeof data.area === 'number' ? Math.max(data.area, 6) : undefined;
         const rooms = this.resolveRooms(data.rooms, data.pattern);
         const areaComponent = area ? Math.pow(area, 0.92) * 950 : 0;
         const roomComponent = rooms ? Math.min(rooms, 4) * 1200 : 0;
@@ -230,7 +239,8 @@ export class AIMapService {
         let floorMultiplier = 1;
         if (typeof data.floor === 'number') {
             const normalizedFloor = Math.max(1, Math.min(data.floor, 25));
-            floorMultiplier += Math.min(Math.max(normalizedFloor - 1, 0), 14) * 0.015;
+            floorMultiplier +=
+                Math.min(Math.max(normalizedFloor - 1, 0), 14) * 0.015;
             if (normalizedFloor <= 2) {
                 floorMultiplier -= 0.02;
             }
@@ -238,21 +248,42 @@ export class AIMapService {
 
         let ageMultiplier = 1;
         if (typeof data.age === 'number') {
-            const agePenalty = data.age <= 5 ? 0 : Math.min(0.45, (data.age - 5) * 0.012);
+            const agePenalty =
+                data.age <= 5 ? 0 : Math.min(0.45, (data.age - 5) * 0.012);
             ageMultiplier = Math.max(0.55, 1 - agePenalty);
         }
 
-        const amenityAdjustment = this.buildingTypeAdjustment(data.building_type);
-        const baseline = BASE_PRICE + areaComponent + roomComponent + amenityAdjustment.absolute;
+        const amenityAdjustment = this.buildingTypeAdjustment(
+            data.building_type,
+        );
+        const baseline =
+            BASE_PRICE +
+            areaComponent +
+            roomComponent +
+            amenityAdjustment.absolute;
         const marketModifier = this.marketPressureModifier(
-            typeof data.rent_per_month === 'number' ? data.rent_per_month : undefined,
-            baseline
+            typeof data.rent_per_month === 'number'
+                ? data.rent_per_month
+                : undefined,
+            baseline,
         );
 
-        const rawPrice = baseline * locationMultiplier * floorMultiplier * ageMultiplier * (1 + amenityAdjustment.multiplier + marketModifier);
+        const rawPrice =
+            baseline *
+            locationMultiplier *
+            floorMultiplier *
+            ageMultiplier *
+            (1 + amenityAdjustment.multiplier + marketModifier);
         const price = Math.round(Math.max(6000, rawPrice));
 
-        const featureCount = [area, rooms, data.floor, data.age, data.building_type, distanceKm].filter(value => value !== undefined && value !== null).length;
+        const featureCount = [
+            area,
+            rooms,
+            data.floor,
+            data.age,
+            data.building_type,
+            distanceKm,
+        ].filter((value) => value !== undefined && value !== null).length;
         let confidence = 0.58 + featureCount * 0.08;
         if (typeof distanceKm === 'number' && distanceKm > 12) {
             confidence -= 0.05;
@@ -277,7 +308,9 @@ export class AIMapService {
             location_multiplier: parseFloat(locationMultiplier.toFixed(3)),
             floor_multiplier: parseFloat(floorMultiplier.toFixed(3)),
             age_multiplier: parseFloat(ageMultiplier.toFixed(3)),
-            amenity_multiplier: parseFloat(amenityAdjustment.multiplier.toFixed(3)),
+            amenity_multiplier: parseFloat(
+                amenityAdjustment.multiplier.toFixed(3),
+            ),
             market_modifier: parseFloat(marketModifier.toFixed(3)),
         };
 
@@ -316,18 +349,23 @@ export class AIMapService {
     /**
      * 智慧資料過濾
      */
-    static smartFilter(points: MapPoint[], zoom: number, viewport: {
-        north: number;
-        south: number;
-        east: number;
-        west: number;
-    }): MapPoint[] {
+    static smartFilter(
+        points: MapPoint[],
+        zoom: number,
+        viewport: {
+            north: number;
+            south: number;
+            east: number;
+            west: number;
+        },
+    ): MapPoint[] {
         // 根據視口過濾
-        let filtered = points.filter(point =>
-            point.lat >= viewport.south &&
-            point.lat <= viewport.north &&
-            point.lng >= viewport.west &&
-            point.lng <= viewport.east
+        let filtered = points.filter(
+            (point) =>
+                point.lat >= viewport.south &&
+                point.lat <= viewport.north &&
+                point.lng >= viewport.west &&
+                point.lng <= viewport.east,
         );
 
         // 根據縮放級別決定顯示策略
@@ -346,18 +384,30 @@ export class AIMapService {
      */
     static optimizeViewportUpdate(
         currentPoints: MapPoint[],
-        newViewport: { north: number; south: number; east: number; west: number },
-        previousViewport: { north: number; south: number; east: number; west: number } | null
+        newViewport: {
+            north: number;
+            south: number;
+            east: number;
+            west: number;
+        },
+        previousViewport: {
+            north: number;
+            south: number;
+            east: number;
+            west: number;
+        } | null,
     ): { needsUpdate: boolean; strategy: 'full' | 'incremental' } {
         if (!previousViewport) {
             return { needsUpdate: true, strategy: 'full' };
         }
 
         // 計算視口變化程度
-        const latChange = Math.abs(newViewport.north - previousViewport.north) +
-                         Math.abs(newViewport.south - previousViewport.south);
-        const lngChange = Math.abs(newViewport.east - previousViewport.east) +
-                         Math.abs(newViewport.west - previousViewport.west);
+        const latChange =
+            Math.abs(newViewport.north - previousViewport.north) +
+            Math.abs(newViewport.south - previousViewport.south);
+        const lngChange =
+            Math.abs(newViewport.east - previousViewport.east) +
+            Math.abs(newViewport.west - previousViewport.west);
 
         const changeThreshold = 0.01; // 約 1km
 
@@ -369,14 +419,20 @@ export class AIMapService {
     }
 
     // 輔助方法
-    private static calculateDistance(point1: { lat: number; lng: number }, point2: { lat: number; lng: number }): number {
+    private static calculateDistance(
+        point1: { lat: number; lng: number },
+        point2: { lat: number; lng: number },
+    ): number {
         const R = 6371; // 地球半徑 (km)
         const dLat = this.deg2rad(point2.lat - point1.lat);
         const dLng = this.deg2rad(point2.lng - point1.lng);
 
-        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                  Math.cos(this.deg2rad(point1.lat)) * Math.cos(this.deg2rad(point2.lat)) *
-                  Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        const a =
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(this.deg2rad(point1.lat)) *
+                Math.cos(this.deg2rad(point2.lat)) *
+                Math.sin(dLng / 2) *
+                Math.sin(dLng / 2);
 
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return R * c;
@@ -411,8 +467,8 @@ export class AIMapService {
             return { north: 0, south: 0, east: 0, west: 0 };
         }
 
-        const lats = points.map(p => p.lat);
-        const lngs = points.map(p => p.lng);
+        const lats = points.map((p) => p.lat);
+        const lngs = points.map((p) => p.lng);
 
         return {
             north: Math.max(...lats),
@@ -429,18 +485,32 @@ export class AIMapService {
         return '40000以上';
     }
 
-    private static getLocationFactor(lat: number, lng: number, centerLat: number, centerLng: number): number {
-        const distance = this.calculateDistance({ lat, lng }, { lat: centerLat, lng: centerLng });
+    private static getLocationFactor(
+        lat: number,
+        lng: number,
+        centerLat: number,
+        centerLng: number,
+    ): number {
+        const distance = this.calculateDistance(
+            { lat, lng },
+            { lat: centerLat, lng: centerLng },
+        );
         return Math.max(0, 10000 - distance * 1000);
     }
 
-    private static marketPressureModifier(listedRent: number | undefined, baseline: number): number {
+    private static marketPressureModifier(
+        listedRent: number | undefined,
+        baseline: number,
+    ): number {
         if (!listedRent || listedRent <= 0) return 0;
         const delta = (listedRent - baseline) / Math.max(baseline, 1);
         return this.clamp(delta * 0.45, -0.2, 0.35);
     }
 
-    private static buildingTypeAdjustment(buildingType?: string): { absolute: number; multiplier: number } {
+    private static buildingTypeAdjustment(buildingType?: string): {
+        absolute: number;
+        multiplier: number;
+    } {
         const type = (buildingType || '').toLowerCase();
         if (!type) {
             return { absolute: 0, multiplier: 0 };
@@ -464,7 +534,10 @@ export class AIMapService {
         return 0;
     }
 
-    private static resolveRooms(rooms?: number, pattern?: string): number | undefined {
+    private static resolveRooms(
+        rooms?: number,
+        pattern?: string,
+    ): number | undefined {
         if (typeof rooms === 'number' && rooms >= 0) {
             return Math.floor(rooms);
         }
@@ -479,14 +552,21 @@ export class AIMapService {
         return undefined;
     }
 
-    private static haversine(lat1: number, lng1: number, lat2: number, lng2: number): number {
+    private static haversine(
+        lat1: number,
+        lng1: number,
+        lat2: number,
+        lng2: number,
+    ): number {
         const R = 6371.0088;
         const dLat = this.deg2rad(lat2 - lat1);
         const dLng = this.deg2rad(lng2 - lng1);
         const lat1Rad = this.deg2rad(lat1);
         const lat2Rad = this.deg2rad(lat2);
 
-        const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1Rad) * Math.cos(lat2Rad) * Math.sin(dLng / 2) ** 2;
+        const a =
+            Math.sin(dLat / 2) ** 2 +
+            Math.cos(lat1Rad) * Math.cos(lat2Rad) * Math.sin(dLng / 2) ** 2;
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return R * c;
     }
@@ -502,25 +582,37 @@ export class AIMapService {
         return 1000;
     }
 
-    private static gridSampling(points: MapPoint[], maxPoints: number): MapPoint[] {
+    private static gridSampling(
+        points: MapPoint[],
+        maxPoints: number,
+    ): MapPoint[] {
         const gridSize = Math.sqrt(points.length / maxPoints) * 0.01;
         const clusters = this.gridCluster(points, gridSize);
 
         // 從每個聚合中選擇代表點
         const sampled: MapPoint[] = [];
-        clusters.forEach(cluster => {
-            const clusterPoints = points.filter(point =>
-                Math.abs(point.lat - cluster.center.lat) < gridSize &&
-                Math.abs(point.lng - cluster.center.lng) < gridSize
+        clusters.forEach((cluster) => {
+            const clusterPoints = points.filter(
+                (point) =>
+                    Math.abs(point.lat - cluster.center.lat) < gridSize &&
+                    Math.abs(point.lng - cluster.center.lng) < gridSize,
             );
 
             if (clusterPoints.length > 0) {
                 // 選擇聚合中心附近的點
-                const representative = clusterPoints.reduce((closest, current) => {
-                    const closestDist = this.calculateDistance(closest, cluster.center);
-                    const currentDist = this.calculateDistance(current, cluster.center);
-                    return currentDist < closestDist ? current : closest;
-                });
+                const representative = clusterPoints.reduce(
+                    (closest, current) => {
+                        const closestDist = this.calculateDistance(
+                            closest,
+                            cluster.center,
+                        );
+                        const currentDist = this.calculateDistance(
+                            current,
+                            cluster.center,
+                        );
+                        return currentDist < closestDist ? current : closest;
+                    },
+                );
 
                 sampled.push(representative);
             }

@@ -32,25 +32,32 @@ export class WebSocketService extends EventEmitter {
      */
     private setupEventListeners(): void {
         // 監聽地圖更新
-        this.echo.channel('map-updates')
+        this.echo
+            .channel('map-updates')
             .listen('MapDataUpdated', (data: any) => {
                 this.emit('mapUpdate', data);
             });
 
         // 監聽通知
-        this.echo.channel('notifications')
+        this.echo
+            .channel('notifications')
             .listen('RealTimeNotification', (data: any) => {
                 this.emit('notification', data);
             });
 
         // 監聽系統狀態
-        this.echo.channel('system-status')
+        this.echo
+            .channel('system-status')
             .listen('SystemStatus', (data: any) => {
                 this.emit('systemStatus', data);
             });
 
         // 連接狀態監聽 - 檢查 Echo 是否有有效的 connector
-        if (this.echo.connector && this.echo.connector.pusher && this.echo.connector.pusher.connection) {
+        if (
+            this.echo.connector &&
+            this.echo.connector.pusher &&
+            this.echo.connector.pusher.connection
+        ) {
             this.echo.connector.pusher.connection.bind('connected', () => {
                 this.connectionStatus.connected = true;
                 this.connectionStatus.reconnecting = false;
@@ -69,18 +76,27 @@ export class WebSocketService extends EventEmitter {
             });
         } else {
             // 如果沒有有效的 connector，模擬連接狀態
-            console.info('WebSocketService: Using mock connection status (no real-time features)');
+            console.info(
+                'WebSocketService: Using mock connection status (no real-time features)',
+            );
             this.connectionStatus.connected = true;
             this.connectionStatus.lastConnected = new Date();
             this.emit('connected');
         }
 
         // 錯誤處理也需要檢查 connector 是否存在
-        if (this.echo.connector && this.echo.connector.pusher && this.echo.connector.pusher.connection) {
-            this.echo.connector.pusher.connection.bind('error', (error: any) => {
-                this.connectionStatus.error = error.message;
-                this.emit('error', error);
-            });
+        if (
+            this.echo.connector &&
+            this.echo.connector.pusher &&
+            this.echo.connector.pusher.connection
+        ) {
+            this.echo.connector.pusher.connection.bind(
+                'error',
+                (error: any) => {
+                    this.connectionStatus.error = error.message;
+                    this.emit('error', error);
+                },
+            );
         }
     }
 
@@ -88,7 +104,8 @@ export class WebSocketService extends EventEmitter {
      * 訂閱用戶特定頻道
      */
     subscribeToUserChannel(userId: string): void {
-        this.echo.private(`user.${userId}`)
+        this.echo
+            .private(`user.${userId}`)
             .listen('RealTimeNotification', (data: any) => {
                 this.emit('userNotification', data);
             });
@@ -105,7 +122,8 @@ export class WebSocketService extends EventEmitter {
      * 訂閱地圖更新頻道
      */
     subscribeToMapUpdates(): void {
-        this.echo.channel('map-updates')
+        this.echo
+            .channel('map-updates')
             .listen('MapDataUpdated', (data: any) => {
                 this.emit('mapUpdate', data);
             });

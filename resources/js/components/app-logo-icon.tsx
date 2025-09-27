@@ -41,12 +41,7 @@ export default function AppLogoIcon(props: SVGAttributes<SVGElement>) {
                 opacity="0.2"
             />
             {/* 中心點 */}
-            <circle
-                cx="12"
-                cy="12"
-                r="1"
-                fill="currentColor"
-            />
+            <circle cx="12" cy="12" r="1" fill="currentColor" />
         </svg>
     );
 }

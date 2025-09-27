@@ -29,15 +29,13 @@ class DashboardController extends Controller
             };
 
             // 基本統計
-            $totalProperties = Property::query()->geocoded()->count();
+            $totalProperties = Property::query()->count();
             $recentProperties = Property::query()
-                ->geocoded()
                 ->where('rent_date', '>=', $startDate)
                 ->count();
 
             // 平均租金統計 - 使用 total_rent 欄位（實際租金）
             $avgRentStats = Property::query()
-                ->geocoded()
                 ->selectRaw('
                     AVG(total_rent) as avg_rent,
                     AVG(rent_per_ping) as avg_rent_per_ping,
@@ -48,7 +46,6 @@ class DashboardController extends Controller
 
             // 熱門區域統計
             $popularDistricts = Property::query()
-                ->geocoded()
                 ->selectRaw('
                     city,
                     district,
@@ -68,7 +65,6 @@ class DashboardController extends Controller
 
             // 建築類型統計
             $buildingTypeStats = Property::query()
-                ->geocoded()
                 ->selectRaw('
                     building_type,
                     COUNT(*) as count,
@@ -81,7 +77,6 @@ class DashboardController extends Controller
 
             // 租賃類型統計
             $rentalTypeStats = Property::query()
-                ->geocoded()
                 ->selectRaw('
                     rental_type,
                     COUNT(*) as count,
@@ -93,12 +88,10 @@ class DashboardController extends Controller
 
             // 價格趨勢（最近30天 vs 前30天）
             $currentPeriod = Property::query()
-                ->geocoded()
                 ->where('rent_date', '>=', now()->subDays(30))
                 ->avg('total_rent');
 
             $previousPeriod = Property::query()
-                ->geocoded()
                 ->whereBetween('rent_date', [now()->subDays(60), now()->subDays(30)])
                 ->avg('total_rent');
 
@@ -108,7 +101,6 @@ class DashboardController extends Controller
 
             // 縣市統計
             $cityStats = Property::query()
-                ->geocoded()
                 ->selectRaw('
                     city,
                     COUNT(*) as property_count,
@@ -189,7 +181,6 @@ class DashboardController extends Controller
         try {
             // 獲取可用的篩選選項
             $cities = Property::query()
-                ->geocoded()
                 ->select('city')
                 ->distinct()
                 ->orderBy('city')
@@ -198,7 +189,6 @@ class DashboardController extends Controller
                 ->values();
 
             $districts = Property::query()
-                ->geocoded()
                 ->select('city', 'district')
                 ->distinct()
                 ->orderBy('city')
@@ -213,7 +203,6 @@ class DashboardController extends Controller
                 });
 
             $buildingTypes = Property::query()
-                ->geocoded()
                 ->select('building_type')
                 ->distinct()
                 ->orderBy('building_type')
@@ -222,7 +211,6 @@ class DashboardController extends Controller
                 ->values();
 
             $rentalTypes = Property::query()
-                ->geocoded()
                 ->select('rental_type')
                 ->distinct()
                 ->orderBy('rental_type')

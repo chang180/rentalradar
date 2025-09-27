@@ -1,9 +1,9 @@
-﻿import { useCallback, useEffect, useMemo, useState } from 'react';
-import type {
+﻿import type {
     MarketAnalysisFilters,
     MarketAnalysisOverview,
     MarketAnalysisReport,
 } from '@/types/analysis';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 interface UseMarketAnalysisOptions {
     initialFilters?: MarketAnalysisFilters;
@@ -23,13 +23,16 @@ interface UseMarketAnalysis {
     generateReport: (overrideFilters?: MarketAnalysisFilters) => Promise<void>;
 }
 
-export function useMarketAnalysis(options: UseMarketAnalysisOptions = {}): UseMarketAnalysis {
+export function useMarketAnalysis(
+    options: UseMarketAnalysisOptions = {},
+): UseMarketAnalysis {
     const { initialFilters = { time_range: '12m' }, autoLoad = true } = options;
 
     const [data, setData] = useState<MarketAnalysisOverview | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
-    const [filters, setFiltersState] = useState<MarketAnalysisFilters>(initialFilters);
+    const [filters, setFiltersState] =
+        useState<MarketAnalysisFilters>(initialFilters);
 
     const [report, setReport] = useState<MarketAnalysisReport | null>(null);
     const [reportLoading, setReportLoading] = useState<boolean>(false);
@@ -38,7 +41,10 @@ export function useMarketAnalysis(options: UseMarketAnalysisOptions = {}): UseMa
     const buildQuery = useCallback((payload: MarketAnalysisFilters) => {
         const params = new URLSearchParams();
         Object.entries(payload)
-            .filter(([, value]) => value !== undefined && value !== null && value !== '')
+            .filter(
+                ([, value]) =>
+                    value !== undefined && value !== null && value !== '',
+            )
             .forEach(([key, value]) => {
                 params.set(key, String(value));
             });
@@ -46,62 +52,82 @@ export function useMarketAnalysis(options: UseMarketAnalysisOptions = {}): UseMa
         return params.toString();
     }, []);
 
-    const mergedFilters = useMemo(() => ({ ...initialFilters, ...filters }), [initialFilters, filters]);
+    const mergedFilters = useMemo(
+        () => ({ ...initialFilters, ...filters }),
+        [initialFilters, filters],
+    );
 
-    const fetchOverview = useCallback(async (overrideFilters?: MarketAnalysisFilters) => {
-        const nextFilters = { ...mergedFilters, ...overrideFilters };
-        setLoading(true);
-        setError(null);
+    const fetchOverview = useCallback(
+        async (overrideFilters?: MarketAnalysisFilters) => {
+            const nextFilters = { ...mergedFilters, ...overrideFilters };
+            setLoading(true);
+            setError(null);
 
-        try {
-            const queryString = buildQuery(nextFilters);
-            const response = await fetch(`/api/analysis/overview${queryString ? `?${queryString}` : ''}`, {
-                headers: {
-                    Accept: 'application/json',
-                },
-            });
+            try {
+                const queryString = buildQuery(nextFilters);
+                const response = await fetch(
+                    `/api/analysis/overview${queryString ? `?${queryString}` : ''}`,
+                    {
+                        headers: {
+                            Accept: 'application/json',
+                        },
+                    },
+                );
 
-            if (!response.ok) {
-                throw new Error('Failed to load market analysis overview.');
+                if (!response.ok) {
+                    throw new Error('Failed to load market analysis overview.');
+                }
+
+                const body = await response.json();
+                setData(body.data as MarketAnalysisOverview);
+                setFiltersState(nextFilters);
+            } catch (exception) {
+                setError(
+                    exception instanceof Error
+                        ? exception.message
+                        : 'Unexpected error.',
+                );
+            } finally {
+                setLoading(false);
             }
+        },
+        [buildQuery, mergedFilters],
+    );
 
-            const body = await response.json();
-            setData(body.data as MarketAnalysisOverview);
-            setFiltersState(nextFilters);
-        } catch (exception) {
-            setError(exception instanceof Error ? exception.message : 'Unexpected error.');
-        } finally {
-            setLoading(false);
-        }
-    }, [buildQuery, mergedFilters]);
+    const generateReport = useCallback(
+        async (overrideFilters?: MarketAnalysisFilters) => {
+            const payload = { ...mergedFilters, ...overrideFilters };
+            setReportLoading(true);
+            setReportError(null);
 
-    const generateReport = useCallback(async (overrideFilters?: MarketAnalysisFilters) => {
-        const payload = { ...mergedFilters, ...overrideFilters };
-        setReportLoading(true);
-        setReportError(null);
+            try {
+                const response = await fetch('/api/analysis/report', {
+                    method: 'POST',
+                    headers: {
+                        Accept: 'application/json',
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(payload),
+                });
 
-        try {
-            const response = await fetch('/api/analysis/report', {
-                method: 'POST',
-                headers: {
-                    Accept: 'application/json',
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(payload),
-            });
+                if (!response.ok) {
+                    throw new Error('Failed to generate market report.');
+                }
 
-            if (!response.ok) {
-                throw new Error('Failed to generate market report.');
+                const body = await response.json();
+                setReport(body.report as MarketAnalysisReport);
+            } catch (exception) {
+                setReportError(
+                    exception instanceof Error
+                        ? exception.message
+                        : 'Unexpected error.',
+                );
+            } finally {
+                setReportLoading(false);
             }
-
-            const body = await response.json();
-            setReport(body.report as MarketAnalysisReport);
-        } catch (exception) {
-            setReportError(exception instanceof Error ? exception.message : 'Unexpected error.');
-        } finally {
-            setReportLoading(false);
-        }
-    }, [mergedFilters]);
+        },
+        [mergedFilters],
+    );
 
     useEffect(() => {
         if (autoLoad) {

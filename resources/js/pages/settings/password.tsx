@@ -80,9 +80,7 @@ export default function Password() {
                                 </div>
 
                                 <div className="grid gap-2">
-                                    <Label htmlFor="password">
-                                        新密碼
-                                    </Label>
+                                    <Label htmlFor="password">新密碼</Label>
 
                                     <Input
                                         id="password"

@@ -30,17 +30,21 @@ export const PerformanceChart: React.FC<PerformanceChartProps> = ({
 }) => {
     if (!data || data.length === 0) {
         return (
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 text-center text-gray-500 dark:text-gray-400">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{title}</h3>
+            <div className="rounded-lg bg-white p-6 text-center text-gray-500 shadow dark:bg-gray-800 dark:text-gray-400">
+                <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
+                    {title}
+                </h3>
                 <p>無可用資料</p>
             </div>
         );
     }
 
     return (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{title}</h3>
-            <div className="h-64 flex items-center justify-center text-gray-500 dark:text-gray-400">
+        <div className="rounded-lg bg-white p-6 shadow dark:bg-gray-800">
+            <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
+                {title}
+            </h3>
+            <div className="flex h-64 items-center justify-center text-gray-500 dark:text-gray-400">
                 <p>圖表功能暫時停用</p>
             </div>
         </div>
@@ -62,17 +66,21 @@ export const MultiMetricChart: React.FC<MultiMetricChartProps> = ({
 }) => {
     if (!data || data.length === 0) {
         return (
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 text-center text-gray-500 dark:text-gray-400">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">多指標綜合趨勢</h3>
+            <div className="rounded-lg bg-white p-6 text-center text-gray-500 shadow dark:bg-gray-800 dark:text-gray-400">
+                <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
+                    多指標綜合趨勢
+                </h3>
                 <p>無可用資料</p>
             </div>
         );
     }
 
     return (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">多指標綜合趨勢</h3>
-            <div className="h-64 flex items-center justify-center text-gray-500 dark:text-gray-400">
+        <div className="rounded-lg bg-white p-6 shadow dark:bg-gray-800">
+            <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
+                多指標綜合趨勢
+            </h3>
+            <div className="flex h-64 items-center justify-center text-gray-500 dark:text-gray-400">
                 <p>圖表功能暫時停用</p>
             </div>
         </div>

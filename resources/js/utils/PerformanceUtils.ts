@@ -52,10 +52,12 @@ export class PerformanceUtils {
     /**
      * 獲取平均效能指標
      */
-    static getAverageMetrics(timeWindow: number = 300000): PerformanceMetrics | null {
+    static getAverageMetrics(
+        timeWindow: number = 300000,
+    ): PerformanceMetrics | null {
         const now = Date.now();
         const recentMetrics = this.metrics.filter(
-            metric => now - metric.timestamp <= timeWindow
+            (metric) => now - metric.timestamp <= timeWindow,
         );
 
         if (recentMetrics.length === 0) {
@@ -69,9 +71,11 @@ export class PerformanceUtils {
                 memoryUsage: acc.memoryUsage + metric.memoryUsage,
                 queryCount: acc.queryCount + metric.queryCount,
                 cacheHitRate: acc.cacheHitRate + metric.cacheHitRate,
-                activeConnections: acc.activeConnections + metric.activeConnections,
+                activeConnections:
+                    acc.activeConnections + metric.activeConnections,
                 cpuUsage: (acc.cpuUsage || 0) + (metric.cpuUsage || 0),
-                networkLatency: (acc.networkLatency || 0) + (metric.networkLatency || 0),
+                networkLatency:
+                    (acc.networkLatency || 0) + (metric.networkLatency || 0),
             }),
             {
                 timestamp: 0,
@@ -82,7 +86,7 @@ export class PerformanceUtils {
                 activeConnections: 0,
                 cpuUsage: 0,
                 networkLatency: 0,
-            }
+            },
         );
 
         const count = recentMetrics.length;
@@ -101,11 +105,13 @@ export class PerformanceUtils {
     /**
      * 檢查效能健康狀態
      */
-    static checkHealth(thresholds: PerformanceThresholds = {
-        responseTime: { good: 100, warning: 500 },
-        memoryUsage: { good: 50, warning: 100 },
-        cacheHitRate: { good: 80, warning: 60 },
-    }): {
+    static checkHealth(
+        thresholds: PerformanceThresholds = {
+            responseTime: { good: 100, warning: 500 },
+            memoryUsage: { good: 50, warning: 100 },
+            cacheHitRate: { good: 80, warning: 60 },
+        },
+    ): {
         status: 'good' | 'warning' | 'critical';
         issues: string[];
         score: number;
@@ -149,7 +155,8 @@ export class PerformanceUtils {
             score -= 10;
         }
 
-        const status = score >= 80 ? 'good' : score >= 60 ? 'warning' : 'critical';
+        const status =
+            score >= 80 ? 'good' : score >= 60 ? 'warning' : 'critical';
 
         return {
             status,
@@ -187,7 +194,7 @@ export class PerformanceUtils {
     } {
         const now = Date.now();
         const recentMetrics = this.metrics.filter(
-            metric => now - metric.timestamp <= timeWindow
+            (metric) => now - metric.timestamp <= timeWindow,
         );
 
         if (recentMetrics.length < 2) {
@@ -198,9 +205,16 @@ export class PerformanceUtils {
             };
         }
 
-        const sortedMetrics = recentMetrics.sort((a, b) => a.timestamp - b.timestamp);
-        const firstHalf = sortedMetrics.slice(0, Math.floor(sortedMetrics.length / 2));
-        const secondHalf = sortedMetrics.slice(Math.floor(sortedMetrics.length / 2));
+        const sortedMetrics = recentMetrics.sort(
+            (a, b) => a.timestamp - b.timestamp,
+        );
+        const firstHalf = sortedMetrics.slice(
+            0,
+            Math.floor(sortedMetrics.length / 2),
+        );
+        const secondHalf = sortedMetrics.slice(
+            Math.floor(sortedMetrics.length / 2),
+        );
 
         const getTrend = (first: number[], second: number[]) => {
             const firstAvg = first.reduce((a, b) => a + b, 0) / first.length;
@@ -213,20 +227,22 @@ export class PerformanceUtils {
         };
 
         const responseTimeTrend = getTrend(
-            firstHalf.map(m => m.responseTime),
-            secondHalf.map(m => m.responseTime)
+            firstHalf.map((m) => m.responseTime),
+            secondHalf.map((m) => m.responseTime),
         );
 
         const memoryTrend = getTrend(
-            firstHalf.map(m => m.memoryUsage),
-            secondHalf.map(m => m.memoryUsage)
+            firstHalf.map((m) => m.memoryUsage),
+            secondHalf.map((m) => m.memoryUsage),
         );
 
-        const overall = responseTimeTrend === 'degrading' || memoryTrend === 'degrading'
-            ? 'degrading'
-            : responseTimeTrend === 'improving' || memoryTrend === 'improving'
-            ? 'improving'
-            : 'stable';
+        const overall =
+            responseTimeTrend === 'degrading' || memoryTrend === 'degrading'
+                ? 'degrading'
+                : responseTimeTrend === 'improving' ||
+                    memoryTrend === 'improving'
+                  ? 'improving'
+                  : 'stable';
 
         return {
             responseTime: responseTimeTrend,
@@ -252,13 +268,13 @@ export class PerformanceUtils {
         const recommendations: string[] = [];
 
         if (health.issues.length > 0) {
-            if (health.issues.some(issue => issue.includes('響應時間'))) {
+            if (health.issues.some((issue) => issue.includes('響應時間'))) {
                 recommendations.push('考慮優化資料庫查詢或增加快取');
             }
-            if (health.issues.some(issue => issue.includes('記憶體'))) {
+            if (health.issues.some((issue) => issue.includes('記憶體'))) {
                 recommendations.push('檢查記憶體洩漏或優化資料結構');
             }
-            if (health.issues.some(issue => issue.includes('快取'))) {
+            if (health.issues.some((issue) => issue.includes('快取'))) {
                 recommendations.push('調整快取策略或增加快取容量');
             }
         }

@@ -1,5 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
-import mapWebSocketService, { MapUpdateRequest, MapUpdateResponse, MapBounds } from '../services/MapWebSocketService';
+import { useCallback, useEffect, useState } from 'react';
+import mapWebSocketService, {
+    MapUpdateRequest,
+    MapUpdateResponse,
+} from '../services/MapWebSocketService';
 
 export interface UseRealtimeMapDataOptions {
     autoSubscribe?: boolean;
@@ -18,20 +21,18 @@ export interface UseRealtimeMapDataReturn {
 }
 
 export const useRealtimeMapData = (
-    options: UseRealtimeMapDataOptions = {}
+    options: UseRealtimeMapDataOptions = {},
 ): UseRealtimeMapDataReturn => {
-    const {
-        autoSubscribe = true,
-        debounceMs = 300,
-        maxRetries = 3,
-    } = options;
+    const { autoSubscribe = true, debounceMs = 300, maxRetries = 3 } = options;
 
     const [data, setData] = useState<MapUpdateResponse | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
     const [retryCount, setRetryCount] = useState(0);
-    const [debounceTimer, setDebounceTimer] = useState<NodeJS.Timeout | null>(null);
+    const [debounceTimer, setDebounceTimer] = useState<NodeJS.Timeout | null>(
+        null,
+    );
 
     // 處理地圖更新
     const handleMapUpdate = useCallback((updateData: MapUpdateResponse) => {
@@ -65,35 +66,43 @@ export const useRealtimeMapData = (
         return () => {
             mapWebSocketService.unsubscribeFromMapUpdates(handleMapUpdate);
         };
-    }, [autoSubscribe, handleMapUpdate, handleMapError, handlePerformanceUpdate]);
+    }, [
+        autoSubscribe,
+        handleMapUpdate,
+        handleMapError,
+        handlePerformanceUpdate,
+    ]);
 
     // 請求更新
-    const requestUpdate = useCallback(async (request: MapUpdateRequest) => {
-        // 清除之前的防抖計時器
-        if (debounceTimer) {
-            clearTimeout(debounceTimer);
-        }
-
-        // 設置防抖
-        const timer = setTimeout(async () => {
-            try {
-                setIsLoading(true);
-                setError(null);
-                
-                await mapWebSocketService.requestMapUpdate(request);
-            } catch (err) {
-                setError(err instanceof Error ? err.message : '請求失敗');
-                setIsLoading(false);
+    const requestUpdate = useCallback(
+        async (request: MapUpdateRequest) => {
+            // 清除之前的防抖計時器
+            if (debounceTimer) {
+                clearTimeout(debounceTimer);
             }
-        }, debounceMs);
 
-        setDebounceTimer(timer);
-    }, [debounceMs, debounceTimer]);
+            // 設置防抖
+            const timer = setTimeout(async () => {
+                try {
+                    setIsLoading(true);
+                    setError(null);
+
+                    await mapWebSocketService.requestMapUpdate(request);
+                } catch (err) {
+                    setError(err instanceof Error ? err.message : '請求失敗');
+                    setIsLoading(false);
+                }
+            }, debounceMs);
+
+            setDebounceTimer(timer);
+        },
+        [debounceMs, debounceTimer],
+    );
 
     // 重試
     const retry = useCallback(() => {
         if (retryCount < maxRetries && data) {
-            setRetryCount(prev => prev + 1);
+            setRetryCount((prev) => prev + 1);
             // 重新請求最後一次更新
             const lastRequest = {
                 bounds: data.bounds,

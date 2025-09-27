@@ -13,7 +13,7 @@ import {
 import { dashboard } from '@/routes';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { LayoutGrid, BarChart3, Map, Home, ChevronLeft, ChevronRight } from 'lucide-react';
+import { BarChart3, ChevronLeft, ChevronRight, Home, Map } from 'lucide-react';
 import AppLogo from './app-logo';
 
 const mainNavItems: NavItem[] = [
@@ -61,11 +61,11 @@ export function AppSidebar() {
                     <NavUser />
                 </SidebarFooter>
             </Sidebar>
-            
+
             {/* 側邊欄切換按鈕 - 位於側邊欄和內容區域的邊線上 */}
             <button
                 onClick={toggleSidebar}
-                className="absolute -right-3 top-6 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                className="absolute top-6 -right-3 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-gray-200 bg-white shadow-sm transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
             >
                 {isCollapsed ? (
                     <ChevronRight className="h-3 w-3 text-gray-600 dark:text-gray-400" />

@@ -31,7 +31,7 @@ export default function Login({ status, canResetPassword }: LoginProps) {
             </Head>
 
             {status && (
-                <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-center">
+                <div className="mb-6 rounded-lg border border-green-200 bg-green-50 p-4 text-center dark:border-green-800 dark:bg-green-900/20">
                     <div className="flex items-center justify-center gap-2 text-sm font-medium text-green-700 dark:text-green-400">
                         <Shield className="h-4 w-4" />
                         <span>{status}</span>
@@ -48,7 +48,10 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                     <>
                         <div className="grid gap-6">
                             <div className="grid gap-2">
-                                <Label htmlFor="email" className="text-gray-700 dark:text-gray-300 font-medium">
+                                <Label
+                                    htmlFor="email"
+                                    className="font-medium text-gray-700 dark:text-gray-300"
+                                >
                                     電子郵件
                                 </Label>
                                 <Input
@@ -60,20 +63,23 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                     tabIndex={1}
                                     autoComplete="email"
                                     placeholder="example@email.com"
-                                    className="border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400"
+                                    className="border-gray-300 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:focus:border-blue-400 dark:focus:ring-blue-400"
                                 />
                                 <InputError message={errors.email} />
                             </div>
 
                             <div className="grid gap-2">
                                 <div className="flex items-center">
-                                    <Label htmlFor="password" className="text-gray-700 dark:text-gray-300 font-medium">
+                                    <Label
+                                        htmlFor="password"
+                                        className="font-medium text-gray-700 dark:text-gray-300"
+                                    >
                                         密碼
                                     </Label>
                                     {canResetPassword && (
                                         <TextLink
                                             href={request()}
-                                            className="ml-auto text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors duration-200"
+                                            className="ml-auto text-sm text-blue-600 transition-colors duration-200 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
                                             tabIndex={5}
                                         >
                                             忘記密碼？
@@ -88,7 +94,7 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                     tabIndex={2}
                                     autoComplete="current-password"
                                     placeholder="請輸入密碼"
-                                    className="border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400"
+                                    className="border-gray-300 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:focus:border-blue-400 dark:focus:ring-blue-400"
                                 />
                                 <InputError message={errors.password} />
                             </div>
@@ -98,28 +104,31 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                     id="remember"
                                     name="remember"
                                     tabIndex={3}
-                                    className="border-gray-300 dark:border-gray-600 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                                    className="border-gray-300 data-[state=checked]:border-blue-600 data-[state=checked]:bg-blue-600 dark:border-gray-600"
                                 />
-                                <Label htmlFor="remember" className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                                <Label
+                                    htmlFor="remember"
+                                    className="cursor-pointer text-sm text-gray-700 dark:text-gray-300"
+                                >
                                     記住我的登入狀態
                                 </Label>
                             </div>
 
                             <Button
                                 type="submit"
-                                className="mt-4 w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-3 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                                className="mt-4 w-full transform bg-gradient-to-r from-blue-600 to-indigo-600 py-3 font-semibold text-white shadow-lg transition-all duration-300 hover:scale-105 hover:from-blue-700 hover:to-indigo-700 hover:shadow-xl"
                                 tabIndex={4}
                                 disabled={processing}
                                 data-test="login-button"
                             >
                                 {processing && (
-                                    <LoaderCircle className="h-4 w-4 animate-spin mr-2" />
+                                    <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
                                 )}
-                                <LogIn className="h-4 w-4 mr-2" />
+                                <LogIn className="mr-2 h-4 w-4" />
                                 立即登入
                             </Button>
 
-                            <div className="text-center text-xs text-gray-500 dark:text-gray-400 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
+                            <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-center text-xs text-gray-500 dark:border-blue-800 dark:bg-blue-900/20 dark:text-gray-400">
                                 安全登入，保護您的租屋市場分析資料
                             </div>
                         </div>
@@ -129,7 +138,7 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                             <TextLink
                                 href={register()}
                                 tabIndex={6}
-                                className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium transition-colors duration-200"
+                                className="font-medium text-blue-600 transition-colors duration-200 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
                             >
                                 立即註冊
                             </TextLink>

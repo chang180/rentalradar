@@ -1,16 +1,16 @@
 import React from 'react';
 import {
-    LineChart,
+    Area,
+    AreaChart,
+    Bar,
+    BarChart,
+    CartesianGrid,
     Line,
+    LineChart,
+    ResponsiveContainer,
+    Tooltip,
     XAxis,
     YAxis,
-    CartesianGrid,
-    Tooltip,
-    ResponsiveContainer,
-    AreaChart,
-    Area,
-    BarChart,
-    Bar,
 } from 'recharts';
 
 interface PerformanceData {
@@ -84,7 +84,10 @@ export const PerformanceChart: React.FC<PerformanceChartProps> = ({
                         <XAxis dataKey="time" />
                         <YAxis />
                         <Tooltip
-                            formatter={(value: number) => [formatValue(value), title]}
+                            formatter={(value: number) => [
+                                formatValue(value),
+                                title,
+                            ]}
                             labelFormatter={(label) => `時間: ${label}`}
                         />
                         <Area
@@ -103,7 +106,10 @@ export const PerformanceChart: React.FC<PerformanceChartProps> = ({
                         <XAxis dataKey="time" />
                         <YAxis />
                         <Tooltip
-                            formatter={(value: number) => [formatValue(value), title]}
+                            formatter={(value: number) => [
+                                formatValue(value),
+                                title,
+                            ]}
                             labelFormatter={(label) => `時間: ${label}`}
                         />
                         <Bar dataKey="value" fill={color} />
@@ -116,7 +122,10 @@ export const PerformanceChart: React.FC<PerformanceChartProps> = ({
                         <XAxis dataKey="time" />
                         <YAxis />
                         <Tooltip
-                            formatter={(value: number) => [formatValue(value), title]}
+                            formatter={(value: number) => [
+                                formatValue(value),
+                                title,
+                            ]}
                             labelFormatter={(label) => `時間: ${label}`}
                         />
                         <Line
@@ -134,23 +143,25 @@ export const PerformanceChart: React.FC<PerformanceChartProps> = ({
 
     if (!data || data.length === 0) {
         return (
-            <div className="flex items-center justify-center h-64 bg-gray-50 rounded-lg">
+            <div className="flex h-64 items-center justify-center rounded-lg bg-gray-50">
                 <div className="text-center">
-                    <div className="text-gray-400 text-4xl mb-2">📊</div>
+                    <div className="mb-2 text-4xl text-gray-400">📊</div>
                     <p className="text-gray-500">暫無資料</p>
-                    <p className="text-sm text-gray-400 mt-1">等待效能資料載入...</p>
+                    <p className="mt-1 text-sm text-gray-400">
+                        等待效能資料載入...
+                    </p>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between mb-4">
+        <div className="rounded-lg bg-white p-6 shadow">
+            <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
                 <div className="flex items-center space-x-2">
                     <div
-                        className="w-3 h-3 rounded-full"
+                        className="h-3 w-3 rounded-full"
                         style={{ backgroundColor: color }}
                     ></div>
                     <span className="text-sm text-gray-500">
@@ -255,7 +266,11 @@ export const MultiMetricChart: React.FC<MultiMetricChartProps> = ({
                         stroke={metric.color}
                         strokeWidth={2}
                         dot={{ fill: metric.color, strokeWidth: 2, r: 4 }}
-                        activeDot={{ r: 6, stroke: metric.color, strokeWidth: 2 }}
+                        activeDot={{
+                            r: 6,
+                            stroke: metric.color,
+                            strokeWidth: 2,
+                        }}
                     />
                 ))}
             </LineChart>
@@ -264,28 +279,37 @@ export const MultiMetricChart: React.FC<MultiMetricChartProps> = ({
 
     if (!data || data.length === 0) {
         return (
-            <div className="flex items-center justify-center h-64 bg-gray-50 rounded-lg">
+            <div className="flex h-64 items-center justify-center rounded-lg bg-gray-50">
                 <div className="text-center">
-                    <div className="text-gray-400 text-4xl mb-2">📊</div>
+                    <div className="mb-2 text-4xl text-gray-400">📊</div>
                     <p className="text-gray-500">暫無資料</p>
-                    <p className="text-sm text-gray-400 mt-1">等待效能資料載入...</p>
+                    <p className="mt-1 text-sm text-gray-400">
+                        等待效能資料載入...
+                    </p>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">效能趨勢</h3>
+        <div className="rounded-lg bg-white p-6 shadow">
+            <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900">
+                    效能趨勢
+                </h3>
                 <div className="flex items-center space-x-4">
                     {metrics.map((metric) => (
-                        <div key={metric.key} className="flex items-center space-x-2">
+                        <div
+                            key={metric.key}
+                            className="flex items-center space-x-2"
+                        >
                             <div
-                                className="w-3 h-3 rounded-full"
+                                className="h-3 w-3 rounded-full"
                                 style={{ backgroundColor: metric.color }}
                             ></div>
-                            <span className="text-sm text-gray-500">{metric.title}</span>
+                            <span className="text-sm text-gray-500">
+                                {metric.title}
+                            </span>
                         </div>
                     ))}
                 </div>
