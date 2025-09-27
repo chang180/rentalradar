@@ -311,7 +311,7 @@ export const PerformanceDashboard: React.FC = () => {
                                     <div className="ml-4">
                                         <p className="text-sm font-medium text-gray-500">響應時間</p>
                                         <p className="text-2xl font-semibold text-gray-900">
-                                            {metrics?.responseTime.toFixed(0)}ms
+                                            {metrics?.responseTime?.toFixed(0) || '0'}ms
                                         </p>
                                     </div>
                                 </div>
@@ -327,7 +327,7 @@ export const PerformanceDashboard: React.FC = () => {
                                     <div className="ml-4">
                                         <p className="text-sm font-medium text-gray-500">記憶體使用</p>
                                         <p className="text-2xl font-semibold text-gray-900">
-                                            {metrics?.memoryUsage.toFixed(1)}MB
+                                            {metrics?.memoryUsage?.toFixed(1) || '0'}MB
                                         </p>
                                     </div>
                                 </div>
@@ -343,7 +343,7 @@ export const PerformanceDashboard: React.FC = () => {
                                     <div className="ml-4">
                                         <p className="text-sm font-medium text-gray-500">活躍連接</p>
                                         <p className="text-2xl font-semibold text-gray-900">
-                                            {metrics?.activeConnections}
+                                            {metrics?.activeConnections || 0}
                                         </p>
                                     </div>
                                 </div>
@@ -359,7 +359,7 @@ export const PerformanceDashboard: React.FC = () => {
                                     <div className="ml-4">
                                         <p className="text-sm font-medium text-gray-500">錯誤率</p>
                                         <p className="text-2xl font-semibold text-gray-900">
-                                            {metrics?.errorRate.toFixed(2)}%
+                                            {metrics?.errorRate?.toFixed(2) || '0.00'}%
                                         </p>
                                     </div>
                                 </div>
@@ -381,19 +381,19 @@ export const PerformanceDashboard: React.FC = () => {
                                     <div className="flex justify-between">
                                         <span className="text-sm text-gray-600">快取命中率</span>
                                         <span className="text-sm font-medium text-gray-900">
-                                            {metrics?.cacheHitRate.toFixed(1)}%
+                                            {metrics?.cacheHitRate?.toFixed(1) || '0.0'}%
                                         </span>
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-sm text-gray-600">查詢次數</span>
                                         <span className="text-sm font-medium text-gray-900">
-                                            {metrics?.queryCount}
+                                            {metrics?.queryCount || 0}
                                         </span>
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-sm text-gray-600">吞吐量</span>
                                         <span className="text-sm font-medium text-gray-900">
-                                            {metrics?.throughput.toFixed(0)} req/min
+                                            {metrics?.throughput?.toFixed(0) || '0'} req/min
                                         </span>
                                     </div>
                                 </div>
