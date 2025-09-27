@@ -69,7 +69,7 @@ export class WebSocketService extends EventEmitter {
             });
         } else {
             // 如果沒有有效的 connector，模擬連接狀態
-            console.warn('WebSocketService: Echo connector not available, using mock connection status');
+            console.info('WebSocketService: Using mock connection status (no real-time features)');
             this.connectionStatus.connected = true;
             this.connectionStatus.lastConnected = new Date();
             this.emit('connected');
