@@ -10,14 +10,19 @@ const REDIRECT_URI = 'http://localhost:8000/callback';
 const LINEAR_API_URL = 'https://api.linear.app/graphql';
 const LINEAR_AUTH_URL = 'https://linear.app/oauth/authorize';
 
-// 儲存 token 的檔案
-const TOKEN_FILE = path.join(__dirname, 'linear-token.json');
+// 儲存 token 的檔案路徑
+const PARENT_TOKEN_FILE = path.join(__dirname, '../../.ai-dev-tools/linear-token.json');
+const LOCAL_TOKEN_FILE = path.join(__dirname, 'linear-token.json');
 
 // 讀取儲存的 token
 function loadToken() {
   try {
-    if (require('fs').existsSync(TOKEN_FILE)) {
-      return JSON.parse(require('fs').readFileSync(TOKEN_FILE, 'utf8'));
+    const fs = require('fs');
+    // 優先使用上層目錄的 token 檔案
+    if (fs.existsSync(PARENT_TOKEN_FILE)) {
+      return JSON.parse(fs.readFileSync(PARENT_TOKEN_FILE, 'utf8'));
+    } else if (fs.existsSync(LOCAL_TOKEN_FILE)) {
+      return JSON.parse(fs.readFileSync(LOCAL_TOKEN_FILE, 'utf8'));
     }
   } catch (error) {
     console.log('無法讀取 token 檔案');
@@ -27,7 +32,14 @@ function loadToken() {
 
 // 儲存 token
 function saveToken(token) {
-  require('fs').writeFileSync(TOKEN_FILE, JSON.stringify(token, null, 2));
+  const fs = require('fs');
+  // 確保上層目錄存在
+  const parentDir = path.dirname(PARENT_TOKEN_FILE);
+  if (!fs.existsSync(parentDir)) {
+    fs.mkdirSync(parentDir, { recursive: true });
+  }
+  // 儲存到上層目錄
+  fs.writeFileSync(PARENT_TOKEN_FILE, JSON.stringify(token, null, 2));
 }
 
 // 取得授權 URL

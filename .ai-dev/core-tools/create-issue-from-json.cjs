@@ -5,8 +5,14 @@ const path = require('path');
 // 讀取儲存的 token
 function loadToken() {
   try {
-    if (fs.existsSync(path.join(__dirname, 'linear-token.json'))) {
-      return JSON.parse(fs.readFileSync(path.join(__dirname, 'linear-token.json'), 'utf8'));
+    // 優先使用上層目錄的 token 檔案
+    const parentTokenPath = path.join(__dirname, '../../.ai-dev-tools/linear-token.json');
+    const localTokenPath = path.join(__dirname, 'linear-token.json');
+    
+    if (fs.existsSync(parentTokenPath)) {
+      return JSON.parse(fs.readFileSync(parentTokenPath, 'utf8'));
+    } else if (fs.existsSync(localTokenPath)) {
+      return JSON.parse(fs.readFileSync(localTokenPath, 'utf8'));
     }
   } catch (error) {
     console.log('無法讀取 token 檔案');
