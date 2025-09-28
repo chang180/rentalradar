@@ -1,9 +1,13 @@
 // API 請求工具函數
 export const apiRequest = async (url: string, options: RequestInit = {}) => {
+    // 獲取 CSRF token
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    
     const defaultHeaders = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
         'X-Requested-With': 'XMLHttpRequest',
+        ...(csrfToken && { 'X-CSRF-TOKEN': csrfToken }),
     };
 
     const config: RequestInit = {
