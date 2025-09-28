@@ -5,13 +5,10 @@ namespace App\Services;
 use App\Models\FileUpload;
 use App\Models\Property;
 use App\Models\User;
-use App\Services\DataParserService;
-use App\Services\PermissionService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use ZipArchive;
 
 class FileUploadService
 {
@@ -37,11 +34,11 @@ class FileUploadService
             $errors[] = '檔案大小不能超過 100MB';
         }
 
-        if (!in_array($file->getMimeType(), self::ALLOWED_MIME_TYPES)) {
+        if (! in_array($file->getMimeType(), self::ALLOWED_MIME_TYPES)) {
             $errors[] = '只允許上傳 ZIP、CSV 檔案';
         }
 
-        if (!$file->isValid()) {
+        if (! $file->isValid()) {
             $errors[] = '檔案上傳失敗或檔案已損壞';
         }
 
@@ -50,21 +47,23 @@ class FileUploadService
 
     public function uploadFile(UploadedFile $file, User $user): ?FileUpload
     {
-        if (!$this->permissionService->checkUploadPermission($user)) {
+        if (! $this->permissionService->checkUploadPermission($user)) {
             Log::warning('User attempted to upload without permission', [
                 'user_id' => $user->id,
                 'email' => $user->email,
             ]);
+
             return null;
         }
 
         $validationErrors = $this->validateFile($file);
-        if (!empty($validationErrors)) {
+        if (! empty($validationErrors)) {
             Log::error('File validation failed', [
                 'user_id' => $user->id,
                 'errors' => $validationErrors,
                 'file_name' => $file->getClientOriginalName(),
             ]);
+
             return null;
         }
 
@@ -97,6 +96,7 @@ class FileUploadService
                 'error' => $e->getMessage(),
                 'file_name' => $file->getClientOriginalName(),
             ]);
+
             return null;
         }
     }
@@ -106,11 +106,10 @@ class FileUploadService
         try {
             $fileUpload->update(['upload_status' => 'processing']);
 
-            $filePath = Storage::disk('local')->path($fileUpload->upload_path);
-
             if ($fileUpload->file_type === 'application/zip') {
-                $result = $this->processZipFile($filePath);
+                $result = $this->processZipFile($fileUpload);
             } else {
+                $filePath = Storage::disk('local')->path($fileUpload->upload_path);
                 $result = $this->processCsvFile($filePath);
             }
 
@@ -127,7 +126,7 @@ class FileUploadService
                 ]);
 
                 // 處理完成後清理上傳檔案
-                $this->cleanupUploadFile($filePath);
+                $this->cleanupUploadFile($fileUpload);
 
                 return true;
             } else {
@@ -153,37 +152,53 @@ class FileUploadService
         }
     }
 
-    private function processZipFile(string $filePath): array
+    private function processZipFile(FileUpload $fileUpload): array
     {
         try {
+            // 直接使用 FileUpload 物件中的相對路徑，這樣更可靠
+            $storagePath = $fileUpload->upload_path;
+
             // 使用 DataParserService 來處理政府資料 ZIP 檔案
-            $result = $this->dataParserService->parseZipData($filePath);
-            
+            $result = $this->dataParserService->parseZipData($storagePath);
+
             if ($result['success']) {
                 $data = $result['data'];
-                
+
                 // 提取所有 serial_number
                 $serialNumbers = array_filter(array_column($data, 'serial_number'));
-                
+
                 // 批量查詢已存在的 serial_number
                 $existingSerialNumbers = Property::whereIn('serial_number', $serialNumbers)
                     ->pluck('serial_number')
                     ->toArray();
-                
+
                 // 計算重複記錄數
                 $duplicateCount = count($existingSerialNumbers);
-                
-                // 篩選出需要儲存的記錄
+
+                // 篩選出需要儲存的記錄（過濾掉重複的 serial_number）
                 $recordsToSave = [];
+                $seenSerialNumbers = [];
+
                 foreach ($data as $record) {
-                    if (!$record['serial_number'] || !in_array($record['serial_number'], $existingSerialNumbers)) {
-                        $recordsToSave[] = $record;
+                    $serialNumber = $record['serial_number'] ?? null;
+
+                    // 跳過沒有 serial_number 的記錄或已存在於資料庫的記錄
+                    if (! $serialNumber || in_array($serialNumber, $existingSerialNumbers)) {
+                        continue;
                     }
+
+                    // 跳過在本批次中重複的 serial_number
+                    if (in_array($serialNumber, $seenSerialNumbers)) {
+                        continue;
+                    }
+
+                    $recordsToSave[] = $record;
+                    $seenSerialNumbers[] = $serialNumber;
                 }
-                
+
                 // 批量儲存記錄
                 $savedCount = 0;
-                if (!empty($recordsToSave)) {
+                if (! empty($recordsToSave)) {
                     // 分批儲存以避免記憶體問題
                     $chunks = array_chunk($recordsToSave, 100);
                     foreach ($chunks as $chunk) {
@@ -193,12 +208,12 @@ class FileUploadService
                             $record['created_at'] = $now;
                             $record['updated_at'] = $now;
                         }
-                        
+
                         Property::insert($chunk);
                         $savedCount += count($chunk);
                     }
                 }
-                
+
                 return [
                     'success' => true,
                     'processed_records' => count($result['data']),
@@ -218,7 +233,7 @@ class FileUploadService
                 'file_path' => $filePath,
                 'error' => $e->getMessage(),
             ]);
-            
+
             return [
                 'success' => false,
                 'error' => $e->getMessage(),
@@ -234,13 +249,14 @@ class FileUploadService
             $duplicateSerialNumbers = [];
 
             $handle = fopen($filePath, 'r');
-            if (!$handle) {
+            if (! $handle) {
                 return ['success' => false, 'error' => 'Cannot read CSV file'];
             }
 
             $header = fgetcsv($handle);
-            if (!$header) {
+            if (! $header) {
                 fclose($handle);
+
                 return ['success' => false, 'error' => 'Invalid CSV format'];
             }
 
@@ -335,12 +351,13 @@ class FileUploadService
         }
 
         $value = strtolower(trim($value));
+
         return in_array($value, ['yes', 'true', '1', '有', 'y']);
     }
 
     private function parseDate($value): ?string
     {
-        if (!$value) {
+        if (! $value) {
             return null;
         }
 
@@ -348,6 +365,7 @@ class FileUploadService
             $year = $matches[1] + 1911;
             $month = $matches[2];
             $day = $matches[3];
+
             return "{$year}-{$month}-{$day}";
         }
 
@@ -392,7 +410,7 @@ class FileUploadService
     {
         $query = FileUpload::query();
 
-        if (!$this->permissionService->checkAdminPermission($user)) {
+        if (! $this->permissionService->checkAdminPermission($user)) {
             $query->where('user_id', $user->id);
         }
 
@@ -417,40 +435,7 @@ class FileUploadService
 
     public function processUpload(FileUpload $upload): bool
     {
-        try {
-            $upload->update(['upload_status' => 'processing']);
-
-            // 這裡應該調用實際的資料處理邏輯
-            // 暫時模擬處理成功
-            $upload->update([
-                'upload_status' => 'completed',
-                'processing_result' => [
-                    'records_processed' => 100,
-                    'records_imported' => 95,
-                    'records_skipped' => 5,
-                    'processing_time' => 30,
-                ],
-            ]);
-
-            Log::info('File processing completed', [
-                'upload_id' => $upload->id,
-                'filename' => $upload->original_filename,
-            ]);
-
-            return true;
-        } catch (\Exception $e) {
-            $upload->update([
-                'upload_status' => 'failed',
-                'error_message' => $e->getMessage(),
-            ]);
-
-            Log::error('File processing failed', [
-                'upload_id' => $upload->id,
-                'error' => $e->getMessage(),
-            ]);
-
-            return false;
-        }
+        return $this->processUploadedFile($upload);
     }
 
     public function deleteUpload(FileUpload $upload): bool
@@ -484,7 +469,7 @@ class FileUploadService
     {
         $query = FileUpload::query();
 
-        if (!$this->permissionService->checkAdminPermission($user)) {
+        if (! $this->permissionService->checkAdminPermission($user)) {
             $query->where('user_id', $user->id);
         }
 
@@ -510,16 +495,21 @@ class FileUploadService
     /**
      * 清理上傳檔案
      */
-    private function cleanupUploadFile(string $filePath): void
+    private function cleanupUploadFile(FileUpload $fileUpload): void
     {
         try {
-            if (file_exists($filePath)) {
-                unlink($filePath);
-                Log::info('Upload file cleaned up', ['file_path' => $filePath]);
+            if (Storage::exists($fileUpload->upload_path)) {
+                Storage::delete($fileUpload->upload_path);
+                Log::info('Upload file cleaned up', [
+                    'upload_id' => $fileUpload->id,
+                    'filename' => $fileUpload->filename,
+                    'upload_path' => $fileUpload->upload_path,
+                ]);
             }
         } catch (\Exception $e) {
             Log::error('Failed to cleanup upload file', [
-                'file_path' => $filePath,
+                'upload_id' => $fileUpload->id,
+                'upload_path' => $fileUpload->upload_path,
                 'error' => $e->getMessage(),
             ]);
         }

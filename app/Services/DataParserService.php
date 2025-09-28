@@ -20,7 +20,8 @@ class DataParserService
     public function parseZipData(string $filePath): array
     {
         try {
-            $zipPath = $filePath; // 直接使用傳入的檔案路徑
+            // 將 Storage 路徑轉換為實際文件系統路徑
+            $zipPath = Storage::path($filePath);
             $extractPath = storage_path('app/temp/extracted');
 
             // 確保解壓目錄存在
@@ -36,27 +37,65 @@ class DataParserService
                 }
             }
 
-            $zip = new ZipArchive;
-            $result = $zip->open($zipPath);
+            // 使用多種方法嘗試解壓縮 ZIP 檔案
+            $extracted = false;
 
-            // 即使 open 返回錯誤碼，嘗試解壓縮
-            if ($result !== true) {
-                // 嘗試直接解壓縮，有些 ZIP 檔案可能 open 失敗但 extractTo 成功
-                try {
+            // 方法 1: 標準 ZipArchive
+            try {
+                $zip = new ZipArchive;
+                $result = $zip->open($zipPath);
+
+                if ($result === true) {
                     $zip->extractTo($extractPath);
                     $zip->close();
-                    Log::info('ZIP 檔案解壓縮成功 (open 失敗但 extractTo 成功)', [
+                    $extracted = true;
+                    Log::info('ZIP 檔案解壓縮成功 (標準方法)', ['file_path' => $filePath]);
+                } else {
+                    // 當 open 失敗時，不調用 close()，因為物件可能處於無效狀態
+                    Log::warning('標準 ZIP 開啟失敗', [
                         'file_path' => $filePath,
-                        'open_result' => $result,
+                        'error_code' => $result,
                     ]);
-                } catch (\Exception $e) {
-                    $zip->close();
-                    throw new \Exception("無法開啟 ZIP 檔案: {$result}，解壓縮也失敗: " . $e->getMessage());
                 }
-            } else {
-                // 正常情況：open 成功
-                $zip->extractTo($extractPath);
-                $zip->close();
+            } catch (\Exception $e) {
+                Log::warning('標準 ZIP 解壓縮失敗', [
+                    'file_path' => $filePath,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
+            // 方法 2: 使用 shell 命令 (如果可用)
+            if (! $extracted && function_exists('shell_exec')) {
+                try {
+                    $command = "powershell -Command \"Expand-Archive -Path '{$zipPath}' -DestinationPath '{$extractPath}' -Force\"";
+                    $output = shell_exec($command.' 2>&1');
+
+                    // 檢查是否成功解壓縮（PowerShell 成功時通常沒有輸出）
+                    if (is_dir($extractPath) && count(glob($extractPath.'/*')) > 0) {
+                        $extracted = true;
+                        Log::info('ZIP 檔案解壓縮成功 (PowerShell 方法)', [
+                            'file_path' => $filePath,
+                            'extracted_files' => count(glob($extractPath.'/*')),
+                            'output' => $output ?: '無輸出 (正常)',
+                        ]);
+                    } else {
+                        Log::warning('PowerShell ZIP 解壓縮失敗', [
+                            'file_path' => $filePath,
+                            'output' => $output ?: '無輸出',
+                            'extract_path_exists' => is_dir($extractPath),
+                            'files_count' => is_dir($extractPath) ? count(glob($extractPath.'/*')) : 0,
+                        ]);
+                    }
+                } catch (\Exception $e) {
+                    Log::warning('PowerShell ZIP 解壓縮異常', [
+                        'file_path' => $filePath,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
+            if (! $extracted) {
+                throw new \Exception('無法解壓縮 ZIP 檔案，已嘗試多種方法');
             }
 
             Log::info('ZIP 檔案解壓縮成功', [

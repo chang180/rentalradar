@@ -9,6 +9,7 @@ use App\Services\DataValidationService;
 use App\Services\GovernmentDataDownloadService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Storage;
 
 class ProcessRentalData extends Command
 {
@@ -157,7 +158,7 @@ class ProcessRentalData extends Command
         // 步驟 6: 清理下載檔案
         $this->info("\n🧹 步驟 6: 清理下載檔案...");
         $this->cleanupDownloadFile($downloadResult['file_path']);
-        
+
         // 步驟 7: 清理舊檔案 (可選)
         if ($shouldCleanup) {
             $this->info("\n🧹 步驟 7: 清理舊檔案...");
@@ -212,14 +213,15 @@ class ProcessRentalData extends Command
     private function cleanupDownloadFile(string $filePath): void
     {
         try {
-            if (file_exists($filePath)) {
-                unlink($filePath);
-                $this->info("✅ 已刪除下載檔案: " . basename($filePath));
+            // 使用 Storage 來刪除檔案，因為 $filePath 是 Storage 路徑
+            if (Storage::exists($filePath)) {
+                Storage::delete($filePath);
+                $this->info('✅ 已刪除下載檔案: '.basename($filePath));
             } else {
-                $this->warn("⚠️ 檔案不存在: " . basename($filePath));
+                $this->warn('⚠️ 檔案不存在: '.basename($filePath));
             }
         } catch (\Exception $e) {
-            $this->error("❌ 刪除檔案失敗: " . $e->getMessage());
+            $this->error('❌ 刪除檔案失敗: '.$e->getMessage());
         }
     }
 
