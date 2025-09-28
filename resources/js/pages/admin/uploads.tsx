@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { adminApiRequest } from '@/utils/api';
 import { 
     Select,
     SelectContent,
@@ -79,12 +80,10 @@ export default function AdminUploads() {
                 ...(statusFilter !== 'all' && { status: statusFilter }),
             });
 
-            const response = await fetch(`/api/admin/uploads?${params}`);
-            if (response.ok) {
-                const data: UploadsResponse = await response.json();
-                setUploads(data.uploads);
-                setPagination(data.pagination);
-            }
+            const response = await adminApiRequest(`/uploads?${params}`);
+            const data: UploadsResponse = response.data;
+            setUploads(data.uploads);
+            setPagination(data.pagination);
         } catch (error) {
             console.error('載入上傳記錄失敗:', error);
         } finally {
@@ -108,19 +107,14 @@ export default function AdminUploads() {
             const formData = new FormData();
             formData.append('file', file);
 
-            const response = await fetch('/api/admin/uploads', {
+            const response = await adminApiRequest('/uploads', {
                 method: 'POST',
                 body: formData,
             });
 
-            if (response.ok) {
-                // 重新載入上傳記錄
-                loadUploads(pagination.current_page, status);
-                alert('檔案上傳成功！');
-            } else {
-                const error = await response.json();
-                alert(`上傳失敗: ${error.message}`);
-            }
+            // 重新載入上傳記錄
+            loadUploads(pagination.current_page, status);
+            alert('檔案上傳成功！');
         } catch (error) {
             console.error('檔案上傳失敗:', error);
             alert('檔案上傳失敗');
@@ -135,18 +129,13 @@ export default function AdminUploads() {
     // 處理檔案
     const processUpload = async (uploadId: number) => {
         try {
-            const response = await fetch(`/api/admin/uploads/${uploadId}/process`, {
+            await adminApiRequest(`/uploads/${uploadId}/process`, {
                 method: 'POST',
             });
 
-            if (response.ok) {
-                // 重新載入上傳記錄
-                loadUploads(pagination.current_page, status);
-                alert('檔案處理已開始！');
-            } else {
-                const error = await response.json();
-                alert(`處理失敗: ${error.message}`);
-            }
+            // 重新載入上傳記錄
+            loadUploads(pagination.current_page, status);
+            alert('檔案處理已開始！');
         } catch (error) {
             console.error('檔案處理失敗:', error);
             alert('檔案處理失敗');
@@ -160,17 +149,12 @@ export default function AdminUploads() {
         }
 
         try {
-            const response = await fetch(`/api/admin/uploads/${uploadId}`, {
+            await adminApiRequest(`/uploads/${uploadId}`, {
                 method: 'DELETE',
             });
 
-            if (response.ok) {
-                // 重新載入上傳記錄
-                loadUploads(pagination.current_page, status);
-            } else {
-                const error = await response.json();
-                alert(`刪除失敗: ${error.message}`);
-            }
+            // 重新載入上傳記錄
+            loadUploads(pagination.current_page, status);
         } catch (error) {
             console.error('刪除上傳記錄失敗:', error);
             alert('刪除上傳記錄失敗');

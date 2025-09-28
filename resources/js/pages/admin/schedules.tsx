@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { adminApiRequest } from '@/utils/api';
 import { 
     Select,
     SelectContent,
@@ -76,11 +77,9 @@ export default function AdminSchedules() {
     const loadSchedules = async () => {
         try {
             setLoading(true);
-            const response = await fetch('/api/admin/schedules');
-            if (response.ok) {
-                const data = await response.json();
-                setSchedules(data.data || []);
-            }
+            const response = await adminApiRequest('/schedules');
+            const data = response.data;
+            setSchedules(data.data || []);
         } catch (error) {
             console.error('載入排程設定失敗:', error);
         } finally {
@@ -91,11 +90,9 @@ export default function AdminSchedules() {
     // 載入排程執行歷史
     const loadExecutions = async (taskName: string) => {
         try {
-            const response = await fetch(`/api/admin/schedules/${taskName}/history`);
-            if (response.ok) {
-                const data = await response.json();
-                setExecutions(data.data?.executions || []);
-            }
+            const response = await adminApiRequest(`/schedules/${taskName}/history`);
+            const data = response.data;
+            setExecutions(data.data?.executions || []);
         } catch (error) {
             console.error('載入執行歷史失敗:', error);
         }
@@ -110,7 +107,7 @@ export default function AdminSchedules() {
     // 創建新排程
     const createSchedule = async () => {
         try {
-            const response = await fetch('/api/admin/schedules', {
+            await adminApiRequest('/schedules', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -118,21 +115,16 @@ export default function AdminSchedules() {
                 body: JSON.stringify(newSchedule),
             });
 
-            if (response.ok) {
-                loadSchedules();
-                setShowCreateForm(false);
-                setNewSchedule({
-                    task_name: '',
-                    frequency: 'monthly',
-                    execution_days: [5, 15, 25],
-                    execution_time: '02:00',
-                    is_active: true,
-                });
-                alert('排程創建成功！');
-            } else {
-                const error = await response.json();
-                alert(`創建失敗: ${error.message}`);
-            }
+            loadSchedules();
+            setShowCreateForm(false);
+            setNewSchedule({
+                task_name: '',
+                frequency: 'monthly',
+                execution_days: [5, 15, 25],
+                execution_time: '02:00',
+                is_active: true,
+            });
+            alert('排程創建成功！');
         } catch (error) {
             console.error('創建排程失敗:', error);
             alert('創建排程失敗');
@@ -142,7 +134,7 @@ export default function AdminSchedules() {
     // 更新排程狀態
     const updateScheduleStatus = async (taskName: string, isActive: boolean) => {
         try {
-            const response = await fetch(`/api/admin/schedules/${taskName}`, {
+            await adminApiRequest(`/schedules/${taskName}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -150,12 +142,7 @@ export default function AdminSchedules() {
                 body: JSON.stringify({ is_active: isActive }),
             });
 
-            if (response.ok) {
-                loadSchedules();
-            } else {
-                const error = await response.json();
-                alert(`更新失敗: ${error.message}`);
-            }
+            loadSchedules();
         } catch (error) {
             console.error('更新排程狀態失敗:', error);
             alert('更新排程狀態失敗');
@@ -165,18 +152,13 @@ export default function AdminSchedules() {
     // 手動執行排程
     const executeSchedule = async (taskName: string) => {
         try {
-            const response = await fetch(`/api/admin/schedules/${taskName}/execute`, {
+            await adminApiRequest(`/schedules/${taskName}/execute`, {
                 method: 'POST',
             });
 
-            if (response.ok) {
-                alert('排程執行已開始！');
-                if (selectedSchedule?.task_name === taskName) {
-                    loadExecutions(taskName);
-                }
-            } else {
-                const error = await response.json();
-                alert(`執行失敗: ${error.message}`);
+            alert('排程執行已開始！');
+            if (selectedSchedule?.task_name === taskName) {
+                loadExecutions(taskName);
             }
         } catch (error) {
             console.error('手動執行排程失敗:', error);
@@ -191,19 +173,14 @@ export default function AdminSchedules() {
         }
 
         try {
-            const response = await fetch(`/api/admin/schedules/${taskName}`, {
+            await adminApiRequest(`/schedules/${taskName}`, {
                 method: 'DELETE',
             });
 
-            if (response.ok) {
-                loadSchedules();
-                if (selectedSchedule?.task_name === taskName) {
-                    setSelectedSchedule(null);
-                    setExecutions([]);
-                }
-            } else {
-                const error = await response.json();
-                alert(`刪除失敗: ${error.message}`);
+            loadSchedules();
+            if (selectedSchedule?.task_name === taskName) {
+                setSelectedSchedule(null);
+                setExecutions([]);
             }
         } catch (error) {
             console.error('刪除排程失敗:', error);
