@@ -84,26 +84,7 @@ class TaiwanGeoCenterService
     {
         $geoCenters = self::loadGeoCenters();
 
-        // 處理城市名稱不一致問題（台 vs 臺）
-        $normalizedCity = self::normalizeCityName($city);
-        
-        return $geoCenters[$normalizedCity][$district] ?? null;
-    }
-
-    /**
-     * 標準化城市名稱，處理台/臺等字符差異
-     */
-    private static function normalizeCityName(string $city): string
-    {
-        // 處理常見的城市名稱差異
-        $mapping = [
-            '臺中市' => '台中市',
-            '臺北市' => '台北市',
-            '臺南市' => '台南市',
-            '臺東縣' => '台東縣',
-        ];
-
-        return $mapping[$city] ?? $city;
+        return $geoCenters[$city][$district] ?? null;
     }
 
     /**
