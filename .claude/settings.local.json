@@ -61,7 +61,21 @@
       "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan test tests/Feature/AdvancedPricePredictionTest.php::test_rentals_api_returns_price_predictions)",
       "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan test tests/Feature/AdvancedPricePredictionTest.php)",
       "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan test tests/Feature/AdvancedPricePredictionTest.php --stop-on-failure)",
-      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan test tests/Feature/AdvancedPricePredictionTest.php --filter=\"test_rentals_api_returns_price_predictions\")"
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan test tests/Feature/AdvancedPricePredictionTest.php --filter=\"test_rentals_api_returns_price_predictions\")",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan make:migration add_is_admin_to_users_table --no-interaction)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan make:migration add_serial_number_to_properties_table --no-interaction)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan make:migration create_file_uploads_table --no-interaction)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan make:migration create_schedule_settings_table --no-interaction)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan make:migration create_schedule_executions_table --no-interaction)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan migrate --no-interaction)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan make:model FileUpload --no-interaction)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan make:model ScheduleSetting --no-interaction)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan make:model ScheduleExecution --no-interaction)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan make:class Services/PermissionService --no-interaction)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan make:class Services/FileUploadService --no-interaction)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan make:class Services/ScheduleService --no-interaction)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan make:class Services/UserManagementService --no-interaction)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan make:middleware CheckAdmin --no-interaction)"
     ]
   },
   "enableAllProjectMcpServers": true,

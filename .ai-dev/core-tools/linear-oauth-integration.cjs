@@ -314,6 +314,23 @@ async function createIssue(title, description, teamId) {
   return await makeApiRequest(query, variables);
 }
 
+// 刪除 Issue
+async function deleteIssue(issueId) {
+  const query = `
+    mutation DeleteIssue($id: String!) {
+      issueDelete(id: $id) {
+        success
+      }
+    }
+  `;
+
+  const variables = {
+    id: issueId
+  };
+
+  return await makeApiRequest(query, variables);
+}
+
 // 主要功能
 async function main() {
   const command = process.argv[2];
@@ -513,6 +530,23 @@ async function main() {
         }
         break;
 
+      case 'delete':
+        if (args.length < 1) {
+          console.log('❌ 請提供完整參數');
+          console.log('用法: node linear-oauth-integration.cjs delete <issue-id>');
+          return;
+        }
+
+        console.log(`🗑️ 正在刪除 Issue ${args[0]}...`);
+        const deleteResult = await deleteIssue(args[0]);
+        
+        if (deleteResult.data && deleteResult.data.issueDelete.success) {
+          console.log('✅ Issue 刪除成功！');
+        } else {
+          console.log('❌ Issue 刪除失敗:', deleteResult);
+        }
+        break;
+
       default:
         console.log('🏠 RentalRadar Linear 整合工具');
         console.log('\n可用指令:');
@@ -524,6 +558,7 @@ async function main() {
         console.log('  update <issue-id> <state-id> - 更新 Issue 狀態');
         console.log('  edit <issue-id> <title> <description> - 更新 Issue 內容');
         console.log('  create <team-id> <title> <description> - 建立 Issue');
+        console.log('  delete <issue-id> - 刪除 Issue');
         console.log('\n使用流程:');
         console.log('1. node linear-oauth-integration.cjs auth');
         console.log('2. 前往授權 URL 完成授權');

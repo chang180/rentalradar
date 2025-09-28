@@ -1,3 +1,4 @@
+import { AdminNav } from '@/components/admin-nav';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
 import {
@@ -10,6 +11,8 @@ import {
     SidebarMenuItem,
     useSidebar,
 } from '@/components/ui/sidebar';
+import { useAdminCheck } from '@/hooks/useAdmin';
+// @ts-ignore
 import { dashboard } from '@/routes';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
@@ -37,6 +40,7 @@ const mainNavItems: NavItem[] = [
 export function AppSidebar() {
     const { state, toggleSidebar } = useSidebar();
     const isCollapsed = state === 'collapsed';
+    const isAdmin = useAdminCheck();
 
     return (
         <div className="relative">
@@ -55,6 +59,7 @@ export function AppSidebar() {
 
                 <SidebarContent>
                     <NavMain items={mainNavItems} />
+                    {isAdmin && <AdminNav />}
                 </SidebarContent>
 
                 <SidebarFooter>

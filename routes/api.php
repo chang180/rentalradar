@@ -1,9 +1,11 @@
 <?php
 
+use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AIController;
 use App\Http\Controllers\AIPredictionController;
 use App\Http\Controllers\AnomalyDetectionController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\FileUploadController;
 use App\Http\Controllers\MapAIController;
 use App\Http\Controllers\MapDataController;
 use App\Http\Controllers\MapNotificationController;
@@ -12,6 +14,7 @@ use App\Http\Controllers\PerformanceDashboardController;
 use App\Http\Controllers\PublicMapController;
 use App\Http\Controllers\RecommendationController;
 use App\Http\Controllers\RiskAssessmentController;
+use App\Http\Controllers\ScheduleController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -122,4 +125,39 @@ Route::prefix('anomaly-detection')->group(function () {
 Route::prefix('dashboard')->group(function () {
     Route::get('/statistics', [DashboardController::class, 'getStatistics']);
     Route::get('/quick-actions', [DashboardController::class, 'getQuickActions']);
+});
+
+// 權限管理 API (需要管理員權限)
+Route::middleware(['auth:web'])->prefix('admin')->group(function () {
+    // 管理員儀表板
+    Route::get('/dashboard', [AdminController::class, 'dashboard']);
+    Route::get('/permissions', [AdminController::class, 'getUserPermissions']);
+    Route::post('/clear-cache', [AdminController::class, 'clearPermissionCache']);
+    
+    // 使用者管理
+    Route::get('/users', [AdminController::class, 'getUsers']);
+    Route::post('/users/{user}/promote', [AdminController::class, 'promoteUser']);
+    Route::post('/users/{user}/demote', [AdminController::class, 'demoteUser']);
+    Route::delete('/users/{user}', [AdminController::class, 'deleteUser']);
+    
+    // 檔案上傳管理
+    Route::post('/uploads', [FileUploadController::class, 'upload']);
+    Route::get('/uploads', [FileUploadController::class, 'getUploadHistory']);
+    Route::get('/uploads/{uploadId}', [FileUploadController::class, 'getUploadDetails']);
+    Route::post('/uploads/{uploadId}/process', [FileUploadController::class, 'processUpload']);
+    Route::delete('/uploads/{uploadId}', [FileUploadController::class, 'deleteUpload']);
+    Route::get('/uploads/stats', [FileUploadController::class, 'getUploadStats']);
+    Route::post('/uploads/validate', [FileUploadController::class, 'validateFile']);
+    
+    // 排程管理
+    Route::get('/schedules', [ScheduleController::class, 'getSchedules']);
+    Route::get('/schedules/{taskName}', [ScheduleController::class, 'getSchedule']);
+    Route::post('/schedules', [ScheduleController::class, 'createSchedule']);
+    Route::put('/schedules/{taskName}', [ScheduleController::class, 'updateSchedule']);
+    Route::delete('/schedules/{taskName}', [ScheduleController::class, 'deleteSchedule']);
+    Route::post('/schedules/{taskName}/execute', [ScheduleController::class, 'executeSchedule']);
+    Route::get('/schedules/{taskName}/history', [ScheduleController::class, 'getExecutionHistory']);
+    Route::get('/schedules/stats', [ScheduleController::class, 'getScheduleStats']);
+    Route::get('/schedules/{taskName}/status', [ScheduleController::class, 'checkScheduleStatus']);
+    Route::post('/schedules/initialize', [ScheduleController::class, 'initializeDefaultSchedules']);
 });

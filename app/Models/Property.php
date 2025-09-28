@@ -11,6 +11,9 @@ class Property extends Model
     use HasFactory;
 
     protected $fillable = [
+        // 資料驗證資訊
+        'serial_number',                 // 政府資料序號，用於資料驗證和去重
+
         // 基本位置資訊
         'city',                          // 縣市
         'district',                      // 行政區
@@ -207,5 +210,54 @@ class Property extends Model
     public function scopeWithFurniture($query)
     {
         return $query->where('has_furniture', true);
+    }
+
+    /**
+     * 根據政府資料序號查詢記錄
+     */
+    public function scopeBySerialNumber($query, string $serialNumber)
+    {
+        return $query->where('serial_number', $serialNumber);
+    }
+
+    /**
+     * 檢查政府資料序號是否存在
+     */
+    public static function serialNumberExists(string $serialNumber): bool
+    {
+        return static::where('serial_number', $serialNumber)->exists();
+    }
+
+    /**
+     * 根據政府資料序號查找記錄
+     */
+    public static function findBySerialNumber(string $serialNumber): ?self
+    {
+        return static::where('serial_number', $serialNumber)->first();
+    }
+
+    /**
+     * 檢查是否有重複的政府資料序號
+     */
+    public static function hasDuplicateSerialNumbers(): bool
+    {
+        return static::selectRaw('serial_number, COUNT(*) as count')
+            ->whereNotNull('serial_number')
+            ->groupBy('serial_number')
+            ->having('count', '>', 1)
+            ->exists();
+    }
+
+    /**
+     * 取得重複的政府資料序號列表
+     */
+    public static function getDuplicateSerialNumbers(): array
+    {
+        return static::selectRaw('serial_number, COUNT(*) as count')
+            ->whereNotNull('serial_number')
+            ->groupBy('serial_number')
+            ->having('count', '>', 1)
+            ->pluck('serial_number')
+            ->toArray();
     }
 }

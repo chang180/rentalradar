@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\CheckAdmin;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\PerformanceTrackingMiddleware;
@@ -27,6 +28,10 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->api(append: [
             PerformanceTrackingMiddleware::class,
+        ]);
+
+        $middleware->alias([
+            'admin' => CheckAdmin::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

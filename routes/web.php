@@ -82,6 +82,25 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('monitoring', function () {
         return Inertia::render('MonitoringDashboard');
     })->name('monitoring');
+
+    // 管理員路由
+    Route::prefix('admin')->group(function () {
+        Route::get('users', function () {
+            return Inertia::render('admin/users');
+        })->name('admin.users');
+
+        Route::get('uploads', function () {
+            return Inertia::render('admin/uploads');
+        })->name('admin.uploads');
+
+        Route::get('schedules', function () {
+            return Inertia::render('admin/schedules');
+        })->name('admin.schedules');
+
+        Route::get('permissions', function () {
+            return Inertia::render('admin/permissions');
+        })->name('admin.permissions');
+    });
 });
 
 require __DIR__.'/settings.php';
