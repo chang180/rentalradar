@@ -39,13 +39,25 @@ class DataParserService
             $zip = new ZipArchive;
             $result = $zip->open($zipPath);
 
+            // 即使 open 返回錯誤碼，嘗試解壓縮
             if ($result !== true) {
-                throw new \Exception("無法開啟 ZIP 檔案: $result");
+                // 嘗試直接解壓縮，有些 ZIP 檔案可能 open 失敗但 extractTo 成功
+                try {
+                    $zip->extractTo($extractPath);
+                    $zip->close();
+                    Log::info('ZIP 檔案解壓縮成功 (open 失敗但 extractTo 成功)', [
+                        'file_path' => $filePath,
+                        'open_result' => $result,
+                    ]);
+                } catch (\Exception $e) {
+                    $zip->close();
+                    throw new \Exception("無法開啟 ZIP 檔案: {$result}，解壓縮也失敗: " . $e->getMessage());
+                }
+            } else {
+                // 正常情況：open 成功
+                $zip->extractTo($extractPath);
+                $zip->close();
             }
-
-            // 解壓縮到臨時目錄
-            $zip->extractTo($extractPath);
-            $zip->close();
 
             Log::info('ZIP 檔案解壓縮成功', [
                 'file_path' => $filePath,
