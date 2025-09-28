@@ -221,7 +221,7 @@ class AdminController extends Controller
                 ], 400);
             }
 
-            $result = $this->userManagementService->deleteUser($targetUser->id, $user);
+            $result = $this->userManagementService->deleteUser($targetUser->id, $requestingUser);
 
             if ($result['success']) {
                 return response()->json([
