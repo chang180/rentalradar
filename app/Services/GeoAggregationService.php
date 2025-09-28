@@ -291,14 +291,22 @@ class GeoAggregationService
         // 快取未命中，載入完整的地理資料
         $geoCenters = $this->loadGeoCentersWithCache();
         
-        // 特例處理：嘉義縣 嘉義市 和 嘉義市 嘉義市 都對應到嘉義市
+        // 特例處理：處理特殊城市組合
         $searchCity = $city;
         $searchDistrict = $district;
         
+        // 嘉義市特例：嘉義縣 嘉義市 和 嘉義市 嘉義市 都對應到嘉義市
         if (($city === '嘉義縣' && $district === '嘉義市') || 
             ($city === '嘉義市' && $district === '嘉義市')) {
             $searchCity = '嘉義市';
             $searchDistrict = '嘉義市';
+        }
+        
+        // 新竹市特例：新竹縣 新竹市 和 新竹市 新竹市 都對應到新竹市
+        if (($city === '新竹縣' && $district === '新竹市') || 
+            ($city === '新竹市' && $district === '新竹市')) {
+            $searchCity = '新竹市';
+            $searchDistrict = '新竹市';
         }
         
         $center = $geoCenters[$searchCity][$searchDistrict] ?? null;
