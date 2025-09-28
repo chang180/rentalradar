@@ -157,20 +157,35 @@ class FileUploadService
             $result = $this->dataParserService->parseZipData($filePath);
             
             if ($result['success']) {
+                $data = $result['data'];
+                
+                // 提取所有 serial_number
+                $serialNumbers = array_filter(array_column($data, 'serial_number'));
+                
+                // 批量查詢已存在的 serial_number
+                $existingSerialNumbers = Property::whereIn('serial_number', $serialNumbers)
+                    ->pluck('serial_number')
+                    ->toArray();
+                
                 // 計算重複記錄數
-                $duplicateCount = 0;
-                foreach ($result['data'] as $record) {
-                    if ($record['serial_number'] && Property::serialNumberExists($record['serial_number'])) {
-                        $duplicateCount++;
+                $duplicateCount = count($existingSerialNumbers);
+                
+                // 篩選出需要儲存的記錄
+                $recordsToSave = [];
+                foreach ($data as $record) {
+                    if (!$record['serial_number'] || !in_array($record['serial_number'], $existingSerialNumbers)) {
+                        $recordsToSave[] = $record;
                     }
                 }
                 
-                // 儲存非重複的記錄到資料庫
+                // 批量儲存記錄
                 $savedCount = 0;
-                foreach ($result['data'] as $record) {
-                    if (!$record['serial_number'] || !Property::serialNumberExists($record['serial_number'])) {
-                        Property::create($record);
-                        $savedCount++;
+                if (!empty($recordsToSave)) {
+                    // 分批儲存以避免記憶體問題
+                    $chunks = array_chunk($recordsToSave, 100);
+                    foreach ($chunks as $chunk) {
+                        Property::insert($chunk);
+                        $savedCount += count($chunk);
                     }
                 }
                 
