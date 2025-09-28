@@ -1,12 +1,3 @@
-import { route } from '@inertiajs/react';
-
-export const dashboard = {
-    url: () => route('dashboard'),
-};
-
-export const admin = {
-    users: () => route('admin.users'),
-    uploads: () => route('admin.uploads'),
-    schedules: () => route('admin.schedules'),
-    permissions: () => route('admin.permissions'),
-};
+// 重新導出 Wayfinder 生成的路由
+export { dashboard } from './routes/index';
+export { default as admin } from './routes/admin/index';
