@@ -11,9 +11,9 @@ class TaiwanGeoCenterService
      *
      * 資料來源：政府開放資料平台
      * 網址：https://data.gov.tw/dataset/7442
-     * 檔案：storage/app/taiwan_geo_centers.json
+     * 檔案：database/data/taiwan_geo_centers.json
      *
-     * 注意：資料已遷移至 JSON 檔案以提升維護性和可讀性
+     * 注意：資料已遷移至 database/data 目錄以納入版控管理
      */
     private static ?array $geoCenters = null;
 
@@ -24,7 +24,7 @@ class TaiwanGeoCenterService
     {
         if (self::$geoCenters === null) {
             try {
-                $jsonPath = __DIR__.'/../../storage/app/taiwan_geo_centers.json';
+                $jsonPath = __DIR__.'/../../database/data/taiwan_geo_centers.json';
                 if (! file_exists($jsonPath)) {
                     throw new \Exception('JSON file not found at: '.$jsonPath);
                 }
