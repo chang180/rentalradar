@@ -239,28 +239,28 @@ export default function AdminUploads() {
                 </div>
 
                 {/* 政府資料下載連結 */}
-                <Card className="mb-6 bg-blue-50 border-blue-200">
+                <Card className="mb-6 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-blue-900">
+                        <CardTitle className="flex items-center gap-2 text-blue-900 dark:text-blue-100">
                             <ExternalLink className="h-5 w-5" />
                             政府資料平台下載連結
                         </CardTitle>
-                        <CardDescription className="text-blue-700">
+                        <CardDescription className="text-blue-700 dark:text-blue-300">
                             用於下載歷史資料或排程失敗時的手動補下載
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div className="space-y-2">
-                                <h4 className="font-medium text-blue-900">政府開放資料平台</h4>
-                                <p className="text-sm text-blue-700 mb-2">
+                                <h4 className="font-medium text-blue-900 dark:text-blue-100">政府開放資料平台</h4>
+                                <p className="text-sm text-blue-700 dark:text-blue-300 mb-2">
                                     本期發布之不動產租賃實價登錄批次資料
                                 </p>
                                 <a 
                                     href="https://data.gov.tw/dataset/25118" 
                                     target="_blank" 
                                     rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 underline"
+                                    className="inline-flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 underline"
                                 >
                                     <ExternalLink className="h-4 w-4" />
                                     前往資料平台
@@ -268,15 +268,15 @@ export default function AdminUploads() {
                             </div>
                             
                             <div className="space-y-2">
-                                <h4 className="font-medium text-blue-900">直接下載連結</h4>
-                                <p className="text-sm text-blue-700 mb-2">
+                                <h4 className="font-medium text-blue-900 dark:text-blue-100">直接下載連結</h4>
+                                <p className="text-sm text-blue-700 dark:text-blue-300 mb-2">
                                     當期租賃實價登錄資料 (CSV/XML 格式)
                                 </p>
                                 <a 
                                     href="https://data.moi.gov.tw/MoiOD/System/DownloadFile.aspx?DATA=F85D101E-1453-49B2-892D-36234CF9303D" 
                                     target="_blank" 
                                     rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 underline"
+                                    className="inline-flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 underline"
                                 >
                                     <Download className="h-4 w-4" />
                                     直接下載資料
@@ -284,15 +284,15 @@ export default function AdminUploads() {
                             </div>
                             
                             <div className="space-y-2">
-                                <h4 className="font-medium text-blue-900">地政司下載中心</h4>
-                                <p className="text-sm text-blue-700 mb-2">
+                                <h4 className="font-medium text-blue-900 dark:text-blue-100">地政司下載中心</h4>
+                                <p className="text-sm text-blue-700 dark:text-blue-300 mb-2">
                                     更多不動產相關資料和歷史檔案
                                 </p>
                                 <a 
                                     href="https://plvr.land.moi.gov.tw/DownloadOpenData" 
                                     target="_blank" 
                                     rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 underline"
+                                    className="inline-flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 underline"
                                 >
                                     <ExternalLink className="h-4 w-4" />
                                     地政司下載中心
@@ -300,9 +300,9 @@ export default function AdminUploads() {
                             </div>
                         </div>
                         
-                        <div className="mt-4 p-3 bg-blue-100 rounded-lg">
-                            <h5 className="font-medium text-blue-900 mb-2">📋 使用說明</h5>
-                            <ul className="text-sm text-blue-700 space-y-1">
+                        <div className="mt-4 p-3 bg-blue-100 dark:bg-blue-800/30 rounded-lg">
+                            <h5 className="font-medium text-blue-900 dark:text-blue-100 mb-2">📋 使用說明</h5>
+                            <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
                                 <li>• <strong>更新頻率</strong>: 每10日 (每月1、11、21日)</li>
                                 <li>• <strong>資料格式</strong>: 支援 CSV 和 XML 格式</li>
                                 <li>• <strong>檔案大小</strong>: 通常 500KB - 2MB</li>
