@@ -34,8 +34,8 @@ class FileUploadController extends Controller
         // 動態設置 PHP 上傳限制
         ini_set('upload_max_filesize', '200M');
         ini_set('post_max_size', '200M');
-        ini_set('max_execution_time', 600);
-        ini_set('memory_limit', '1G');
+        ini_set('max_execution_time', 0); // 無限制執行時間
+        ini_set('memory_limit', '2G'); // 增加記憶體限制
 
         // 檢查 PHP 上傳限制
         $maxUploadSize = ini_get('upload_max_filesize');

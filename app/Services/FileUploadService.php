@@ -104,6 +104,10 @@ class FileUploadService
     public function processUploadedFile(FileUpload $fileUpload): bool
     {
         try {
+            // 設定執行時間和記憶體限制
+            ini_set('max_execution_time', 0); // 無限制執行時間
+            ini_set('memory_limit', '2G'); // 增加記憶體限制
+            
             $fileUpload->update(['upload_status' => 'processing']);
 
             if ($fileUpload->file_type === 'application/zip') {
@@ -155,8 +159,13 @@ class FileUploadService
     private function processZipFile(FileUpload $fileUpload): array
     {
         try {
+            // 設定執行時間和記憶體限制
+            ini_set('max_execution_time', 0); // 無限制執行時間
+            ini_set('memory_limit', '2G'); // 增加記憶體限制
+            
             // 直接使用 FileUpload 物件中的相對路徑，這樣更可靠
             $storagePath = $fileUpload->upload_path;
+            $filePath = $storagePath; // 為了在 catch 區塊中使用
 
             // 使用 DataParserService 來處理政府資料 ZIP 檔案
             $result = $this->dataParserService->parseZipData($storagePath);
@@ -167,10 +176,17 @@ class FileUploadService
                 // 提取所有 serial_number
                 $serialNumbers = array_filter(array_column($data, 'serial_number'));
 
-                // 批量查詢已存在的 serial_number
-                $existingSerialNumbers = Property::whereIn('serial_number', $serialNumbers)
-                    ->pluck('serial_number')
-                    ->toArray();
+                // 分批查詢已存在的 serial_number（避免 SQLite 變數限制）
+                $existingSerialNumbers = [];
+                $chunkSize = 500; // SQLite 安全限制
+                $serialNumberChunks = array_chunk($serialNumbers, $chunkSize);
+                
+                foreach ($serialNumberChunks as $chunk) {
+                    $existing = Property::whereIn('serial_number', $chunk)
+                        ->pluck('serial_number')
+                        ->toArray();
+                    $existingSerialNumbers = array_merge($existingSerialNumbers, $existing);
+                }
 
                 // 計算重複記錄數
                 $duplicateCount = count($existingSerialNumbers);
