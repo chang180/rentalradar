@@ -63,6 +63,7 @@ export default function AdminUploads() {
     const [loading, setLoading] = useState(true);
     const [status, setStatus] = useState<string>('all');
     const [uploading, setUploading] = useState(false);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [pagination, setPagination] = useState({
         current_page: 1,
         last_page: 1,
@@ -98,29 +99,37 @@ export default function AdminUploads() {
         }
     }, [isAdmin, status]);
 
-    // 檔案上傳
-    const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    // 檔案選擇
+    const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
-        if (!file) return;
+        setSelectedFile(file || null);
+    };
+
+    // 檔案上傳
+    const handleFileUpload = async () => {
+        if (!selectedFile) return;
 
         try {
             setUploading(true);
             const formData = new FormData();
-            formData.append('file', file);
+            formData.append('file', selectedFile);
 
             const response = await adminFileUploadRequest('/uploads', formData);
 
             // 重新載入上傳記錄
             loadUploads(pagination.current_page, status);
             alert('檔案上傳成功！');
+            
+            // 清除選中的檔案
+            setSelectedFile(null);
+            if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+            }
         } catch (error) {
             console.error('檔案上傳失敗:', error);
             alert('檔案上傳失敗');
         } finally {
             setUploading(false);
-            if (fileInputRef.current) {
-                fileInputRef.current.value = '';
-            }
         }
     };
 
@@ -314,7 +323,7 @@ export default function AdminUploads() {
                     <CardHeader>
                         <CardTitle>上傳政府資料檔案</CardTitle>
                         <CardDescription>
-                            支援 ZIP 和 CSV 格式，檔案大小限制 100MB
+                            支援 ZIP 和 CSV 格式，檔案大小限制 200MB
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -325,28 +334,44 @@ export default function AdminUploads() {
                                     id="file-upload"
                                     type="file"
                                     accept=".zip,.csv"
-                                    onChange={handleFileUpload}
+                                    onChange={handleFileSelect}
                                     disabled={uploading}
                                     ref={fileInputRef}
                                 />
-                            </div>
-                            <Button
-                                onClick={() => fileInputRef.current?.click()}
-                                disabled={uploading}
-                                className="w-full md:w-auto"
-                            >
-                                {uploading ? (
-                                    <>
-                                        <Clock className="h-4 w-4 mr-2" />
-                                        上傳中...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Upload className="h-4 w-4 mr-2" />
-                                        選擇檔案上傳
-                                    </>
+                                {selectedFile && (
+                                    <p className="mt-2 text-sm text-gray-600">
+                                        已選擇: {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
+                                    </p>
                                 )}
-                            </Button>
+                            </div>
+                            <div className="flex gap-2">
+                                <Button
+                                    onClick={() => fileInputRef.current?.click()}
+                                    disabled={uploading}
+                                    variant="outline"
+                                    className="flex-1"
+                                >
+                                    <Upload className="h-4 w-4 mr-2" />
+                                    選擇檔案
+                                </Button>
+                                <Button
+                                    onClick={handleFileUpload}
+                                    disabled={!selectedFile || uploading}
+                                    className="flex-1"
+                                >
+                                    {uploading ? (
+                                        <>
+                                            <Clock className="h-4 w-4 mr-2" />
+                                            上傳中...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Upload className="h-4 w-4 mr-2" />
+                                            上傳檔案
+                                        </>
+                                    )}
+                                </Button>
+                            </div>
                         </div>
                     </CardContent>
                 </Card>
