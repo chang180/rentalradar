@@ -265,6 +265,90 @@ export default function AdminSchedules() {
                     </div>
                 </div>
 
+                {/* 政府資料下載排程說明 */}
+                <Card className="mb-6 bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-green-900 dark:text-green-100">
+                            <Calendar className="h-5 w-5" />
+                            政府資料下載排程設定指南
+                        </CardTitle>
+                        <CardDescription className="text-green-700 dark:text-green-300">
+                            用於自動下載政府租賃實價登錄資料的排程設定說明
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-4">
+                                <div>
+                                    <h4 className="font-medium text-green-900 dark:text-green-100 mb-2">📋 推薦排程設定</h4>
+                                    <div className="space-y-2 text-sm text-green-700 dark:text-green-300">
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-medium">任務名稱:</span>
+                                            <code className="bg-green-100 dark:bg-green-800 px-2 py-1 rounded text-xs">government_data_download</code>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-medium">執行頻率:</span>
+                                            <span>每月</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-medium">執行日期:</span>
+                                            <span>5, 15, 25 日</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-medium">執行時間:</span>
+                                            <span>02:00</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <h4 className="font-medium text-green-900 dark:text-green-100 mb-2">🎯 設定原因</h4>
+                                    <ul className="text-sm text-green-700 dark:text-green-300 space-y-1">
+                                        <li>• 政府資料更新頻率：每10日</li>
+                                        <li>• 與政府發布日錯開：避免資料衝突</li>
+                                        <li>• 凌晨執行：減少系統負載</li>
+                                        <li>• 多次下載：確保資料完整性</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            
+                            <div className="space-y-4">
+                                <div>
+                                    <h4 className="font-medium text-green-900 dark:text-green-100 mb-2">🔍 資料驗證重點</h4>
+                                    <ul className="text-sm text-green-700 dark:text-green-300 space-y-1">
+                                        <li>• <strong>serial_number 重複檢測</strong></li>
+                                        <li>• 資料完整性驗證</li>
+                                        <li>• 檔案格式檢查</li>
+                                        <li>• 地理編碼處理</li>
+                                        <li>• 重複資料處理策略</li>
+                                    </ul>
+                                </div>
+                                
+                                <div>
+                                    <h4 className="font-medium text-green-900 dark:text-green-100 mb-2">📊 監控指標</h4>
+                                    <ul className="text-sm text-green-700 dark:text-green-300 space-y-1">
+                                        <li>• 下載成功率</li>
+                                        <li>• 資料處理時間</li>
+                                        <li>• serial_number 重複率</li>
+                                        <li>• 地理編碼成功率</li>
+                                        <li>• 錯誤日誌分析</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div className="mt-4 p-3 bg-green-100 dark:bg-green-800/30 rounded-lg">
+                            <h5 className="font-medium text-green-900 dark:text-green-100 mb-2">💡 設定提示</h5>
+                            <ul className="text-sm text-green-700 dark:text-green-300 space-y-1">
+                                <li>• 建議先手動測試排程功能，確認資料下載和處理正常</li>
+                                <li>• 定期檢查排程執行記錄，監控 serial_number 重複情況</li>
+                                <li>• 如發現資料問題，可手動執行排程進行補下載</li>
+                                <li>• 排程失敗時會記錄錯誤訊息，便於問題排查</li>
+                            </ul>
+                        </div>
+                    </CardContent>
+                </Card>
+
                 {/* 創建排程表單 */}
                 {showCreateForm && (
                     <Card className="mb-6">
