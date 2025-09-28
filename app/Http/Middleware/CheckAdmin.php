@@ -21,7 +21,7 @@ class CheckAdmin
      */
     public function handle(Request $request, Closure $next, string $permission = 'admin'): Response
     {
-        if (!Auth::check()) {
+        if (! Auth::check()) {
             return $this->unauthorizedResponse($request);
         }
 
@@ -35,8 +35,21 @@ class CheckAdmin
             default => $this->permissionService->checkAdminPermission($user),
         };
 
-        if (!$hasPermission) {
+        if (! $hasPermission) {
             $this->permissionService->logPermissionCheck($user, $permission, false);
+
+            // 對於 API 請求，返回 403 錯誤
+            // 對於頁面請求，如果是管理員頁面，允許訪問但前端會處理權限顯示
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return $this->forbiddenResponse($request);
+            }
+
+            // 對於管理員頁面，允許訪問
+            if ($request->is('admin/*')) {
+                return $next($request);
+            }
+
+            // 其他情況返回 403 錯誤頁面
             return $this->forbiddenResponse($request);
         }
 

@@ -84,7 +84,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     })->name('monitoring');
 
     // 管理員路由
-    Route::prefix('admin')->group(function () {
+    Route::prefix('admin')->middleware('admin')->group(function () {
         Route::get('users', function () {
             return Inertia::render('admin/users');
         })->name('admin.users');

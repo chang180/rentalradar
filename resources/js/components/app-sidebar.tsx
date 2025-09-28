@@ -12,8 +12,7 @@ import {
     useSidebar,
 } from '@/components/ui/sidebar';
 import { useAdminCheck } from '@/hooks/useAdmin';
-// @ts-ignore
-import { dashboard } from '@/routes';
+import { dashboard } from '@/routes/index';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
 import { BarChart3, ChevronLeft, ChevronRight, Home, Map } from 'lucide-react';

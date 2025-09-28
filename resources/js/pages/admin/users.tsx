@@ -18,6 +18,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { useAdminCheck } from '@/hooks/useAdmin';
+import { adminApiRequest } from '@/utils/api';
 import { Head, router } from '@inertiajs/react';
 import { 
     Plus, 
@@ -73,12 +74,9 @@ export default function AdminUsers() {
                 ...(roleFilter !== 'all' && { role: roleFilter }),
             });
 
-            const response = await fetch(`/api/admin/users?${params}`);
-            if (response.ok) {
-                const data: UsersResponse = await response.json();
-                setUsers(data.users);
-                setPagination(data.pagination);
-            }
+            const data: UsersResponse = await adminApiRequest(`/users?${params}`);
+            setUsers(data.users);
+            setPagination(data.pagination);
         } catch (error) {
             console.error('載入使用者列表失敗:', error);
         } finally {
@@ -95,20 +93,9 @@ export default function AdminUsers() {
     // 提升使用者為管理員
     const promoteUser = async (userId: number) => {
         try {
-            const response = await fetch(`/api/admin/users/${userId}/promote`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-            });
-
-            if (response.ok) {
-                // 重新載入使用者列表
-                loadUsers(pagination.current_page, search, role);
-            } else {
-                const error = await response.json();
-                alert(`提升失敗: ${error.message}`);
-            }
+            await adminApiRequest(`/users/${userId}/promote`, { method: 'POST' });
+            // 重新載入使用者列表
+            loadUsers(pagination.current_page, search, role);
         } catch (error) {
             console.error('提升使用者失敗:', error);
             alert('提升使用者失敗');
@@ -118,20 +105,9 @@ export default function AdminUsers() {
     // 撤銷管理員權限
     const demoteUser = async (userId: number) => {
         try {
-            const response = await fetch(`/api/admin/users/${userId}/demote`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-            });
-
-            if (response.ok) {
-                // 重新載入使用者列表
-                loadUsers(pagination.current_page, search, role);
-            } else {
-                const error = await response.json();
-                alert(`撤銷失敗: ${error.message}`);
-            }
+            await adminApiRequest(`/users/${userId}/demote`, { method: 'POST' });
+            // 重新載入使用者列表
+            loadUsers(pagination.current_page, search, role);
         } catch (error) {
             console.error('撤銷管理員權限失敗:', error);
             alert('撤銷管理員權限失敗');
@@ -145,17 +121,9 @@ export default function AdminUsers() {
         }
 
         try {
-            const response = await fetch(`/api/admin/users/${userId}`, {
-                method: 'DELETE',
-            });
-
-            if (response.ok) {
-                // 重新載入使用者列表
-                loadUsers(pagination.current_page, search, role);
-            } else {
-                const error = await response.json();
-                alert(`刪除失敗: ${error.message}`);
-            }
+            await adminApiRequest(`/users/${userId}`, { method: 'DELETE' });
+            // 重新載入使用者列表
+            loadUsers(pagination.current_page, search, role);
         } catch (error) {
             console.error('刪除使用者失敗:', error);
             alert('刪除使用者失敗');

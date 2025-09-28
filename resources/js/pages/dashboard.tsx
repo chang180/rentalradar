@@ -1,5 +1,5 @@
 import AppLayout from '@/layouts/app-layout';
-import { dashboard } from '@/routes';
+import { dashboard } from '@/routes/index';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
 import axios from 'axios';
@@ -147,23 +147,6 @@ export default function Dashboard() {
                             </div>
                         </div>
                     </Link>
-
-                    {/* 智慧搜尋功能暫時隱藏 */}
-                    {/* <div className="group bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 hover:border-green-300 dark:hover:border-green-600 transition-all duration-200 hover:shadow-lg">
-                        <div className="flex items-center space-x-4">
-                            <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center group-hover:bg-green-200 dark:group-hover:bg-green-900/50 transition-colors">
-                                <Search className="w-6 h-6 text-green-600 dark:text-green-400" />
-                            </div>
-                            <div>
-                                <h3 className="font-semibold text-gray-900 dark:text-white group-hover:text-green-600 dark:group-hover:text-green-400">
-                                    智慧搜尋
-                                </h3>
-                                <p className="text-sm text-gray-600 dark:text-gray-400">
-                                    AI 驅動的租屋條件篩選
-                                </p>
-                            </div>
-                        </div>
-                    </div> */}
 
                     <div className="group rounded-xl border border-gray-200 bg-white p-6 transition-all duration-200 hover:border-purple-300 hover:shadow-lg dark:border-gray-700 dark:bg-gray-800 dark:hover:border-purple-600">
                         <div className="flex items-center space-x-4">
@@ -332,15 +315,10 @@ export default function Dashboard() {
                             className="group flex items-center space-x-3 rounded-lg border border-gray-200 p-4 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700"
                         >
                             <TrendingUp className="h-5 w-5 text-green-600 group-hover:text-green-700 dark:text-green-400 dark:group-hover:text-green-300" />
-                            <span className="text-sm font-medium text-gray-900 group-hover:text-green-600 dark:text-white dark:group-hover:text-green-400">
+                            <span className="text-sm font-medium text-gray-900 group-hover:text-green-600 dark:text-white dark:group-hover:text-blue-400">
                                 市場分析
                             </span>
                         </Link>
-                        {/* 社群分享功能暫時 comment 掉 */}
-                        {/* <button className="flex items-center space-x-3 p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                            <Users className="w-5 h-5 text-orange-600 dark:text-orange-400" />
-                            <span className="text-sm font-medium text-gray-900 dark:text-white">社群分享</span>
-                        </button> */}
                     </div>
                 </div>
             </div>

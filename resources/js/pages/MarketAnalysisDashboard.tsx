@@ -16,7 +16,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { useMarketAnalysis } from '@/hooks/use-market-analysis';
 import AppLayout from '@/layouts/app-layout';
-import { dashboard } from '@/routes';
+import { dashboard } from '@/routes/index';
 import type { BreadcrumbItem } from '@/types';
 import { type MarketAnalysisFilters } from '@/types/analysis';
 import { Head } from '@inertiajs/react';
