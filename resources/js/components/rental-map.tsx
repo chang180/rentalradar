@@ -520,9 +520,9 @@ const RentalMap = memo(() => {
     // 優化的視口變更處理，加入節流
     const handleViewportChange = useCallback(
         throttle((viewport: any) => {
-            updateViewport(viewport, selectedDistrict);
+            updateViewport(viewport, selectedDistrict, selectedCity);
         }, 16), // 60fps
-        [updateViewport, selectedDistrict],
+        [updateViewport, selectedDistrict, selectedCity],
     );
 
     // 優化的圖標創建，使用緩存
@@ -592,6 +592,7 @@ const RentalMap = memo(() => {
                                         zoom,
                                     },
                                     selectedDistrict,
+                                    selectedCity,
                                 );
                             }
                         }}

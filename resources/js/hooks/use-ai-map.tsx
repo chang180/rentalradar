@@ -103,6 +103,9 @@ export function useAIMap(options: UseAIMapOptions = {}) {
                 // 如果選擇了特定行政區，不傳送視口範圍參數，讓後端返回該行政區的所有資料
                 if (district && district.trim() !== '') {
                     params.append('district', district);
+                    if (city && city.trim() !== '') {
+                        params.append('city', city);
+                    }
                     params.append('zoom', viewport.zoom.toString());
                 } else if (city && city.trim() !== '') {
                     // 如果選擇了縣市但沒有選擇行政區，不傳送視口範圍參數，讓後端返回該縣市的所有資料
