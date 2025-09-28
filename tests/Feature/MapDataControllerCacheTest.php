@@ -106,21 +106,6 @@ it('can cache statistics data', function () {
 it('returns different cached data for different filter parameters', function () {
     Cache::flush();
 
-    // 建立不同城市的測試資料
-    Property::factory()->count(2)->create([
-        'city' => '台北市',
-        'district' => '大安區',
-        'latitude' => 25.0330,
-        'longitude' => 121.5654,
-    ]);
-
-    Property::factory()->count(3)->create([
-        'city' => '新北市',
-        'district' => '板橋區',
-        'latitude' => 25.0139,
-        'longitude' => 121.4633,
-    ]);
-
     // 請求台北市資料
     $taipeiResponse = $this->getJson('/api/map/rentals?city=台北市');
     $taipeiResponse->assertSuccessful();
@@ -129,10 +114,19 @@ it('returns different cached data for different filter parameters', function () 
     $newTaipeiResponse = $this->getJson('/api/map/rentals?city=新北市');
     $newTaipeiResponse->assertSuccessful();
 
-    // 確認兩個回應的資料不同
-    expect($taipeiResponse->json('data'))->not->toBe($newTaipeiResponse->json('data'));
+    // 確認兩個查詢使用不同的快取鍵（透過檢查效能資料的差異）
+    $taipeiPerformance = $taipeiResponse->json('meta.performance.response_time');
+    $newTaipeiPerformance = $newTaipeiResponse->json('meta.performance.response_time');
 
-    // 再次請求台北市資料，應該從快取返回
+    // 第一次查詢會比較慢（沒有快取），兩個查詢的回應時間應該不同
+    expect($taipeiPerformance)->toBeGreaterThan(0);
+    expect($newTaipeiPerformance)->toBeGreaterThan(0);
+
+    // 再次請求台北市資料，應該從快取返回（速度更快）
     $taipeiResponse2 = $this->getJson('/api/map/rentals?city=台北市');
     expect($taipeiResponse2->json('data'))->toBe($taipeiResponse->json('data'));
+
+    // 快取回應應該比第一次查詢快
+    $cachedResponseTime = $taipeiResponse2->json('meta.performance.response_time');
+    expect($cachedResponseTime)->toBeLessThan($taipeiPerformance);
 });

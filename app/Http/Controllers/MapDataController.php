@@ -18,9 +18,9 @@ use Illuminate\Support\Facades\Validator;
 class MapDataController extends Controller
 {
     public function __construct(
+        private MapCacheService $mapCacheService,
         private GeoAggregationService $geoAggregationService,
         private MapDataService $mapDataService,
-        private MapCacheService $mapCacheService,
         private AIMapOptimizationService $aiMapService
     ) {}
 
@@ -57,7 +57,7 @@ class MapDataController extends Controller
 
             // 只回傳有座標的資料
             $properties = $aggregatedData->filter(function ($item) {
-                return $item['has_coordinates'];
+                return $item->has_coordinates ?? false;
             })->values();
 
             $monitor->mark('query_loaded');
@@ -186,7 +186,7 @@ class MapDataController extends Controller
 
             // 只回傳有座標的資料
             $properties = $aggregatedData->filter(function ($item) {
-                return $item['has_coordinates'];
+                return $item->has_coordinates ?? false;
             })->values();
 
             $monitor->mark('query_loaded');
@@ -735,8 +735,8 @@ class MapDataController extends Controller
             $aggregatedData = $this->geoAggregationService->getAggregatedProperties([]);
             $hasAggregatedData = $aggregatedData->count() > 0;
             
-            // 只要有資料就可以顯示，不強制要求地理編碼
-            $isReady = $propertyCount > 0 && $hasAggregatedData;
+            // 只要有聚合資料就可以顯示，不強制要求原始資料
+            $isReady = $hasAggregatedData;
             
             return response()->json([
                 'success' => $isReady,

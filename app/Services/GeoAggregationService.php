@@ -5,14 +5,29 @@ namespace App\Services;
 use App\Models\Property;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 
 class GeoAggregationService
 {
+    /**
+     * 聚合資料快取時間（秒）
+     */
+    private const AGGREGATION_CACHE_TTL = 1800; // 30分鐘
+
     /**
      * 取得聚合後的租賃資料（按縣市行政區分組）
      */
     public function getAggregatedProperties(array $filters = []): Collection
     {
+        // 建立快取鍵值
+        $cacheKey = $this->buildCacheKey('aggregated_properties', $filters);
+        
+        // 嘗試從 Redis 快取取得資料
+        $cachedData = Cache::store('redis')->get($cacheKey);
+        if ($cachedData !== null) {
+            return collect($cachedData);
+        }
+
         $query = Property::query()
             ->select([
                 'city',
@@ -66,7 +81,7 @@ class GeoAggregationService
         $results = $query->get();
 
         // 為每個聚合結果添加地理中心點
-        return $results->map(function ($item) {
+        $processedResults = $results->map(function ($item) {
             // 處理城市名稱不一致問題（台 vs 臺）
             $normalizedCity = $this->normalizeCityNameForGeoService($item->city);
             $center = $this->getCoordinatesDirect($normalizedCity, $item->district);
@@ -89,6 +104,11 @@ class GeoAggregationService
                 'has_coordinates' => ! is_null($center) && isset($center['lat']) && isset($center['lng']),
             ];
         });
+
+        // 快取處理後的結果到 Redis
+        Cache::store('redis')->put($cacheKey, $processedResults->toArray(), self::AGGREGATION_CACHE_TTL);
+
+        return $processedResults;
     }
 
     /**
@@ -405,5 +425,28 @@ class GeoAggregationService
         \Illuminate\Support\Facades\Cache::store('redis')->put($cacheKey, $geoCenters, 86400);
         
         return $geoCenters;
+    }
+
+    /**
+     * 建立快取鍵值
+     */
+    private function buildCacheKey(string $type, array $filters): string
+    {
+        $filterString = '';
+
+        // 排序篩選條件以確保一致性
+        ksort($filters);
+
+        foreach ($filters as $key => $value) {
+            if ($value !== null && $value !== '') {
+                // 處理陣列值
+                if (is_array($value)) {
+                    $value = json_encode($value, JSON_UNESCAPED_UNICODE);
+                }
+                $filterString .= $key.'='.$value.';';
+            }
+        }
+
+        return 'geo_aggregation:'.$type.':'.md5($filterString);
     }
 }
