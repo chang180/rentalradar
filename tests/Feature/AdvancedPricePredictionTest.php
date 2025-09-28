@@ -150,6 +150,7 @@ class AdvancedPricePredictionTest extends TestCase
                     'east' => 121.6,
                     'west' => 121.5,
                 ],
+                'city' => '台北市', // 添加 city 參數讓查詢走個別屬性路徑
                 'zoom' => 12,
             ]));
 
@@ -189,7 +190,11 @@ class AdvancedPricePredictionTest extends TestCase
                 ],
             ]);
 
+        $data = $response->json('data');
+        dump('rentals count:', count($data['rentals'] ?? []));
+        dump('first rental prediction:', $data['rentals'][0]['price_prediction'] ?? 'missing');
         $statistics = $response->json('data.statistics');
+        dump('confidence_percentiles:', $statistics['confidence_percentiles'] ?? 'missing');
         $this->assertArrayHasKey('confidence_percentiles', $statistics);
         $this->assertArrayHasKey('p50', $statistics['confidence_percentiles']);
         $this->assertArrayHasKey('p75', $statistics['confidence_percentiles']);

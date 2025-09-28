@@ -61,12 +61,25 @@ class MapDataController extends Controller
             })->values();
 
             $monitor->mark('query_loaded');
+
+            // 為聚合資料也生成價格預測
+            $predictionInput = $this->mapDataService->buildPredictionPayloadForAggregated($properties);
+            $predictionResult = $predictionInput === []
+                ? ['predictions' => ['items' => [], 'summary' => []], 'model_info' => []]
+                : $monitor->trackModel('price_prediction', function () use ($predictionInput) {
+                    return $this->aiMapService->predictPrices($predictionInput);
+                }, ['threshold_ms' => 300]);
+
+            $predictionLookup = $this->mapDataService->indexPredictions($predictionResult['predictions'] ?? []);
+            $predictionSummary = $predictionResult['summary'] ?? [];
+            $modelInfo = $predictionResult['model_info'] ?? [];
+
             $queryCount = count($connection->getQueryLog());
             $connection->disableQueryLog();
 
             $responseData = [
-                'rentals' => $this->mapDataService->transformAggregatedToRentals($properties),
-                'statistics' => $this->mapDataService->calculateStatistics($properties),
+                'rentals' => $this->mapDataService->transformAggregatedToRentals($properties, $predictionLookup),
+                'statistics' => $this->calculateStatisticsForBounds($properties, $filters, $predictionSummary),
             ];
 
             // 快取結果
@@ -82,6 +95,12 @@ class MapDataController extends Controller
                         'query_count' => $queryCount,
                     ]),
                     'aggregation_type' => 'geo_center',
+                    'models' => [
+                        'price_prediction' => [
+                            'version' => $modelInfo['version'] ?? \App\Support\AdvancedPricePredictor::MODEL_VERSION,
+                            'average_confidence' => $predictionSummary['average_confidence'] ?? null,
+                        ],
+                    ],
                 ],
             ]);
         } elseif (($request->has('bounds') || $request->has(['north', 'south', 'east', 'west'])) && 

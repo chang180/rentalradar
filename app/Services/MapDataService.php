@@ -93,10 +93,10 @@ class MapDataService
     /**
      * 轉換聚合資料為租屋資料格式
      */
-    public function transformAggregatedToRentals(Collection $properties): Collection
+    public function transformAggregatedToRentals(Collection $properties, array $predictionLookup = []): Collection
     {
-        return $properties->map(function ($item) {
-            return [
+        return $properties->map(function ($item, $index) use ($predictionLookup) {
+            $baseData = [
                 'id' => $item['city'].'_'.$item['district'],
                 'title' => $item['city'].$item['district'],
                 'price' => $item['avg_rent_per_ping'],
@@ -114,7 +114,41 @@ class MapDataService
                 'management_ratio' => $item['management_ratio'],
                 'furniture_ratio' => $item['furniture_ratio'],
             ];
+
+            // 如果有預測資料，加入價格預測
+            if (!empty($predictionLookup)) {
+                $prediction = $this->matchPrediction($predictionLookup, $item['city'].'_'.$item['district'], $index);
+                $baseData['price_prediction'] = $this->formatPricePrediction($prediction);
+            }
+
+            return $baseData;
         });
+    }
+
+    /**
+     * 為聚合資料建構預測載荷
+     */
+    public function buildPredictionPayloadForAggregated(Collection $properties): array
+    {
+        if ($properties->isEmpty()) {
+            return [];
+        }
+
+        return $properties->values()->map(function ($item, $index) {
+            return [
+                'id' => $item['city'].'_'.$item['district'],
+                'index' => $index,
+                'lat' => $item['latitude'] ?? null,
+                'lng' => $item['longitude'] ?? null,
+                'area' => $item['avg_area_ping'] ?? null,
+                'floor' => 5, // 預設樓層
+                'age' => 10, // 預設建築年齡
+                'rent_per_ping' => $item['avg_rent_per_ping'] ?? null,
+                'building_type' => '住宅大樓',
+                'pattern' => '2房1廳1衛',
+                'district' => $item['district'] ?? null,
+            ];
+        })->toArray();
     }
 
     /**

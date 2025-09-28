@@ -56,7 +56,12 @@
       "Bash(node:*)",
       "Bash(git commit:*)",
       "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan test tests/Feature/ModelConsistencyTest.php)",
-      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan test --filter=ModelConsistencyTest)"
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan test --filter=ModelConsistencyTest)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan test tests/Feature/AdvancedPricePredictionTest.php --filter=\"rentals api returns price predictions\")",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan test tests/Feature/AdvancedPricePredictionTest.php::test_rentals_api_returns_price_predictions)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan test tests/Feature/AdvancedPricePredictionTest.php)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan test tests/Feature/AdvancedPricePredictionTest.php --stop-on-failure)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan test tests/Feature/AdvancedPricePredictionTest.php --filter=\"test_rentals_api_returns_price_predictions\")"
     ]
   },
   "enableAllProjectMcpServers": true,

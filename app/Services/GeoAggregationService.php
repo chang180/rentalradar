@@ -67,7 +67,9 @@ class GeoAggregationService
 
         // 為每個聚合結果添加地理中心點
         return $results->map(function ($item) {
-            $center = TaiwanGeoCenterService::getGeoCenter($item->city, $item->district);
+            // 處理城市名稱不一致問題（台 vs 臺）
+            $normalizedCity = $this->normalizeCityNameForGeoService($item->city);
+            $center = $this->getCoordinatesDirect($normalizedCity, $item->district);
 
             return [
                 'city' => $item->city,
@@ -84,7 +86,7 @@ class GeoAggregationService
                 'furniture_ratio' => round(($item->furniture_count / $item->property_count) * 100, 1),
                 'latitude' => $center['lat'] ?? null,
                 'longitude' => $center['lng'] ?? null,
-                'has_coordinates' => ! is_null($center),
+                'has_coordinates' => ! is_null($center) && isset($center['lat']) && isset($center['lng']),
             ];
         });
     }
@@ -255,5 +257,78 @@ class GeoAggregationService
     public function getDistrictBounds(string $district): ?array
     {
         return TaiwanGeoCenterService::getDistrictBounds($district);
+    }
+
+    /**
+     * 為地理服務標準化城市名稱，處理台/臺等字符差異
+     */
+    private function normalizeCityNameForGeoService(string $city): string
+    {
+        // 處理常見的城市名稱差異（資料庫使用「臺」，JSON 檔案使用「台」）
+        $mapping = [
+            '臺中市' => '台中市',
+            '臺南市' => '台南市',
+            '臺東縣' => '台東縣',
+            // 臺北市在 JSON 中也是「臺北市」，不需要轉換
+        ];
+
+        return $mapping[$city] ?? $city;
+    }
+
+    /**
+     * 直接從 JSON 檔案取得座標（使用 Redis 快取）
+     */
+    private function getCoordinatesDirect(string $city, string $district): ?array
+    {
+        $cacheKey = "geo_coordinates:{$city}:{$district}";
+        
+        // 嘗試從 Redis 快取取得
+        $cached = \Illuminate\Support\Facades\Cache::store('redis')->get($cacheKey);
+        if ($cached !== null) {
+            return $cached;
+        }
+        
+        // 快取未命中，載入完整的地理資料
+        $geoCenters = $this->loadGeoCentersWithCache();
+        
+        $center = $geoCenters[$city][$district] ?? null;
+        $result = $center && isset($center['lat']) && isset($center['lng']) ? [
+            'lat' => $center['lat'],
+            'lng' => $center['lng']
+        ] : null;
+        
+        // 快取結果到 Redis（快取 24 小時）
+        \Illuminate\Support\Facades\Cache::store('redis')->put($cacheKey, $result, 86400);
+        
+        return $result;
+    }
+
+    /**
+     * 載入地理中心點資料（使用 Redis 快取）
+     */
+    private function loadGeoCentersWithCache(): array
+    {
+        $cacheKey = 'taiwan_geo_centers_full';
+        
+        // 嘗試從 Redis 快取取得
+        $cached = \Illuminate\Support\Facades\Cache::store('redis')->get($cacheKey);
+        if ($cached !== null) {
+            return $cached;
+        }
+        
+        // 快取未命中，從檔案載入
+        $jsonPath = __DIR__ . '/../../storage/app/taiwan_geo_centers.json';
+        $geoCenters = [];
+        
+        if (file_exists($jsonPath)) {
+            $jsonContent = file_get_contents($jsonPath);
+            $data = json_decode($jsonContent, true);
+            $geoCenters = $data['geo_centers'] ?? [];
+        }
+        
+        // 快取結果到 Redis（快取 24 小時）
+        \Illuminate\Support\Facades\Cache::store('redis')->put($cacheKey, $geoCenters, 86400);
+        
+        return $geoCenters;
     }
 }
