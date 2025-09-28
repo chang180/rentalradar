@@ -271,6 +271,7 @@ class DataParserService
         $buildingAge = $constructionYear ? date('Y') - $constructionYear : null;
 
         return [
+            'serial_number' => $serialNumber,
             'city' => $city,
             'district' => $district,
             'latitude' => null,  // 預留給地理編碼
