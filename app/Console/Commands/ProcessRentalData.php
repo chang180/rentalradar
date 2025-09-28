@@ -154,9 +154,13 @@ class ProcessRentalData extends Command
             }
         }
 
-        // 步驟 6: 清理舊檔案
+        // 步驟 6: 清理下載檔案
+        $this->info("\n🧹 步驟 6: 清理下載檔案...");
+        $this->cleanupDownloadFile($downloadResult['file_path']);
+        
+        // 步驟 7: 清理舊檔案 (可選)
         if ($shouldCleanup) {
-            $this->info("\n🧹 步驟 6: 清理舊檔案...");
+            $this->info("\n🧹 步驟 7: 清理舊檔案...");
             $cleanupResult = $this->downloadService->cleanupOldFiles();
             $this->info("✅ 清理完成: 刪除 {$cleanupResult['deleted_count']} 個檔案");
         }
@@ -199,6 +203,23 @@ class ProcessRentalData extends Command
                 'successful' => 0,
                 'failed' => 50,
             ];
+        }
+    }
+
+    /**
+     * 清理下載檔案
+     */
+    private function cleanupDownloadFile(string $filePath): void
+    {
+        try {
+            if (file_exists($filePath)) {
+                unlink($filePath);
+                $this->info("✅ 已刪除下載檔案: " . basename($filePath));
+            } else {
+                $this->warn("⚠️ 檔案不存在: " . basename($filePath));
+            }
+        } catch (\Exception $e) {
+            $this->error("❌ 刪除檔案失敗: " . $e->getMessage());
         }
     }
 

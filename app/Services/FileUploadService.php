@@ -126,6 +126,9 @@ class FileUploadService
                     'duplicate_records' => $result['duplicate_records'] ?? 0,
                 ]);
 
+                // 處理完成後清理上傳檔案
+                $this->cleanupUploadFile($filePath);
+
                 return true;
             } else {
                 $fileUpload->update([
@@ -502,5 +505,23 @@ class FileUploadService
             'total_size' => $totalSize,
             'success_rate' => $totalUploads > 0 ? round(($completedUploads / $totalUploads) * 100, 2) : 0,
         ];
+    }
+
+    /**
+     * 清理上傳檔案
+     */
+    private function cleanupUploadFile(string $filePath): void
+    {
+        try {
+            if (file_exists($filePath)) {
+                unlink($filePath);
+                Log::info('Upload file cleaned up', ['file_path' => $filePath]);
+            }
+        } catch (\Exception $e) {
+            Log::error('Failed to cleanup upload file', [
+                'file_path' => $filePath,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 }
