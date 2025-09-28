@@ -1,9 +1,36 @@
 const https = require('https');
 const path = require('path');
+const fs = require('fs');
 
-// OAuth 設定
-const CLIENT_ID = '7a8573c37786a73a9affd9c04ab46202';
-const CLIENT_SECRET = '464cafb8daaadedafe599cc7f31826d5';
+// 安全地從環境變數讀取 OAuth 設定
+function getEnvVariable(varName) {
+  // 首先檢查 process.env
+  if (process.env[varName]) {
+    return process.env[varName];
+  }
+
+  // 如果環境變數不存在，嘗試從 .env 檔案讀取
+  try {
+    const envPath = path.join(__dirname, '../../.env');
+    const envContent = fs.readFileSync(envPath, 'utf8');
+
+    const lines = envContent.split('\n');
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+      if (trimmedLine.startsWith(`${varName}=`)) {
+        return trimmedLine.split('=')[1].trim();
+      }
+    }
+  } catch (error) {
+    console.log(`⚠️  無法讀取 ${varName} 環境變數:`, error.message);
+  }
+
+  return null;
+}
+
+// OAuth 設定（從環境變數讀取）
+const CLIENT_ID = getEnvVariable('LINEAR_CLIENT_ID');
+const CLIENT_SECRET = getEnvVariable('LINEAR_CLIENT_SECRET');
 const REDIRECT_URI = 'http://localhost:8000/callback';
 
 // Linear API 端點
@@ -96,17 +123,26 @@ async function getTokenFromCode(code) {
 
 // 使用 token 進行 API 請求
 async function makeApiRequest(query, variables = {}) {
-  const token = loadToken();
-  
-  if (!token || !token.access_token) {
-    throw new Error('需要先進行 OAuth 認證');
+  // 優先使用 .env 中的 LINEAR_API_TOKEN
+  const envToken = getEnvVariable('LINEAR_API_TOKEN');
+
+  let authHeader;
+  if (envToken) {
+    authHeader = `Bearer ${envToken}`;
+  } else {
+    // 備用方案：使用 OAuth token
+    const oauthToken = loadToken();
+    if (!oauthToken || !oauthToken.access_token) {
+      throw new Error('需要先進行 OAuth 認證或在 .env 中設定 LINEAR_API_TOKEN');
+    }
+    authHeader = `Bearer ${oauthToken.access_token}`;
   }
 
   const options = {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token.access_token}`
+      'Authorization': authHeader
     }
   };
 
@@ -283,9 +319,19 @@ async function main() {
   const command = process.argv[2];
   const args = process.argv.slice(3);
 
+  // 檢查必要的環境變數
+  if (!CLIENT_ID || !CLIENT_SECRET) {
+    console.log('❌ 缺少必要的環境變數');
+    console.log('💡 請確認 .env 檔案中有設定:');
+    console.log('   LINEAR_CLIENT_ID');
+    console.log('   LINEAR_CLIENT_SECRET');
+    return;
+  }
+
   try {
     switch (command) {
       case 'auth':
+        console.log('✅ 環境變數載入成功');
         console.log('🔐 請前往以下 URL 進行授權:');
         console.log(getAuthUrl());
         console.log('\n📋 授權完成後，請複製授權碼並執行:');
@@ -312,9 +358,23 @@ async function main() {
         break;
 
       case 'status':
+        // 檢查並顯示使用的 token 類型
+        const envToken = getEnvVariable('LINEAR_API_TOKEN');
+        const oauthToken = loadToken();
+
+        if (envToken) {
+          console.log('🔑 使用 .env 中的 LINEAR_API_TOKEN');
+        } else if (oauthToken && oauthToken.access_token) {
+          console.log('🔑 使用 OAuth token');
+        } else {
+          console.log('❌ 無可用的 token');
+          console.log('💡 請設定 LINEAR_API_TOKEN 或執行 OAuth 認證');
+          return;
+        }
+
         console.log('🔍 正在檢查 Linear 連接...');
         const teamsResult = await listTeamsAndProjects();
-        
+
         if (teamsResult.errors) {
           console.log('❌ API 錯誤:', teamsResult.errors);
           return;

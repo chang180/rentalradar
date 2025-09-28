@@ -49,7 +49,43 @@ class MapDataController extends Controller
         $connection->enableQueryLog();
 
         // 檢查是否有 bounds 參數，如果有則查詢個別屬性，否則使用聚合資料
-        if ($request->has('bounds') || $request->has(['north', 'south', 'east', 'west'])) {
+        // 但如果沒有選擇縣市和行政區，即使有 bounds 也使用聚合資料
+        if (($request->has('bounds') || $request->has(['north', 'south', 'east', 'west'])) && 
+            !($request->has('city') || $request->has('district'))) {
+            // 有 bounds 但沒有 city/district，使用聚合資料
+            $aggregatedData = $this->geoAggregationService->getAggregatedProperties($filters);
+
+            // 只回傳有座標的資料
+            $properties = $aggregatedData->filter(function ($item) {
+                return $item['has_coordinates'];
+            })->values();
+
+            $monitor->mark('query_loaded');
+            $queryCount = count($connection->getQueryLog());
+            $connection->disableQueryLog();
+
+            $responseData = [
+                'rentals' => $this->mapDataService->transformAggregatedToRentals($properties),
+                'statistics' => $this->mapDataService->calculateStatistics($properties),
+            ];
+
+            // 快取結果
+            $this->mapCacheService->cacheMapRentals($filters, $responseData);
+
+            broadcast(new MapDataUpdated($responseData, 'properties'));
+
+            return response()->json([
+                'success' => true,
+                'data' => $responseData,
+                'meta' => [
+                    'performance' => $monitor->summary([
+                        'query_count' => $queryCount,
+                    ]),
+                    'aggregation_type' => 'geo_center',
+                ],
+            ]);
+        } elseif (($request->has('bounds') || $request->has(['north', 'south', 'east', 'west'])) && 
+                  ($request->has('city') || $request->has('district'))) {
             $query = \App\Models\Property::query()->geocoded();
             $this->applyBounds($request, $query);
 

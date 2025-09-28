@@ -53,7 +53,10 @@
       "Bash(curl -s \"https://rentalradar.test/api/map/cities\" -H \"Accept: application/json\")",
       "Bash(curl:*)",
       "Bash(https://api.linear.app/graphql)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(git commit:*)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan test tests/Feature/ModelConsistencyTest.php)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan test --filter=ModelConsistencyTest)"
     ]
   },
   "enableAllProjectMcpServers": true,

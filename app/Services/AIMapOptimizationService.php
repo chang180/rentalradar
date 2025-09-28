@@ -227,19 +227,21 @@ class AIMapOptimizationService
             return $clusters;
         }
 
-        // 簡化的 K-means 實作
+        // K-means 實作，匹配 JS 版本邏輯
         $centers = $this->initializeCenters($data, $k);
-        $maxIterations = 10;
+        $maxIterations = 15; // 匹配 JS 版本
+        $shiftTolerance = 0.025; // 匹配 JS 版本 (~25 公尺)
         $clusters = [];
+        $assignments = array_fill(0, count($data), -1);
 
         for ($iter = 0; $iter < $maxIterations; $iter++) {
-            $assignments = [];
-            $newCenters = [];
+            $newCenters = array_fill(0, $k, ['lat' => 0, 'lng' => 0]);
             $counts = array_fill(0, $k, 0);
-            $sums = array_fill(0, $k, ['lat' => 0, 'lng' => 0]);
+            $errors = array_fill(0, count($data), 0);
+            $assignmentChanged = false;
 
             // 分配點到最近的中心
-            foreach ($data as $point) {
+            foreach ($data as $pointIndex => $point) {
                 $minDistance = PHP_FLOAT_MAX;
                 $closestCenter = 0;
 
@@ -251,65 +253,94 @@ class AIMapOptimizationService
                     }
                 }
 
-                $assignments[] = $closestCenter;
-                $sums[$closestCenter]['lat'] += $point['lat'];
-                $sums[$closestCenter]['lng'] += $point['lng'];
+                if ($assignments[$pointIndex] !== $closestCenter) {
+                    $assignmentChanged = true;
+                    $assignments[$pointIndex] = $closestCenter;
+                }
+
+                $errors[$pointIndex] = $minDistance;
+                $newCenters[$closestCenter]['lat'] += $point['lat'];
+                $newCenters[$closestCenter]['lng'] += $point['lng'];
                 $counts[$closestCenter]++;
             }
 
-            // 更新中心點
-            $converged = true;
+            // 更新中心點並檢查收斂
+            $maxShift = 0;
             for ($i = 0; $i < $k; $i++) {
-                if ($counts[$i] > 0) {
-                    $newCenter = [
-                        'lat' => $sums[$i]['lat'] / $counts[$i],
-                        'lng' => $sums[$i]['lng'] / $counts[$i],
-                    ];
-
-                    if ($this->calculateDistance($centers[$i], $newCenter) > 0.001) {
-                        $converged = false;
+                if ($counts[$i] === 0) {
+                    // 處理空聚類：重新分配錯誤最大的點
+                    $maxError = -1;
+                    $maxErrorIndex = null;
+                    foreach ($errors as $idx => $error) {
+                        if ($assignments[$idx] !== $i && $error > $maxError) {
+                            $maxError = $error;
+                            $maxErrorIndex = $idx;
+                        }
                     }
 
-                    $newCenters[$i] = $newCenter;
-                } else {
-                    $newCenters[$i] = $centers[$i];
+                    if ($maxErrorIndex !== null) {
+                        $centers[$i] = [
+                            'lat' => $data[$maxErrorIndex]['lat'],
+                            'lng' => $data[$maxErrorIndex]['lng'],
+                        ];
+                        $assignments[$maxErrorIndex] = $i;
+                        $assignmentChanged = true;
+                    }
+                    continue;
                 }
+
+                $newCenter = [
+                    'lat' => $newCenters[$i]['lat'] / $counts[$i],
+                    'lng' => $newCenters[$i]['lng'] / $counts[$i],
+                ];
+
+                $shift = $this->calculateDistance($centers[$i], $newCenter);
+                $centers[$i] = $newCenter;
+                $maxShift = max($maxShift, $shift);
             }
 
-            $centers = $newCenters;
-            if ($converged) {
+            if (!$assignmentChanged && $maxShift <= $shiftTolerance) {
                 break;
             }
         }
 
         // 建立最終聚合
-        foreach ($centers as $i => $center) {
-            if ($counts[$i] > 0) {
-                $clusterPoints = array_filter($data, function ($point, $index) use ($assignments, $i) {
-                    return $assignments[$index] === $i;
-                }, ARRAY_FILTER_USE_BOTH);
-
-                $prices = array_column($clusterPoints, 'price');
-                $prices = array_filter($prices, function ($price) {
-                    return $price !== null && $price > 0;
-                });
-
-                $clusters[] = [
-                    'id' => "cluster_{$i}",
-                    'center' => $center,
-                    'count' => $counts[$i],
-                    'bounds' => $this->calculateBounds($clusterPoints),
-                    'radius_km' => $this->calculateClusterRadius($clusterPoints, $center),
-                    'density' => $counts[$i] / max(1, $this->calculateClusterRadius($clusterPoints, $center)),
-                    'visual_level' => min(5, max(1, intval($counts[$i] / 10) + 1)),
-                    'price_stats' => [
-                        'avg' => count($prices) > 0 ? array_sum($prices) / count($prices) : 0,
-                        'min' => count($prices) > 0 ? min($prices) : 0,
-                        'max' => count($prices) > 0 ? max($prices) : 0,
-                        'median' => count($prices) > 0 ? $this->calculateMedian($prices) : 0,
-                    ],
-                ];
+        $memberPoints = array_fill(0, $k, []);
+        foreach ($assignments as $pointIndex => $clusterIndex) {
+            if ($clusterIndex >= 0) {
+                $memberPoints[$clusterIndex][] = $data[$pointIndex];
             }
+        }
+
+        foreach ($memberPoints as $i => $points) {
+            if (count($points) === 0) continue;
+
+            $prices = array_column($points, 'price');
+            $prices = array_filter($prices, function ($price) {
+                return $price !== null && $price > 0;
+            });
+
+            $radius = $this->calculateClusterRadius($points, $centers[$i]);
+            $density = $radius > 0 ? count($points) / (pi() * $radius ** 2) : null;
+
+            $clusters[] = [
+                'id' => "cluster_{$i}",
+                'center' => [
+                    'lat' => round($centers[$i]['lat'], 6),
+                    'lng' => round($centers[$i]['lng'], 6),
+                ],
+                'count' => count($points),
+                'bounds' => $this->calculateBounds($points),
+                'radius_km' => round($radius, 4),
+                'density' => $density !== null ? round($density, 4) : null,
+                'visual_level' => $this->calculateVisualLevel(count($points), $density, count($prices) > 0 ? array_sum($prices) / count($prices) : 0),
+                'price_stats' => [
+                    'avg' => count($prices) > 0 ? round(array_sum($prices) / count($prices)) : 0,
+                    'min' => count($prices) > 0 ? round(min($prices)) : 0,
+                    'max' => count($prices) > 0 ? round(max($prices)) : 0,
+                    'median' => count($prices) > 0 ? round($this->calculateMedian($prices)) : 0,
+                ],
+            ];
         }
 
         return $clusters;
@@ -400,22 +431,25 @@ class AIMapOptimizationService
     }
 
     /**
-     * 初始化 K-means 中心點
+     * 初始化 K-means 中心點 (決定性方法，匹配 JS 版本)
      */
     private function initializeCenters(array $data, int $k): array
     {
+        // 依緯度排序，與 JS 版本保持一致
+        $sorted = $data;
+        usort($sorted, function($a, $b) {
+            $latCompare = $a['lat'] <=> $b['lat'];
+            return $latCompare !== 0 ? $latCompare : $a['lng'] <=> $b['lng'];
+        });
+
+        $step = max(1, floor(count($sorted) / $k));
         $centers = [];
-        $used = [];
 
-        for ($i = 0; $i < $k && $i < count($data); $i++) {
-            do {
-                $index = array_rand($data);
-            } while (in_array($index, $used));
-
-            $used[] = $index;
+        for ($i = 0; $i < $k; $i++) {
+            $index = min($i * $step, count($sorted) - 1);
             $centers[] = [
-                'lat' => $data[$index]['lat'],
-                'lng' => $data[$index]['lng'],
+                'lat' => $sorted[$index]['lat'],
+                'lng' => $sorted[$index]['lng'],
             ];
         }
 
@@ -519,6 +553,29 @@ class AIMapOptimizationService
         }
 
         return $values[$middle];
+    }
+
+    /**
+     * 計算視覺等級（匹配 JS 版本）
+     */
+    private function calculateVisualLevel(int $count, ?float $density, float $avgPrice): int
+    {
+        $level = 1;
+
+        // 基於數量
+        if ($count >= 100) $level += 2;
+        else if ($count >= 50) $level += 1.5;
+        else if ($count >= 20) $level += 1;
+
+        // 基於密度
+        if ($density && $density >= 50) $level += 1;
+        else if ($density && $density >= 20) $level += 0.5;
+
+        // 基於價格
+        if ($avgPrice >= 40000) $level += 1;
+        else if ($avgPrice >= 25000) $level += 0.5;
+
+        return min(5, max(1, round($level)));
     }
 
     /**
