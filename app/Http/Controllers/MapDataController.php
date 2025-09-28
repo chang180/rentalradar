@@ -55,10 +55,8 @@ class MapDataController extends Controller
             // 有 bounds 但沒有 city/district，使用聚合資料
             $aggregatedData = $this->geoAggregationService->getAggregatedProperties($filters);
 
-            // 只回傳有座標的資料
-            $properties = $aggregatedData->filter(function ($item) {
-                return $item->has_coordinates ?? false;
-            })->values();
+            // 回傳所有聚合資料，不強制要求座標
+            $properties = $aggregatedData;
 
             $monitor->mark('query_loaded');
 
@@ -184,10 +182,8 @@ class MapDataController extends Controller
             // 沒有 bounds 參數時使用聚合資料
             $aggregatedData = $this->geoAggregationService->getAggregatedProperties($filters);
 
-            // 只回傳有座標的資料
-            $properties = $aggregatedData->filter(function ($item) {
-                return $item->has_coordinates ?? false;
-            })->values();
+            // 回傳所有聚合資料，不強制要求座標
+            $properties = $aggregatedData;
 
             $monitor->mark('query_loaded');
             $queryCount = count($connection->getQueryLog());
@@ -450,6 +446,9 @@ class MapDataController extends Controller
             $query->whereBetween('latitude', [$bounds['south'], $bounds['north']])
                 ->whereBetween('longitude', [$bounds['west'], $bounds['east']]);
         }
+        
+        // 如果沒有經緯度座標，不進行篩選，顯示所有資料
+        // 這樣可以讓沒有地理編碼的資料也能顯示
     }
 
     /**
@@ -735,8 +734,8 @@ class MapDataController extends Controller
             $aggregatedData = $this->geoAggregationService->getAggregatedProperties([]);
             $hasAggregatedData = $aggregatedData->count() > 0;
             
-            // 只要有聚合資料就可以顯示，不強制要求原始資料
-            $isReady = $hasAggregatedData;
+            // 如果完全沒有資料，也允許顯示（顯示空狀態）
+            $isReady = true;
             
             return response()->json([
                 'success' => $isReady,
