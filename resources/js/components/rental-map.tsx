@@ -354,6 +354,20 @@ const RentalMap = memo(() => {
             const coordinates = defaultCoordinates[cityDistrictKey] || defaultCoordinates[district];
             if (coordinates) {
                 mapRef.current.setView(coordinates, 12);
+            } else {
+                // 如果降級處理中沒有找到座標，嘗試使用城市中心點
+                try {
+                    const cityCenterResponse = await fetch(
+                        `/api/map/city-center?city=${encodeURIComponent(selectedCity)}`,
+                    );
+                    const cityCenterData = await cityCenterResponse.json();
+                    if (cityCenterData.success && cityCenterData.center && mapRef.current) {
+                        const { lat, lng } = cityCenterData.center;
+                        mapRef.current.setView([lat, lng], 13);
+                    }
+                } catch (cityCenterErr) {
+                    console.error('Failed to get city center:', cityCenterErr);
+                }
             }
         }
     }, [selectedCity]);

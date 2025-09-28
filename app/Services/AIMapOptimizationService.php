@@ -41,7 +41,7 @@ class AIMapOptimizationService
                 'clusters' => $clusters,
                 'algorithm_info' => [
                     'algorithm' => $algorithm,
-                    'n_clusters' => $nClusters,
+                        'n_clusters' => $nClusters,
                     'total_points' => count($data),
                     'cluster_count' => count($clusters),
                 ],
@@ -362,7 +362,7 @@ class AIMapOptimizationService
             $latIndex = floor($point['lat'] / $gridSize);
             $lngIndex = floor($point['lng'] / $gridSize);
             $key = "{$latIndex}_{$lngIndex}";
-
+            
             if (! isset($grid[$key])) {
                 $grid[$key] = [];
             }
