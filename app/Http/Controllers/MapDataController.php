@@ -111,7 +111,7 @@ class MapDataController extends Controller
                 $specialData = $this->handleSpecialCityCase($request->city, $request->district);
                 $properties = collect($specialData);
             } else {
-                $query = \App\Models\Property::query()->geocoded();
+                $query = \App\Models\Property::query();
                 $this->applyBounds($request, $query);
 
                 if ($request->has('city')) {
@@ -485,7 +485,7 @@ class MapDataController extends Controller
         $connection->flushQueryLog();
         $connection->enableQueryLog();
 
-        $query = \App\Models\Property::query()->geocoded();
+        $query = \App\Models\Property::query();
         $this->applyBounds($request, $query);
 
         if ($request->has('city')) {
@@ -575,7 +575,7 @@ class MapDataController extends Controller
     {
         // 嘉義市特例：需要同時查詢嘉義縣 嘉義市 和 嘉義市 嘉義市 的資料
         if ($city === '嘉義市') {
-            $query = \App\Models\Property::query()->geocoded();
+            $query = \App\Models\Property::query();
             
             if ($district) {
                 // 如果有指定行政區，查詢該行政區的資料
@@ -608,7 +608,7 @@ class MapDataController extends Controller
         
         // 新竹市特例：需要同時查詢新竹縣 新竹市 和 新竹市 新竹市 的資料
         if ($city === '新竹市') {
-            $query = \App\Models\Property::query()->geocoded();
+            $query = \App\Models\Property::query();
             
             if ($district) {
                 // 如果有指定行政區，查詢該行政區的資料
@@ -653,7 +653,7 @@ class MapDataController extends Controller
         $connection->enableQueryLog();
 
         // 應用邊界篩選
-        $query = \App\Models\Property::query()->geocoded();
+        $query = \App\Models\Property::query();
         $this->applyBounds($request, $query);
 
         if ($request->has('city')) {
@@ -719,6 +719,53 @@ class MapDataController extends Controller
     }
 
     /**
+     * 檢查地圖資料載入狀態
+     */
+    public function status(): JsonResponse
+    {
+        try {
+            // 檢查 Redis 快取狀態
+            $cacheStatus = $this->mapCacheService->getCacheStatus();
+            
+            // 檢查資料庫是否有資料
+            $propertyCount = \App\Models\Property::count();
+            $geocodedCount = \App\Models\Property::whereNotNull('latitude')->whereNotNull('longitude')->count();
+            
+            // 檢查聚合資料是否存在
+            $aggregatedData = $this->geoAggregationService->getAggregatedProperties([]);
+            $hasAggregatedData = $aggregatedData->count() > 0;
+            
+            // 只要有資料就可以顯示，不強制要求地理編碼
+            $isReady = $propertyCount > 0 && $hasAggregatedData;
+            
+            return response()->json([
+                'success' => $isReady,
+                'data' => [
+                    'is_ready' => $isReady,
+                    'property_count' => $propertyCount,
+                    'geocoded_count' => $geocodedCount,
+                    'aggregated_count' => $aggregatedData->count(),
+                    'cache_status' => $cacheStatus,
+                    'message' => $isReady 
+                        ? '地圖資料已準備完成' 
+                        : '地圖資料尚未準備完成，正在載入中...'
+                ],
+                'timestamp' => now()->toISOString(),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'data' => [
+                    'is_ready' => false,
+                    'error' => $e->getMessage(),
+                    'message' => '無法檢查地圖資料狀態'
+                ],
+                'timestamp' => now()->toISOString(),
+            ], 500);
+        }
+    }
+
+    /**
      * 獲取價格分析資料
      */
     public function priceAnalysis(Request $request): JsonResponse
@@ -729,7 +776,7 @@ class MapDataController extends Controller
         $connection->enableQueryLog();
 
         // 應用邊界篩選
-        $query = \App\Models\Property::query()->geocoded();
+        $query = \App\Models\Property::query();
         $this->applyBounds($request, $query);
 
         if ($request->has('city')) {

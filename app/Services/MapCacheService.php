@@ -267,4 +267,30 @@ class MapCacheService
             return false;
         }
     }
+
+    /**
+     * 取得快取狀態資訊
+     */
+    public function getCacheStatus(): array
+    {
+        try {
+            $isConnected = $this->isConnected();
+            $stats = $this->getCacheStats();
+            
+            return [
+                'redis_connected' => $isConnected,
+                'cache_stats' => $stats,
+                'has_cities_cache' => $this->getCachedCities() !== null,
+                'has_any_cache' => $stats['total_keys'] > 0,
+            ];
+        } catch (\Exception $e) {
+            return [
+                'redis_connected' => false,
+                'cache_stats' => ['total_keys' => 0, 'memory_usage' => 0, 'key_types' => []],
+                'has_cities_cache' => false,
+                'has_any_cache' => false,
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
 }

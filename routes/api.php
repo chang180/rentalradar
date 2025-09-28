@@ -49,6 +49,9 @@ Route::prefix('ai')->group(function () {
 
 // Map data API
 Route::prefix('map')->group(function () {
+    // 地圖狀態檢查路由
+    Route::get('/status', [MapDataController::class, 'status']);
+    
     // 基本地圖資料路由 - 使用 MapDataController (帶快取)
     Route::get('/rentals', [MapDataController::class, 'index']);
     Route::get('/statistics', [MapDataController::class, 'statistics']);

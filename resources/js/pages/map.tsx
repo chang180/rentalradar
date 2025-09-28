@@ -3,9 +3,10 @@ import { AppShell } from '@/components/app-shell';
 import { AppSidebar } from '@/components/app-sidebar';
 import { AppSidebarHeader } from '@/components/app-sidebar-header';
 import { Head, Link } from '@inertiajs/react';
-import { ArrowLeft, Clock, User } from 'lucide-react';
+import { ArrowLeft, Clock, User, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import RentalMap from '../components/rental-map';
+import { LoadingIndicator } from '../components/LoadingIndicator';
 
 interface MapProps {
     is_public?: boolean;
@@ -24,6 +25,43 @@ export default function Map({
 }: MapProps) {
     const [timeLeft, setTimeLeft] = useState(remaining_seconds);
     const [isActive, setIsActive] = useState(true);
+    const [isInitialLoading, setIsInitialLoading] = useState(true);
+    const [loadingError, setLoadingError] = useState<string | null>(null);
+    const [retryCount, setRetryCount] = useState(0);
+
+    // 檢查地圖資料載入狀態
+    useEffect(() => {
+        const checkMapDataStatus = async () => {
+            try {
+                // 檢查 Redis 快取狀態
+                const response = await fetch('/api/map/status');
+                const data = await response.json();
+                
+                if (data.success) {
+                    setIsInitialLoading(false);
+                    setLoadingError(null);
+                } else {
+                    setLoadingError('地圖資料尚未準備完成，正在載入中...');
+                    // 如果資料未準備好，等待 3 秒後重試
+                    setTimeout(() => {
+                        setRetryCount(prev => prev + 1);
+                        checkMapDataStatus();
+                    }, 3000);
+                }
+            } catch (error) {
+                console.error('Map data status check failed:', error);
+                setLoadingError('無法連接到地圖服務，請稍後再試');
+                // 5 秒後重試
+                setTimeout(() => {
+                    setRetryCount(prev => prev + 1);
+                    checkMapDataStatus();
+                }, 5000);
+            }
+        };
+
+        // 初始載入檢查
+        checkMapDataStatus();
+    }, [retryCount]);
 
     useEffect(() => {
         if (!is_public || !isActive || timeLeft <= 0) return;
@@ -82,6 +120,77 @@ export default function Map({
     const totalUsedSeconds = Math.max(0, 1800 - timeLeft);
     const usedMinutes = Math.floor(totalUsedSeconds / 60);
     const usedSeconds = Math.floor(totalUsedSeconds % 60);
+
+    // 重試載入地圖資料
+    const handleRetry = () => {
+        setRetryCount(0);
+        setIsInitialLoading(true);
+        setLoadingError(null);
+    };
+
+    // 載入狀態 UI
+    if (isInitialLoading) {
+        return (
+            <>
+                <Head title="載入中 - RentalRadar" />
+                <div className="flex h-screen flex-col bg-gray-50 dark:bg-gray-900">
+                    {/* 頂部導航欄 */}
+                    <header className="flex-shrink-0 border-b border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                        <div className="px-4 sm:px-6 lg:px-8">
+                            <div className="flex h-16 items-center justify-between">
+                                <div className="flex items-center space-x-4">
+                                    <Link
+                                        href="/"
+                                        className="flex items-center space-x-2 text-gray-600 transition-colors hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400"
+                                    >
+                                        <ArrowLeft className="h-5 w-5" />
+                                        <span>返回首頁</span>
+                                    </Link>
+                                </div>
+                                <div className="flex items-center space-x-4">
+                                    <div className="flex items-center space-x-2 rounded-lg bg-blue-50 px-3 py-2 dark:bg-blue-900/20">
+                                        <Loader2 className="h-4 w-4 animate-spin text-blue-600 dark:text-blue-400" />
+                                        <span className="text-sm text-blue-600 dark:text-blue-400">
+                                            載入中...
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </header>
+
+                    {/* 載入內容 */}
+                    <main className="flex min-h-0 flex-1 flex-col items-center justify-center">
+                        <div className="text-center">
+                            <div className="mb-6">
+                                <Loader2 className="mx-auto h-16 w-16 animate-spin text-blue-600 dark:text-blue-400" />
+                            </div>
+                            <h2 className="mb-2 text-2xl font-semibold text-gray-900 dark:text-gray-100">
+                                正在載入地圖資料
+                            </h2>
+                            <p className="mb-4 text-gray-600 dark:text-gray-400">
+                                {loadingError || '正在準備地圖資料，請稍候...'}
+                            </p>
+                            {retryCount > 0 && (
+                                <p className="mb-4 text-sm text-gray-500 dark:text-gray-500">
+                                    重試次數: {retryCount}
+                                </p>
+                            )}
+                            <div className="flex items-center justify-center space-x-4">
+                                <button
+                                    onClick={handleRetry}
+                                    className="flex items-center space-x-2 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+                                >
+                                    <RefreshCw className="h-4 w-4" />
+                                    <span>重新載入</span>
+                                </button>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            </>
+        );
+    }
 
     // 如果是公開模式，使用簡化的布局
     if (is_public) {
@@ -208,6 +317,30 @@ export default function Map({
                                 </p>
                             </div>
                         </div>
+
+                        {/* 載入狀態提示 */}
+                        {isInitialLoading && (
+                            <div className="border-b border-gray-200 bg-yellow-50 px-6 py-3 dark:border-gray-700 dark:bg-yellow-900/20">
+                                <div className="flex items-center space-x-2">
+                                    <Loader2 className="h-4 w-4 animate-spin text-yellow-600 dark:text-yellow-400" />
+                                    <span className="text-sm text-yellow-800 dark:text-yellow-200">
+                                        {loadingError || '正在載入地圖資料，請稍候...'}
+                                    </span>
+                                    {retryCount > 0 && (
+                                        <span className="text-xs text-yellow-600 dark:text-yellow-400">
+                                            (重試 {retryCount} 次)
+                                        </span>
+                                    )}
+                                    <button
+                                        onClick={handleRetry}
+                                        className="ml-2 flex items-center space-x-1 rounded bg-yellow-600 px-2 py-1 text-xs text-white hover:bg-yellow-700"
+                                    >
+                                        <RefreshCw className="h-3 w-3" />
+                                        <span>重試</span>
+                                    </button>
+                                </div>
+                            </div>
+                        )}
 
                         {/* 地圖容器 - 佔用剩餘空間 */}
                         <div className="flex-1 bg-white dark:bg-gray-800">
