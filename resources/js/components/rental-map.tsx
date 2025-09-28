@@ -13,6 +13,7 @@ import {
 } from 'react-leaflet';
 import { useAIMap } from '../hooks/use-ai-map';
 import { LoadingIndicator } from './LoadingIndicator';
+import { AlertCircle } from 'lucide-react';
 
 // 修正 Leaflet 預設圖標問題
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -842,6 +843,45 @@ const RentalMap = memo(() => {
 
             {/* 地圖容器 */}
             <div className="relative flex-1" style={{ minHeight: '400px' }}>
+                {/* 空資料狀態提示 */}
+                {!loading && !error && !isInitialLoad &&
+                 (!properties || properties.length === 0) &&
+                 (!clusters || clusters.length === 0) &&
+                 (!heatmapData || heatmapData.length === 0) && (
+                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-gray-50/90 dark:bg-gray-900/90">
+                        <div className="text-center">
+                            <div className="mb-4">
+                                <div className="mx-auto h-16 w-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                                    <AlertCircle className="h-8 w-8 text-gray-400 dark:text-gray-500" />
+                                </div>
+                            </div>
+                            <h3 className="mb-2 text-lg font-semibold text-gray-900 dark:text-gray-100">
+                                暫無租屋資料
+                            </h3>
+                            <p className="text-gray-600 dark:text-gray-400">
+                                {selectedCity || selectedDistrict 
+                                    ? '所選區域目前沒有可用的租屋資料，請選擇其他區域或查看全台資料'
+                                    : '目前沒有可用的租屋資料，請稍後再試或聯繫管理員'
+                                }
+                            </p>
+                            {(selectedCity || selectedDistrict) && (
+                                <button
+                                    onClick={() => {
+                                        setSelectedCity('');
+                                        setSelectedDistrict('');
+                                        if (mapRef.current) {
+                                            mapRef.current.setView(defaultCenter, defaultZoom);
+                                        }
+                                    }}
+                                    className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+                                >
+                                    查看全台資料
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                )}
+                
                 <MapContainer
                     center={defaultCenter}
                     zoom={defaultZoom}

@@ -13,10 +13,21 @@ test('login screen can be rendered', function () {
 test('users can authenticate using the login screen', function () {
     $user = User::factory()->create();
 
+    // 清理速率限制
+    \Illuminate\Support\Facades\RateLimiter::clear('login.' . request()->ip());
+
     $response = $this->post(route('login.store'), [
         'email' => $user->email,
         'password' => 'password',
     ]);
+
+    // Debug response
+    dump('Status: ' . $response->getStatusCode());
+    if ($response->getStatusCode() !== 302) {
+        dump('Content: ' . $response->getContent());
+    } else {
+        dump('Redirect to: ' . $response->headers->get('Location'));
+    }
 
     $this->assertAuthenticated();
     $response->assertRedirect(route('dashboard', absolute: false));
@@ -40,7 +51,7 @@ test('users with two factor enabled are redirected to two factor challenge', fun
         'two_factor_confirmed_at' => now(),
     ])->save();
 
-    $response = $this->post(route('login'), [
+    $response = $this->post(route('login.store'), [
         'email' => $user->email,
         'password' => 'password',
     ]);

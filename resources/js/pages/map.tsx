@@ -37,25 +37,50 @@ export default function Map({
                 const response = await fetch('/api/map/status');
                 const data = await response.json();
                 
-                if (data.success) {
+                // 檢查是否有實際的資料
+                const hasData = data.data && (
+                    data.data.property_count > 0 || 
+                    data.data.aggregated_count > 0 ||
+                    data.data.has_aggregated_data
+                );
+                
+                if (data.success && hasData) {
+                    // 有資料且成功
                     setIsInitialLoading(false);
                     setLoadingError(null);
+                } else if (data.success && !hasData) {
+                    // 成功但沒有資料
+                    setIsInitialLoading(false);
+                    setLoadingError('目前沒有可用的租屋資料，請稍後再試或聯繫管理員');
                 } else {
+                    // 資料未準備好
                     setLoadingError('地圖資料尚未準備完成，正在載入中...');
-                    // 如果資料未準備好，等待 3 秒後重試
-                    setTimeout(() => {
-                        setRetryCount(prev => prev + 1);
-                        checkMapDataStatus();
-                    }, 3000);
+                    // 如果資料未準備好，等待 3 秒後重試，但最多重試 5 次
+                    if (retryCount < 5) {
+                        setTimeout(() => {
+                            setRetryCount(prev => prev + 1);
+                            checkMapDataStatus();
+                        }, 3000);
+                    } else {
+                        // 重試次數過多，顯示錯誤
+                        setIsInitialLoading(false);
+                        setLoadingError('地圖資料載入失敗，請重新整理頁面或聯繫管理員');
+                    }
                 }
             } catch (error) {
                 console.error('Map data status check failed:', error);
                 setLoadingError('無法連接到地圖服務，請稍後再試');
-                // 5 秒後重試
-                setTimeout(() => {
-                    setRetryCount(prev => prev + 1);
-                    checkMapDataStatus();
-                }, 5000);
+                // 5 秒後重試，但最多重試 3 次
+                if (retryCount < 3) {
+                    setTimeout(() => {
+                        setRetryCount(prev => prev + 1);
+                        checkMapDataStatus();
+                    }, 5000);
+                } else {
+                    // 重試次數過多，顯示錯誤
+                    setIsInitialLoading(false);
+                    setLoadingError('無法連接到地圖服務，請檢查網路連接或聯繫管理員');
+                }
             }
         };
 
@@ -128,11 +153,14 @@ export default function Map({
         setLoadingError(null);
     };
 
-    // 載入狀態 UI
-    if (isInitialLoading) {
+    // 載入狀態或錯誤狀態 UI
+    if (isInitialLoading || loadingError) {
+        const isError = loadingError && !isInitialLoading;
+        const isNoData = loadingError && loadingError.includes('沒有可用的租屋資料');
+        
         return (
             <>
-                <Head title="載入中 - RentalRadar" />
+                <Head title={isError ? "載入失敗 - RentalRadar" : "載入中 - RentalRadar"} />
                 <div className="flex h-screen flex-col bg-gray-50 dark:bg-gray-900">
                     {/* 頂部導航欄 */}
                     <header className="flex-shrink-0 border-b border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
@@ -148,10 +176,22 @@ export default function Map({
                                     </Link>
                                 </div>
                                 <div className="flex items-center space-x-4">
-                                    <div className="flex items-center space-x-2 rounded-lg bg-blue-50 px-3 py-2 dark:bg-blue-900/20">
-                                        <Loader2 className="h-4 w-4 animate-spin text-blue-600 dark:text-blue-400" />
-                                        <span className="text-sm text-blue-600 dark:text-blue-400">
-                                            載入中...
+                                    <div className={`flex items-center space-x-2 rounded-lg px-3 py-2 ${
+                                        isError 
+                                            ? 'bg-red-50 dark:bg-red-900/20' 
+                                            : 'bg-blue-50 dark:bg-blue-900/20'
+                                    }`}>
+                                        {isInitialLoading ? (
+                                            <Loader2 className="h-4 w-4 animate-spin text-blue-600 dark:text-blue-400" />
+                                        ) : (
+                                            <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                                        )}
+                                        <span className={`text-sm ${
+                                            isError 
+                                                ? 'text-red-600 dark:text-red-400' 
+                                                : 'text-blue-600 dark:text-blue-400'
+                                        }`}>
+                                            {isInitialLoading ? '載入中...' : '載入失敗'}
                                         </span>
                                     </div>
                                 </div>
@@ -163,15 +203,28 @@ export default function Map({
                     <main className="flex min-h-0 flex-1 flex-col items-center justify-center">
                         <div className="text-center">
                             <div className="mb-6">
-                                <Loader2 className="mx-auto h-16 w-16 animate-spin text-blue-600 dark:text-blue-400" />
+                                {isInitialLoading ? (
+                                    <Loader2 className="mx-auto h-16 w-16 animate-spin text-blue-600 dark:text-blue-400" />
+                                ) : isNoData ? (
+                                    <div className="mx-auto h-16 w-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                                        <AlertCircle className="h-8 w-8 text-gray-400 dark:text-gray-500" />
+                                    </div>
+                                ) : (
+                                    <AlertCircle className="mx-auto h-16 w-16 text-red-500 dark:text-red-400" />
+                                )}
                             </div>
                             <h2 className="mb-2 text-2xl font-semibold text-gray-900 dark:text-gray-100">
-                                正在載入地圖資料
+                                {isInitialLoading 
+                                    ? '正在載入地圖資料'
+                                    : isNoData 
+                                        ? '暫無可用資料'
+                                        : '載入失敗'
+                                }
                             </h2>
                             <p className="mb-4 text-gray-600 dark:text-gray-400">
                                 {loadingError || '正在準備地圖資料，請稍候...'}
                             </p>
-                            {retryCount > 0 && (
+                            {retryCount > 0 && isInitialLoading && (
                                 <p className="mb-4 text-sm text-gray-500 dark:text-gray-500">
                                     重試次數: {retryCount}
                                 </p>
@@ -184,6 +237,15 @@ export default function Map({
                                     <RefreshCw className="h-4 w-4" />
                                     <span>重新載入</span>
                                 </button>
+                                {isNoData && (
+                                    <Link
+                                        href="/"
+                                        className="flex items-center space-x-2 rounded-lg bg-gray-600 px-4 py-2 text-white hover:bg-gray-700"
+                                    >
+                                        <ArrowLeft className="h-4 w-4" />
+                                        <span>返回首頁</span>
+                                    </Link>
+                                )}
                             </div>
                         </div>
                     </main>
