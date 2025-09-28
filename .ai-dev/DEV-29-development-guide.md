@@ -41,71 +41,28 @@
 app/
 ├── Http/
 │   ├── Controllers/
-│   │   ├── PermissionController.php
-│   │   ├── RoleController.php
-│   │   └── UserPermissionController.php
+│   │   ├── AdminController.php
+│   │   ├── FileUploadController.php
+│   │   └── PermissionController.php
 │   ├── Middleware/
-│   │   ├── CheckPermission.php
-│   │   └── CheckRole.php
+│   │   ├── CheckAdmin.php
+│   │   └── CheckUploadPermission.php
 │   └── Requests/
-│       ├── PermissionRequest.php
-│       └── RoleRequest.php
+│       ├── FileUploadRequest.php
+│       └── AdminRequest.php
 ├── Models/
-│   ├── Role.php
-│   ├── Permission.php
-│   └── UserRole.php
+│   ├── User.php (新增 role_type 欄位)
+│   └── FileUpload.php
 └── Services/
     ├── PermissionService.php
-    ├── RoleService.php
-    ├── UserPermissionService.php
+    ├── FileUploadService.php
     └── PermissionAuditService.php
 ```
 
 ### 資料庫設計
 ```sql
--- 角色表
-CREATE TABLE roles (
-    id BIGINT PRIMARY KEY AUTOINCREMENT,
-    name VARCHAR(255) NOT NULL UNIQUE,
-    display_name VARCHAR(255) NOT NULL,
-    description TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- 權限表
-CREATE TABLE permissions (
-    id BIGINT PRIMARY KEY AUTOINCREMENT,
-    name VARCHAR(255) NOT NULL UNIQUE,
-    display_name VARCHAR(255) NOT NULL,
-    description TEXT,
-    resource VARCHAR(255) NOT NULL,
-    action VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- 角色權限關聯表
-CREATE TABLE role_permissions (
-    id BIGINT PRIMARY KEY AUTOINCREMENT,
-    role_id BIGINT NOT NULL,
-    permission_id BIGINT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
-    FOREIGN KEY (permission_id) REFERENCES permissions(id) ON DELETE CASCADE,
-    UNIQUE(role_id, permission_id)
-);
-
--- 使用者角色關聯表
-CREATE TABLE user_roles (
-    id BIGINT PRIMARY KEY AUTOINCREMENT,
-    user_id BIGINT NOT NULL,
-    role_id BIGINT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
-    UNIQUE(user_id, role_id)
-);
+-- 在現有的 users 表中新增權限欄位
+ALTER TABLE users ADD COLUMN role_type TINYINT DEFAULT 0 COMMENT '0=一般使用者, 1=管理員';
 
 -- 權限操作日誌表
 CREATE TABLE permission_logs (
@@ -119,88 +76,100 @@ CREATE TABLE permission_logs (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
+
+-- 檔案上傳記錄表
+CREATE TABLE file_uploads (
+    id BIGINT PRIMARY KEY AUTOINCREMENT,
+    user_id BIGINT NOT NULL,
+    filename VARCHAR(255) NOT NULL,
+    original_name VARCHAR(255) NOT NULL,
+    file_size BIGINT NOT NULL,
+    file_type VARCHAR(100) NOT NULL,
+    upload_path VARCHAR(500) NOT NULL,
+    status ENUM('pending', 'processing', 'completed', 'failed') DEFAULT 'pending',
+    error_message TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
 ```
 
 ### 前端架構
 ```
 resources/js/
 ├── components/
-│   ├── permissions/
-│   │   ├── PermissionList.tsx
-│   │   ├── RoleManagement.tsx
-│   │   ├── UserRoleAssignment.tsx
-│   │   └── PermissionAudit.tsx
-│   └── admin/
-│       ├── AdminDashboard.tsx
-│       └── SystemSettings.tsx
+│   ├── admin/
+│   │   ├── AdminDashboard.tsx
+│   │   ├── UserManagement.tsx
+│   │   └── SystemSettings.tsx
+│   ├── upload/
+│   │   ├── FileUpload.tsx
+│   │   └── UploadHistory.tsx
+│   └── permissions/
+│       └── PermissionAudit.tsx
 ├── hooks/
-│   ├── usePermissions.ts
-│   └── useRoles.ts
+│   ├── useAdmin.ts
+│   └── useFileUpload.ts
 └── pages/
     ├── AdminDashboard.tsx
-    └── PermissionManagement.tsx
+    └── FileUpload.tsx
 ```
 
 ## 🔧 實作步驟
 
-### 階段 1: 權限管理基礎架構 (2-3 天)
+### 階段 1: 權限管理基礎架構 (1-2 天)
 
 #### 1.1 建立資料庫遷移
 ```bash
-php artisan make:migration create_roles_table
-php artisan make:migration create_permissions_table
-php artisan make:migration create_role_permissions_table
-php artisan make:migration create_user_roles_table
+php artisan make:migration add_role_type_to_users_table
 php artisan make:migration create_permission_logs_table
+php artisan make:migration create_file_uploads_table
 ```
 
 #### 1.2 建立模型
 ```bash
-php artisan make:model Role
-php artisan make:model Permission
-php artisan make:model UserRole
+php artisan make:model FileUpload
 ```
 
 #### 1.3 建立服務類別
 ```bash
 php artisan make:class PermissionService
-php artisan make:class RoleService
-php artisan make:class UserPermissionService
+php artisan make:class FileUploadService
 php artisan make:class PermissionAuditService
 ```
 
 #### 1.4 建立中介軟體
 ```bash
-php artisan make:middleware CheckPermission
-php artisan make:middleware CheckRole
+php artisan make:middleware CheckAdmin
+php artisan make:middleware CheckUploadPermission
 ```
 
-### 階段 2: 角色權限系統 (2-3 天)
+### 階段 2: 簡單權限系統 (1-2 天)
 
 #### 2.1 實作權限檢查邏輯
+- 建立管理員權限檢查
+- 實作一般使用者權限檢查
 - 建立權限快取機制
-- 實作權限繼承邏輯
-- 建立權限覆蓋機制
 
-#### 2.2 實作角色管理
-- 建立角色 CRUD 功能
-- 實作角色權限分配
-- 建立角色模板系統
+#### 2.2 實作使用者管理
+- 建立使用者角色切換功能
+- 實作管理員權限分配
+- 建立使用者權限狀態管理
 
-#### 2.3 實作使用者權限
-- 建立使用者角色分配
-- 實作權限檢查 API
-- 建立權限狀態管理
+#### 2.3 實作權限 API
+- 建立權限檢查 API
+- 實作管理員功能 API
+- 建立權限狀態 API
 
 ### 階段 3: 資料上傳權限控制 (2-3 天)
 
-#### 3.1 建立檔案上傳權限
-- 實作上傳權限檢查
+#### 3.1 建立檔案上傳功能
+- 實作檔案上傳 API
 - 建立檔案安全檢查
 - 實作檔案格式驗證
 
-#### 3.2 建立資料匯入權限
-- 實作匯入權限控制
+#### 3.2 建立資料匯入功能
+- 實作資料匯入處理
 - 建立資料驗證機制
 - 實作匯入日誌記錄
 
@@ -260,35 +229,30 @@ php artisan make:middleware CheckRole
 
 ## 📊 API 端點設計
 
-### 權限管理 API
+### 管理員功能 API
 ```
-GET    /api/permissions              # 取得權限列表
-POST   /api/permissions              # 建立新權限
-PUT    /api/permissions/{id}         # 更新權限
-DELETE /api/permissions/{id}         # 刪除權限
-```
-
-### 角色管理 API
-```
-GET    /api/roles                    # 取得角色列表
-POST   /api/roles                    # 建立新角色
-PUT    /api/roles/{id}               # 更新角色
-DELETE /api/roles/{id}               # 刪除角色
-POST   /api/roles/{id}/permissions   # 分配角色權限
+GET    /api/admin/users              # 取得使用者列表
+PUT    /api/admin/users/{id}/role    # 更新使用者角色
+GET    /api/admin/dashboard          # 取得管理員儀表板
 ```
 
-### 使用者權限 API
+### 檔案上傳 API
 ```
-GET    /api/users/{id}/permissions   # 取得使用者權限
-POST   /api/users/{id}/roles        # 分配使用者角色
-DELETE /api/users/{id}/roles/{role_id} # 移除使用者角色
+POST   /api/upload/file              # 上傳檔案
+GET    /api/upload/history           # 取得上傳歷史
+DELETE /api/upload/{id}              # 刪除上傳檔案
+```
+
+### 權限檢查 API
+```
+GET    /api/permissions/check        # 檢查使用者權限
+GET    /api/permissions/status       # 取得權限狀態
 ```
 
 ### 權限審計 API
 ```
-GET    /api/permission-logs         # 取得權限操作日誌
+GET    /api/permission-logs          # 取得權限操作日誌
 GET    /api/permission-stats         # 取得權限使用統計
-GET    /api/permission-reports      # 取得權限分析報告
 ```
 
 ## 🧪 測試策略
@@ -335,13 +299,13 @@ GET    /api/permission-reports      # 取得權限分析報告
 - 提升系統可維護性
 
 ## 🚀 開發時程
-- **階段 1**: 權限管理基礎架構 (2-3 天)
-- **階段 2**: 角色權限系統 (2-3 天)
+- **階段 1**: 權限管理基礎架構 (1-2 天)
+- **階段 2**: 簡單權限系統 (1-2 天)
 - **階段 3**: 資料上傳權限控制 (2-3 天)
 - **階段 4**: 權限審計系統 (1-2 天)
 - **階段 5**: 測試和優化 (1-2 天)
 
-**總預估時間**: 8-13 天
+**總預估時間**: 6-11 天
 
 ## 🔗 相依性
 - Laravel 12 權限管理套件
