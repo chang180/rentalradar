@@ -88,7 +88,21 @@
       "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan test tests/Feature/MapDataControllerCacheTest.php)",
       "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan test tests/Feature/MapDataControllerCacheTest.php --filter=\"returns different cached data\")",
       "Bash(git log:*)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan make:migration create_district_statistics_table --no-interaction)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan make:model DistrictStatistics --no-interaction)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan make:migration create_city_statistics_table --no-interaction)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan make:model CityStatistics --no-interaction)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan make:class Services/StatisticsUpdateService --no-interaction)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan make:class Services/IntelligentCacheService --no-interaction)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan make:job UpdateDistrictStatisticsJob --no-interaction)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan make:event PropertyCreated --no-interaction)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan make:listener UpdateStatisticsOnPropertyCreated --event=PropertyCreated --no-interaction)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan make:command PopulateStatisticsCommand --no-interaction)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan statistics:populate --no-interaction)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan make:test OptimizedGeoAggregationServiceTest --no-interaction)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan test tests/Feature/OptimizedGeoAggregationServiceTest.php --no-interaction)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan test tests/Feature/OptimizedGeoAggregationServiceTest.php)"
     ]
   },
   "enableAllProjectMcpServers": true,

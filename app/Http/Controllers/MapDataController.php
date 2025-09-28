@@ -4,9 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Events\MapDataUpdated;
 use App\Services\AIMapOptimizationService;
-use App\Services\GeoAggregationService;
 use App\Services\MapCacheService;
 use App\Services\MapDataService;
+use App\Services\OptimizedGeoAggregationService;
 use App\Support\AdvancedPricePredictor;
 use App\Support\PerformanceMonitor;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -19,7 +19,7 @@ class MapDataController extends Controller
 {
     public function __construct(
         private MapCacheService $mapCacheService,
-        private GeoAggregationService $geoAggregationService,
+        private OptimizedGeoAggregationService $geoAggregationService,
         private MapDataService $mapDataService,
         private AIMapOptimizationService $aiMapService
     ) {}
@@ -50,8 +50,8 @@ class MapDataController extends Controller
 
         // 檢查是否有 bounds 參數，如果有則查詢個別屬性，否則使用聚合資料
         // 但如果沒有選擇縣市和行政區，即使有 bounds 也使用聚合資料
-        if (($request->has('bounds') || $request->has(['north', 'south', 'east', 'west'])) && 
-            !($request->has('city') || $request->has('district'))) {
+        if (($request->has('bounds') || $request->has(['north', 'south', 'east', 'west'])) &&
+            ! ($request->has('city') || $request->has('district'))) {
             // 有 bounds 但沒有 city/district，使用聚合資料
             $aggregatedData = $this->geoAggregationService->getAggregatedProperties($filters);
 
@@ -101,9 +101,9 @@ class MapDataController extends Controller
                     ],
                 ],
             ]);
-        } elseif (($request->has('bounds') || $request->has(['north', 'south', 'east', 'west'])) && 
+        } elseif (($request->has('bounds') || $request->has(['north', 'south', 'east', 'west'])) &&
                   ($request->has('city') || $request->has('district'))) {
-            
+
             // 特例處理：特殊城市需要查詢多個資料來源
             if ($request->has('city') && in_array($request->city, ['嘉義市', '新竹市'])) {
                 $specialData = $this->handleSpecialCityCase($request->city, $request->district);
@@ -267,14 +267,14 @@ class MapDataController extends Controller
                 ->selectRaw('district, COUNT(*) as property_count, AVG(rent_per_ping) as avg_rent_per_ping')
                 ->groupBy('district')
                 ->get();
-            
+
             $chiayiCityData = \App\Models\Property::where('city', '嘉義市')
                 ->selectRaw('district, COUNT(*) as property_count, AVG(rent_per_ping) as avg_rent_per_ping')
                 ->groupBy('district')
                 ->get();
-            
+
             $allDistricts = $chiayiCountyData->concat($chiayiCityData);
-            
+
             $districts = $allDistricts->map(function ($item) {
                 return [
                     'district' => $item->district,
@@ -295,14 +295,14 @@ class MapDataController extends Controller
                 ->selectRaw('district, COUNT(*) as property_count, AVG(rent_per_ping) as avg_rent_per_ping')
                 ->groupBy('district')
                 ->get();
-            
+
             $hsinchuCityData = \App\Models\Property::where('city', '新竹市')
                 ->selectRaw('district, COUNT(*) as property_count, AVG(rent_per_ping) as avg_rent_per_ping')
                 ->groupBy('district')
                 ->get();
-            
+
             $allDistricts = $hsinchuCountyData->concat($hsinchuCityData);
-            
+
             $districts = $allDistricts->map(function ($item) {
                 return [
                     'district' => $item->district,
@@ -391,7 +391,7 @@ class MapDataController extends Controller
     {
         $district = $request->get('district');
         $city = $request->get('city');
-        
+
         if (! $district) {
             return response()->json([
                 'success' => false,
@@ -415,7 +415,7 @@ class MapDataController extends Controller
     public function cityCenter(Request $request): JsonResponse
     {
         $city = $request->get('city');
-        
+
         if (! $city) {
             return response()->json([
                 'success' => false,
@@ -446,7 +446,7 @@ class MapDataController extends Controller
             $query->whereBetween('latitude', [$bounds['south'], $bounds['north']])
                 ->whereBetween('longitude', [$bounds['west'], $bounds['east']]);
         }
-        
+
         // 如果沒有經緯度座標，不進行篩選，顯示所有資料
         // 這樣可以讓沒有地理編碼的資料也能顯示
     }
@@ -570,26 +570,26 @@ class MapDataController extends Controller
     /**
      * 處理特殊城市情況的資料查詢
      */
-    private function handleSpecialCityCase(string $city, string $district = null): array
+    private function handleSpecialCityCase(string $city, ?string $district = null): array
     {
         // 嘉義市特例：需要同時查詢嘉義縣 嘉義市 和 嘉義市 嘉義市 的資料
         if ($city === '嘉義市') {
             $query = \App\Models\Property::query();
-            
+
             if ($district) {
                 // 如果有指定行政區，查詢該行政區的資料
                 $query->where(function ($q) use ($district) {
                     $q->where(function ($subQ) {
                         $subQ->where('city', '嘉義縣')
-                             ->where('district', '嘉義市');
+                            ->where('district', '嘉義市');
                     })->orWhere(function ($subQ) {
                         $subQ->where('city', '嘉義市')
-                             ->where('district', '嘉義市');
+                            ->where('district', '嘉義市');
                     });
-                    
+
                     if ($district !== '嘉義市') {
                         $q->orWhere('city', '嘉義市')
-                          ->where('district', $district);
+                            ->where('district', $district);
                     }
                 });
             } else {
@@ -597,32 +597,32 @@ class MapDataController extends Controller
                 $query->where(function ($q) {
                     $q->where(function ($subQ) {
                         $subQ->where('city', '嘉義縣')
-                             ->where('district', '嘉義市');
+                            ->where('district', '嘉義市');
                     })->orWhere('city', '嘉義市');
                 });
             }
-            
+
             return $query->get()->toArray();
         }
-        
+
         // 新竹市特例：需要同時查詢新竹縣 新竹市 和 新竹市 新竹市 的資料
         if ($city === '新竹市') {
             $query = \App\Models\Property::query();
-            
+
             if ($district) {
                 // 如果有指定行政區，查詢該行政區的資料
                 $query->where(function ($q) use ($district) {
                     $q->where(function ($subQ) {
                         $subQ->where('city', '新竹縣')
-                             ->where('district', '新竹市');
+                            ->where('district', '新竹市');
                     })->orWhere(function ($subQ) {
                         $subQ->where('city', '新竹市')
-                             ->where('district', '新竹市');
+                            ->where('district', '新竹市');
                     });
-                    
+
                     if ($district !== '新竹市') {
                         $q->orWhere('city', '新竹市')
-                          ->where('district', $district);
+                            ->where('district', $district);
                     }
                 });
             } else {
@@ -630,14 +630,14 @@ class MapDataController extends Controller
                 $query->where(function ($q) {
                     $q->where(function ($subQ) {
                         $subQ->where('city', '新竹縣')
-                             ->where('district', '新竹市');
+                            ->where('district', '新竹市');
                     })->orWhere('city', '新竹市');
                 });
             }
-            
+
             return $query->get()->toArray();
         }
-        
+
         return [];
     }
 
@@ -687,7 +687,7 @@ class MapDataController extends Controller
 
         $districts = $districtStats->map(function ($stat) {
             return [
-                'id' => $stat->city . '_' . $stat->district,
+                'id' => $stat->city.'_'.$stat->district,
                 'city' => $stat->city,
                 'district' => $stat->district,
                 'center' => [
@@ -725,18 +725,18 @@ class MapDataController extends Controller
         try {
             // 檢查 Redis 快取狀態
             $cacheStatus = $this->mapCacheService->getCacheStatus();
-            
+
             // 檢查資料庫是否有資料
             $propertyCount = \App\Models\Property::count();
             $geocodedCount = \App\Models\Property::whereNotNull('latitude')->whereNotNull('longitude')->count();
-            
+
             // 檢查聚合資料是否存在
             $aggregatedData = $this->geoAggregationService->getAggregatedProperties([]);
             $hasAggregatedData = $aggregatedData->count() > 0;
-            
+
             // 如果完全沒有資料，也允許顯示（顯示空狀態）
             $isReady = true;
-            
+
             return response()->json([
                 'success' => $isReady,
                 'data' => [
@@ -745,9 +745,9 @@ class MapDataController extends Controller
                     'geocoded_count' => $geocodedCount,
                     'aggregated_count' => $aggregatedData->count(),
                     'cache_status' => $cacheStatus,
-                    'message' => $isReady 
-                        ? '地圖資料已準備完成' 
-                        : '地圖資料尚未準備完成，正在載入中...'
+                    'message' => $isReady
+                        ? '地圖資料已準備完成'
+                        : '地圖資料尚未準備完成，正在載入中...',
                 ],
                 'timestamp' => now()->toISOString(),
             ]);
@@ -757,7 +757,7 @@ class MapDataController extends Controller
                 'data' => [
                     'is_ready' => false,
                     'error' => $e->getMessage(),
-                    'message' => '無法檢查地圖資料狀態'
+                    'message' => '無法檢查地圖資料狀態',
                 ],
                 'timestamp' => now()->toISOString(),
             ], 500);
@@ -809,11 +809,11 @@ class MapDataController extends Controller
 
         $pricePoints = $properties->map(function ($property) use ($priceLevels, $avgRent, $minRent, $maxRent) {
             $rent = (float) $property->rent_per_ping;
-            
+
             // 判斷價格等級
             $level = 'medium';
             $color = $priceLevels['medium']['color'];
-            
+
             if ($rent <= $avgRent * 0.7) {
                 $level = 'low';
                 $color = $priceLevels['low']['color'];

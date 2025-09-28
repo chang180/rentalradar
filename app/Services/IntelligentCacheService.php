@@ -17,7 +17,7 @@ class IntelligentCacheService
             'description' => '熱門行政區資料',
         ],
         'warm' => [
-            'store' => 'redis', 
+            'store' => 'redis',
             'ttl' => 1800, // 30分鐘
             'description' => '一般行政區資料',
         ],
@@ -49,7 +49,7 @@ class IntelligentCacheService
     public function getCacheLayer(string $city, string $district): string
     {
         // 檢查是否為熱門行政區
-        if (isset(self::HOT_DISTRICTS[$city]) && 
+        if (isset(self::HOT_DISTRICTS[$city]) &&
             in_array($district, self::HOT_DISTRICTS[$city])) {
             return 'hot';
         }
@@ -66,43 +66,44 @@ class IntelligentCacheService
     /**
      * 智能快取取得
      */
-    public function get(string $key, string $city, string $district, callable $callback = null)
+    public function get(string $key, string $city, string $district, ?callable $callback = null)
     {
         $layer = $this->getCacheLayer($city, $district);
         $store = self::CACHE_LAYERS[$layer]['store'];
         $ttl = self::CACHE_LAYERS[$layer]['ttl'];
-        
+
         $cacheKey = $this->buildCacheKey($key, $city, $district, $layer);
 
         // 嘗試從指定層級取得快取
         $cached = Cache::store($store)->get($cacheKey);
         if ($cached !== null) {
-            Log::debug("Cache hit", [
+            Log::debug('Cache hit', [
                 'key' => $cacheKey,
                 'layer' => $layer,
-                'store' => $store
+                'store' => $store,
             ]);
+
             return $cached;
         }
 
         // 快取未命中，執行回調函數
         if ($callback) {
             $data = $callback();
-            
+
             // 儲存到對應層級的快取
             Cache::store($store)->put($cacheKey, $data, $ttl);
-            
+
             // 如果是熱門資料，同時更新到上層快取
             if ($layer === 'hot') {
                 $this->promoteToHotCache($cacheKey, $data, $city, $district);
             }
-            
-            Log::debug("Cache miss, data cached", [
+
+            Log::debug('Cache miss, data cached', [
                 'key' => $cacheKey,
                 'layer' => $layer,
-                'store' => $store
+                'store' => $store,
             ]);
-            
+
             return $data;
         }
 
@@ -117,16 +118,16 @@ class IntelligentCacheService
         $layer = $this->getCacheLayer($city, $district);
         $store = self::CACHE_LAYERS[$layer]['store'];
         $defaultTtl = self::CACHE_LAYERS[$layer]['ttl'];
-        
+
         $cacheKey = $this->buildCacheKey($key, $city, $district, $layer);
-        
+
         Cache::store($store)->put($cacheKey, $data, $ttl ?? $defaultTtl);
-        
-        Log::debug("Data cached", [
+
+        Log::debug('Data cached', [
             'key' => $cacheKey,
             'layer' => $layer,
             'store' => $store,
-            'ttl' => $ttl ?? $defaultTtl
+            'ttl' => $ttl ?? $defaultTtl,
         ]);
     }
 
@@ -136,18 +137,18 @@ class IntelligentCacheService
     public function clearDistrictCache(string $city, string $district): void
     {
         $layers = ['hot', 'warm', 'cold'];
-        
+
         foreach ($layers as $layer) {
             $store = self::CACHE_LAYERS[$layer]['store'];
             $cacheKey = $this->buildCacheKey('*', $city, $district, $layer);
-            
+
             // 清除該行政區的所有快取
             $this->clearCacheByPattern($store, $cacheKey);
         }
-        
-        Log::info("District cache cleared", [
+
+        Log::info('District cache cleared', [
             'city' => $city,
-            'district' => $district
+            'district' => $district,
         ]);
     }
 
@@ -157,15 +158,35 @@ class IntelligentCacheService
     public function clearCityCache(string $city): void
     {
         $layers = ['hot', 'warm', 'cold'];
-        
+
         foreach ($layers as $layer) {
             $store = self::CACHE_LAYERS[$layer]['store'];
             $cacheKey = $this->buildCacheKey('*', $city, '*', $layer);
-            
+
             $this->clearCacheByPattern($store, $cacheKey);
         }
-        
-        Log::info("City cache cleared", ['city' => $city]);
+
+        Log::info('City cache cleared', ['city' => $city]);
+    }
+
+    /**
+     * Get district data from cache or database
+     */
+    public function getDistrictData(string $city, string $district): ?array
+    {
+        return $this->get('district_stats', $city, $district, function () use ($city, $district) {
+            return $this->loadDistrictStatistics($city, $district);
+        });
+    }
+
+    /**
+     * Get city data from cache or database
+     */
+    public function getCityData(string $city): ?array
+    {
+        return $this->get('city_stats', $city, '', function () use ($city) {
+            return $this->loadCityStatistics($city);
+        });
     }
 
     /**
@@ -179,15 +200,15 @@ class IntelligentCacheService
                 $this->get('district_stats', $city, $district, function () use ($city, $district) {
                     return $this->loadDistrictStatistics($city, $district);
                 });
-                
+
                 // 預熱城市統計資料
                 $this->get('city_stats', $city, $district, function () use ($city) {
                     return $this->loadCityStatistics($city);
                 });
             }
         }
-        
-        Log::info("Hot districts cache warmed up");
+
+        Log::info('Hot districts cache warmed up');
     }
 
     /**
@@ -196,7 +217,7 @@ class IntelligentCacheService
     public function getCacheStats(): array
     {
         $stats = [];
-        
+
         foreach (self::CACHE_LAYERS as $layer => $config) {
             $store = $config['store'];
             $stats[$layer] = [
@@ -207,7 +228,7 @@ class IntelligentCacheService
                 'memory_usage' => $this->getCacheMemoryUsage($store),
             ];
         }
-        
+
         return $stats;
     }
 
@@ -241,28 +262,23 @@ class IntelligentCacheService
     /**
      * 載入行政區統計資料
      */
-    private function loadDistrictStatistics(string $city, string $district): array
+    private function loadDistrictStatistics(string $city, string $district): ?array
     {
-        // 這裡實作載入行政區統計資料的邏輯
-        return [
-            'city' => $city,
-            'district' => $district,
-            'property_count' => 0,
-            'avg_rent_per_ping' => 0,
-        ];
+        $stats = \App\Models\DistrictStatistics::where('city', $city)
+            ->where('district', $district)
+            ->first();
+
+        return $stats?->toArray();
     }
 
     /**
      * 載入城市統計資料
      */
-    private function loadCityStatistics(string $city): array
+    private function loadCityStatistics(string $city): ?array
     {
-        // 這裡實作載入城市統計資料的邏輯
-        return [
-            'city' => $city,
-            'total_properties' => 0,
-            'avg_rent_per_ping' => 0,
-        ];
+        $stats = \App\Models\CityStatistics::where('city', $city)->first();
+
+        return $stats?->toArray();
     }
 
     /**
@@ -273,7 +289,7 @@ class IntelligentCacheService
         if ($store === 'redis') {
             // Redis 支援模式匹配
             $keys = \Illuminate\Support\Facades\Redis::keys($pattern);
-            if (!empty($keys)) {
+            if (! empty($keys)) {
                 \Illuminate\Support\Facades\Redis::del($keys);
             }
         } else {
@@ -289,9 +305,10 @@ class IntelligentCacheService
     {
         if ($store === 'redis') {
             $keys = \Illuminate\Support\Facades\Redis::keys('*');
+
             return count($keys);
         }
-        
+
         return 0;
     }
 
@@ -303,7 +320,7 @@ class IntelligentCacheService
         if ($store === 'redis') {
             return \Illuminate\Support\Facades\Redis::memory('usage');
         }
-        
+
         return 0;
     }
 }

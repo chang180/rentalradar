@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Events\PropertyCreated;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -57,6 +58,13 @@ class Property extends Model
             'latitude' => 'decimal:8',
             'longitude' => 'decimal:8',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::created(function (Property $property) {
+            PropertyCreated::dispatch($property);
+        });
     }
 
     /**

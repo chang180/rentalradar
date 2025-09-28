@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Property;
+use App\Models\CityStatistics;
+use App\Models\DistrictStatistics;
 use App\Services\MarketAnalysisService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -28,33 +30,36 @@ class DashboardController extends Controller
                 default => now()->subDays(30)
             };
 
-            // 基本統計
-            $totalProperties = Property::query()->count();
+            // 基本統計 - 使用統計表
+            $totalProperties = CityStatistics::sum('total_properties');
             // 由於資料是每10天下載一次，最近30天新增應該顯示所有資料
             // 因為這些資料代表最新的市場狀況
             $recentProperties = $totalProperties;
 
-            // 平均租金統計 - 使用 total_rent 欄位（實際租金）
-            $avgRentStats = Property::query()
-                ->selectRaw('
-                    AVG(total_rent) as avg_rent,
-                    AVG(rent_per_ping) as avg_rent_per_ping,
-                    MIN(total_rent) as min_rent,
-                    MAX(total_rent) as max_rent
-                ')
-                ->first();
+            // 平均租金統計 - 使用統計表
+            $avgRentStats = CityStatistics::selectRaw('
+                AVG(avg_rent_per_ping) as avg_rent_per_ping,
+                MIN(min_rent_per_ping) as min_rent_per_ping,
+                MAX(max_rent_per_ping) as max_rent_per_ping
+            ')->first();
+            
+            // 計算總平均租金（需要從行政區統計計算）
+            $districtStats = DistrictStatistics::selectRaw('
+                AVG(avg_rent) as avg_rent,
+                MIN(min_rent) as min_rent,
+                MAX(max_rent) as max_rent
+            ')->first();
 
-            // 熱門區域統計
-            $popularDistricts = Property::query()
-                ->selectRaw('
-                    city,
-                    district,
-                    COUNT(*) as property_count,
-                    AVG(total_rent) as avg_rent,
-                    AVG(area_ping) as avg_area_ping,
-                    AVG(rent_per_ping) as avg_rent_per_ping
-                ')
-                ->groupBy('city', 'district')
+            // 熱門區域統計 - 使用統計表
+            $popularDistricts = DistrictStatistics::query()
+                ->select([
+                    'city',
+                    'district',
+                    'property_count',
+                    'avg_rent',
+                    'avg_area_ping',
+                    'avg_rent_per_ping'
+                ])
                 ->orderBy('property_count', 'desc')
                 ->limit(5)
                 ->get();
@@ -63,7 +68,8 @@ class DashboardController extends Controller
             $topDistrict = $popularDistricts->first();
             $topDistrictRentPerPing = $topDistrict ? round($topDistrict->avg_rent_per_ping) : null;
 
-            // 建築類型統計
+            // 建築類型統計 - 暫時使用原始查詢（統計表沒有這個欄位）
+            // TODO: 未來可以在統計表中添加建築類型統計
             $buildingTypeStats = Property::query()
                 ->selectRaw('
                     building_type,
@@ -73,9 +79,11 @@ class DashboardController extends Controller
                 ')
                 ->groupBy('building_type')
                 ->orderBy('count', 'desc')
+                ->limit(10) // 添加限制避免過多資料
                 ->get();
 
-            // 租賃類型統計
+            // 租賃類型統計 - 暫時使用原始查詢（統計表沒有這個欄位）
+            // TODO: 未來可以在統計表中添加租賃類型統計
             $rentalTypeStats = Property::query()
                 ->selectRaw('
                     rental_type,
@@ -84,6 +92,7 @@ class DashboardController extends Controller
                 ')
                 ->groupBy('rental_type')
                 ->orderBy('count', 'desc')
+                ->limit(10) // 添加限制避免過多資料
                 ->get();
 
             // 價格趨勢 - 由於資料是定期下載的歷史資料，暫時設為無變化
@@ -95,16 +104,14 @@ class DashboardController extends Controller
             // $currentMonth = Property::whereMonth('rent_date', now()->month)->avg('total_rent');
             // $previousMonth = Property::whereMonth('rent_date', now()->subMonth()->month)->avg('total_rent');
 
-            // 縣市統計
-            $cityStats = Property::query()
-                ->selectRaw('
-                    city,
-                    COUNT(*) as property_count,
-                    AVG(total_rent) as avg_rent,
-                    AVG(rent_per_ping) as avg_rent_per_ping
-                ')
-                ->groupBy('city')
-                ->orderBy('property_count', 'desc')
+            // 縣市統計 - 使用統計表
+            $cityStats = CityStatistics::query()
+                ->select([
+                    'city',
+                    'total_properties as property_count',
+                    'avg_rent_per_ping'
+                ])
+                ->orderBy('total_properties', 'desc')
                 ->get();
 
             return response()->json([
@@ -116,10 +123,10 @@ class DashboardController extends Controller
                         'time_range' => $timeRange,
                     ],
                     'rent_statistics' => [
-                        'average_rent' => round($avgRentStats->avg_rent ?? 0),
+                        'average_rent' => round($districtStats->avg_rent ?? 0),
                         'average_rent_per_ping' => round($avgRentStats->avg_rent_per_ping ?? 0),
-                        'min_rent' => round($avgRentStats->min_rent ?? 0),
-                        'max_rent' => round($avgRentStats->max_rent ?? 0),
+                        'min_rent' => round($districtStats->min_rent ?? 0),
+                        'max_rent' => round($districtStats->max_rent ?? 0),
                         'price_change_percent' => round($priceChange, 1),
                         'price_change_direction' => $priceChange >= 0 ? 'up' : 'down',
                     ],
@@ -153,7 +160,7 @@ class DashboardController extends Controller
                         return [
                             'city' => $city->city,
                             'property_count' => $city->property_count,
-                            'average_rent' => round($city->avg_rent),
+                            'average_rent' => 0, // 統計表中沒有這個欄位，暫時設為0
                             'average_rent_per_ping' => round($city->avg_rent_per_ping),
                         ];
                     }),
@@ -175,18 +182,16 @@ class DashboardController extends Controller
     public function getQuickActions(): JsonResponse
     {
         try {
-            // 獲取可用的篩選選項
-            $cities = Property::query()
+            // 獲取可用的篩選選項 - 使用統計表
+            $cities = CityStatistics::query()
                 ->select('city')
-                ->distinct()
                 ->orderBy('city')
                 ->pluck('city')
                 ->filter()
                 ->values();
 
-            $districts = Property::query()
+            $districts = DistrictStatistics::query()
                 ->select('city', 'district')
-                ->distinct()
                 ->orderBy('city')
                 ->orderBy('district')
                 ->get()
@@ -198,10 +203,13 @@ class DashboardController extends Controller
                     ];
                 });
 
+            // 建築類型和租賃類型仍需要從原始表查詢（統計表沒有這些欄位）
+            // 但添加限制避免過多資料
             $buildingTypes = Property::query()
                 ->select('building_type')
                 ->distinct()
                 ->orderBy('building_type')
+                ->limit(20) // 限制數量
                 ->pluck('building_type')
                 ->filter()
                 ->values();
@@ -210,6 +218,7 @@ class DashboardController extends Controller
                 ->select('rental_type')
                 ->distinct()
                 ->orderBy('rental_type')
+                ->limit(20) // 限制數量
                 ->pluck('rental_type')
                 ->filter()
                 ->values();

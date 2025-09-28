@@ -26,5 +26,11 @@ class AppServiceProvider extends ServiceProvider
 
             return new \App\Mail\VerifyEmailMail($notifiable, $decodedUrl);
         });
+
+        // Register event listeners
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\PropertyCreated::class,
+            \App\Listeners\UpdateStatisticsOnPropertyCreated::class,
+        );
     }
 }
