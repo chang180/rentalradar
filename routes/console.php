@@ -46,3 +46,55 @@ Schedule::command('data:update --force --geocode --limit=10000')
     ->monthlyOn(1, '04:00')
     ->withoutOverlapping()
     ->runInBackground();
+
+/*
+|--------------------------------------------------------------------------
+| 資料保留與清理排程任務
+|--------------------------------------------------------------------------
+|
+| 自動清理過期資料，執行資料保留政策
+| 適用於 Hostinger 每分鐘執行的排程系統
+|
+*/
+
+// 每日清理快取和會話資料 (凌晨 1 點)
+Schedule::command('data:retention-schedule --frequency=daily')
+    ->dailyAt('01:00')
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->onOneServer();
+
+// 每週清理檔案和排程記錄 (週日凌晨 1:30)
+Schedule::command('data:retention-schedule --frequency=weekly')
+    ->weeklyOn(0, '01:30')
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->onOneServer();
+
+// 每月完整資料清理 (每月 1 號凌晨 2 點)
+Schedule::command('data:retention-schedule --frequency=monthly')
+    ->monthlyOn(1, '02:00')
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->onOneServer();
+
+// 每週三顯示資料保留統計 (凌晨 3 點)
+Schedule::command('data:cleanup --stats')
+    ->weeklyOn(3, '03:00')
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->onOneServer();
+
+// 每小時檢查資料保留狀態 (每小時的 0 分)
+Schedule::command('data:retention-schedule --frequency=hourly')
+    ->hourly()
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->onOneServer();
+
+// 每 6 小時清理臨時資料 (每 6 小時的 0 分)
+Schedule::command('data:retention-schedule --frequency=6hourly')
+    ->everySixHours()
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->onOneServer();

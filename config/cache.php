@@ -38,6 +38,36 @@ return [
             'serialize' => false,
         ],
 
+        // 熱門資料 - Redis 記憶體快取 (1小時)
+        'hot' => [
+            'driver' => 'redis',
+            'connection' => 'cache',
+            'prefix' => 'hot_',
+        ],
+
+        // 溫資料 - Redis 記憶體快取 (30分鐘)
+        'warm' => [
+            'driver' => 'redis',
+            'connection' => 'cache',
+            'prefix' => 'warm_',
+        ],
+
+        // 冷資料 - 資料庫快取 (2小時)
+        'cold' => [
+            'driver' => 'database',
+            'connection' => env('DB_CACHE_CONNECTION'),
+            'table' => env('DB_CACHE_TABLE', 'cache'),
+            'lock_connection' => env('DB_CACHE_LOCK_CONNECTION'),
+            'lock_table' => env('DB_CACHE_LOCK_TABLE'),
+            'prefix' => 'cold_',
+        ],
+
+        // 臨時快取 - 純記憶體 (5分鐘)
+        'temp' => [
+            'driver' => 'array',
+            'serialize' => false,
+        ],
+
         'database' => [
             'driver' => 'database',
             'connection' => env('DB_CACHE_CONNECTION'),
