@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { adminApiRequest } from '@/utils/api';
+import { adminApiRequest, adminFileUploadRequest } from '@/utils/api';
 import { 
     Select,
     SelectContent,
@@ -108,10 +108,7 @@ export default function AdminUploads() {
             const formData = new FormData();
             formData.append('file', file);
 
-            const response = await adminApiRequest('/uploads', {
-                method: 'POST',
-                body: formData,
-            });
+            const response = await adminFileUploadRequest('/uploads', formData);
 
             // 重新載入上傳記錄
             loadUploads(pagination.current_page, status);

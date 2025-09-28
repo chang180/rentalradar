@@ -243,7 +243,7 @@ class FileUploadService
 
     private function processPropertyRecord(array $data): array
     {
-        $serialNumber = $data['序號'] ?? $data['serial_number'] ?? null;
+        $serialNumber = $data['編號'] ?? $data['序號'] ?? $data['serial_number'] ?? null;
 
         if ($serialNumber && Property::serialNumberExists($serialNumber)) {
             return [
@@ -267,14 +267,14 @@ class FileUploadService
     private function normalizePropertyData(array $data): array
     {
         return [
-            'serial_number' => $data['序號'] ?? $data['serial_number'] ?? null,
+            'serial_number' => $data['編號'] ?? $data['序號'] ?? $data['serial_number'] ?? null,
             'city' => $data['縣市'] ?? $data['city'] ?? null,
             'district' => $data['鄉鎮市區'] ?? $data['district'] ?? null,
-            'rental_type' => $data['租賃類型'] ?? $data['rental_type'] ?? '住宅',
-            'total_rent' => $this->parseNumber($data['總租金'] ?? $data['total_rent'] ?? 0),
+            'rental_type' => $data['出租型態'] ?? $data['租賃類型'] ?? $data['rental_type'] ?? '住宅',
+            'total_rent' => $this->parseNumber($data['總額元'] ?? $data['總租金'] ?? $data['total_rent'] ?? 0),
             'rent_per_ping' => $this->parseNumber($data['每坪租金'] ?? $data['rent_per_ping'] ?? 0),
-            'rent_date' => $this->parseDate($data['租賃日期'] ?? $data['rent_date'] ?? null),
-            'building_type' => $data['建物類型'] ?? $data['building_type'] ?? null,
+            'rent_date' => $this->parseDate($data['租賃年月日'] ?? $data['租賃日期'] ?? $data['rent_date'] ?? null),
+            'building_type' => $data['建物型態'] ?? $data['建物類型'] ?? $data['building_type'] ?? null,
             'area_ping' => $this->parseNumber($data['面積坪'] ?? $data['area_ping'] ?? 0),
             'building_age' => $this->parseNumber($data['建物年齡'] ?? $data['building_age'] ?? 0),
             'bedrooms' => $this->parseNumber($data['臥室數'] ?? $data['bedrooms'] ?? 0),
