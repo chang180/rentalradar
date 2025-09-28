@@ -31,8 +31,14 @@ class FileUploadController extends Controller
             ], 403);
         }
 
+        // 檢查 PHP 上傳限制
+        $maxUploadSize = ini_get('upload_max_filesize');
+        $maxPostSize = ini_get('post_max_size');
+        
         $validator = Validator::make($request->all(), [
-            'file' => 'required|file|max:102400', // 100MB
+            'file' => 'required|file|max:204800', // 200MB
+        ], [
+            'file.max' => "檔案大小超過限制。PHP 設置：upload_max_filesize={$maxUploadSize}, post_max_size={$maxPostSize}",
         ]);
 
         if ($validator->fails()) {
