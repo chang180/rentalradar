@@ -64,6 +64,7 @@ export default function AdminUploads() {
     const [status, setStatus] = useState<string>('all');
     const [uploading, setUploading] = useState(false);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [processingUploads, setProcessingUploads] = useState<Set<number>>(new Set());
     const [pagination, setPagination] = useState({
         current_page: 1,
         last_page: 1,
@@ -136,6 +137,9 @@ export default function AdminUploads() {
     // 處理檔案
     const processUpload = async (uploadId: number) => {
         try {
+            // 添加到處理中列表
+            setProcessingUploads(prev => new Set(prev).add(uploadId));
+            
             await adminApiRequest(`/uploads/${uploadId}/process`, {
                 method: 'POST',
             });
@@ -146,6 +150,13 @@ export default function AdminUploads() {
         } catch (error) {
             console.error('檔案處理失敗:', error);
             alert('檔案處理失敗');
+        } finally {
+            // 從處理中列表移除
+            setProcessingUploads(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(uploadId);
+                return newSet;
+            });
         }
     };
 
@@ -452,10 +463,20 @@ export default function AdminUploads() {
                                                             size="sm"
                                                             variant="outline"
                                                             onClick={() => processUpload(upload.id)}
-                                                            className="text-blue-600 hover:text-blue-700"
+                                                            disabled={processingUploads.has(upload.id)}
+                                                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 hover:border-blue-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:border-gray-300 transition-all duration-200"
                                                         >
-                                                            <Play className="h-4 w-4 mr-1" />
-                                                            開始處理
+                                                            {processingUploads.has(upload.id) ? (
+                                                                <>
+                                                                    <Clock className="h-4 w-4 mr-1 animate-spin" />
+                                                                    處理中...
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <Play className="h-4 w-4 mr-1" />
+                                                                    開始處理
+                                                                </>
+                                                            )}
                                                         </Button>
                                                     )}
                                                     {upload.upload_status === 'failed' && (
@@ -463,10 +484,20 @@ export default function AdminUploads() {
                                                             size="sm"
                                                             variant="outline"
                                                             onClick={() => processUpload(upload.id)}
-                                                            className="text-green-600 hover:text-green-700"
+                                                            disabled={processingUploads.has(upload.id)}
+                                                            className="text-green-600 hover:text-green-700 hover:bg-green-50 hover:border-green-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:border-gray-300 transition-all duration-200"
                                                         >
-                                                            <Play className="h-4 w-4 mr-1" />
-                                                            重新處理
+                                                            {processingUploads.has(upload.id) ? (
+                                                                <>
+                                                                    <Clock className="h-4 w-4 mr-1 animate-spin" />
+                                                                    重新處理中...
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <Play className="h-4 w-4 mr-1" />
+                                                                    重新處理
+                                                                </>
+                                                            )}
                                                         </Button>
                                                     )}
                                                     {upload.upload_status !== 'processing' && (
@@ -474,7 +505,7 @@ export default function AdminUploads() {
                                                             size="sm"
                                                             variant="outline"
                                                             onClick={() => deleteUpload(upload.id, upload.original_filename)}
-                                                            className="text-red-600 hover:text-red-700"
+                                                            className="text-red-600 hover:text-red-700 hover:bg-red-50 hover:border-red-300 transition-all duration-200"
                                                         >
                                                             <Trash2 className="h-4 w-4 mr-1" />
                                                             刪除

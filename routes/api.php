@@ -143,14 +143,8 @@ Route::middleware(['auth:web', 'admin'])->prefix('admin')->group(function () {
     Route::post('/users/{user}/demote', [AdminController::class, 'demoteUser']);
     Route::delete('/users/{user}', [AdminController::class, 'deleteUser']);
     
-    // 檔案上傳管理
-    Route::post('/uploads', [FileUploadController::class, 'upload']);
-    Route::get('/uploads', [FileUploadController::class, 'getUploadHistory']);
-    Route::get('/uploads/{uploadId}', [FileUploadController::class, 'getUploadDetails']);
-    Route::post('/uploads/{uploadId}/process', [FileUploadController::class, 'processUpload']);
-    Route::delete('/uploads/{uploadId}', [FileUploadController::class, 'deleteUpload']);
-    Route::get('/uploads/stats', [FileUploadController::class, 'getUploadStats']);
-    Route::post('/uploads/validate', [FileUploadController::class, 'validateFile']);
+    // 檔案上傳管理 (移到 web 路由以支援 CSRF)
+    // 這些路由已移到 routes/web.php 中的 admin API 群組
     
     // 排程管理
     Route::get('/schedules', [ScheduleController::class, 'getSchedules']);

@@ -15,7 +15,7 @@ describe('Admin Permission System', function () {
         it('allows admin users to access admin functions', function () {
             $this->actingAs($this->adminUser);
 
-            $response = $this->get('/api/admin/dashboard');
+            $response = $this->get('/admin/api/dashboard');
 
             $response->assertSuccessful();
         });
@@ -23,13 +23,13 @@ describe('Admin Permission System', function () {
         it('denies regular users from accessing admin functions', function () {
             $this->actingAs($this->regularUser);
 
-            $response = $this->get('/api/admin/dashboard');
+            $response = $this->get('/admin/api/dashboard');
 
             $response->assertForbidden();
         });
 
         it('requires authentication for admin endpoints', function () {
-            $response = $this->get('/api/admin/dashboard');
+            $response = $this->get('/admin/api/dashboard');
 
             $response->assertRedirect('/login');
         });
@@ -39,7 +39,7 @@ describe('Admin Permission System', function () {
         it('allows admin to view users list', function () {
             $this->actingAs($this->adminUser);
 
-            $response = $this->get('/api/admin/users');
+            $response = $this->get('/admin/api/users');
 
             $response->assertSuccessful();
             $response->assertJsonStructure([
@@ -55,7 +55,7 @@ describe('Admin Permission System', function () {
             $this->actingAs($this->adminUser);
             $targetUser = User::factory()->create(['is_admin' => false]);
 
-            $response = $this->postJson('/api/admin/users/' . $targetUser->id . '/promote');
+            $response = $this->postJson('/admin/api/users/' . $targetUser->id . '/promote');
 
             $response->assertSuccessful();
             $response->assertJson(['success' => true]);
@@ -69,7 +69,7 @@ describe('Admin Permission System', function () {
         it('prevents admin from demoting themselves', function () {
             $this->actingAs($this->adminUser);
 
-            $response = $this->postJson('/api/admin/users/' . $this->adminUser->id . '/demote');
+            $response = $this->postJson('/admin/api/users/' . $this->adminUser->id . '/demote');
 
             $response->assertStatus(400);
             $response->assertJson(['success' => false]);
@@ -82,7 +82,7 @@ describe('Admin Permission System', function () {
 
             $file = \Illuminate\Http\UploadedFile::fake()->create('test.zip', 100);
 
-            $response = $this->postJson('/api/admin/uploads', [
+            $response = $this->postJson('/admin/api/uploads', [
                 'file' => $file,
             ]);
 
@@ -94,7 +94,7 @@ describe('Admin Permission System', function () {
         it('allows admin to view schedules', function () {
             $this->actingAs($this->adminUser);
 
-            $response = $this->get('/api/admin/schedules');
+            $response = $this->get('/admin/api/schedules');
 
             $response->assertSuccessful();
             $response->assertJsonStructure([
@@ -106,7 +106,7 @@ describe('Admin Permission System', function () {
         it('validates schedule management permissions', function () {
             $this->actingAs($this->regularUser);
 
-            $response = $this->get('/api/admin/schedules');
+            $response = $this->get('/admin/api/schedules');
 
             $response->assertForbidden();
         });
@@ -116,7 +116,7 @@ describe('Admin Permission System', function () {
         it('allows admin to view their permissions', function () {
             $this->actingAs($this->adminUser);
 
-            $response = $this->get('/api/admin/permissions');
+            $response = $this->get('/admin/api/permissions');
 
             $response->assertSuccessful();
             $response->assertJsonStructure([
@@ -133,7 +133,7 @@ describe('Admin Permission System', function () {
         it('shows correct permissions for admin user', function () {
             $this->actingAs($this->adminUser);
 
-            $response = $this->get('/api/admin/permissions');
+            $response = $this->get('/admin/api/permissions');
 
             $response->assertSuccessful();
             
@@ -150,7 +150,7 @@ describe('Admin Permission System', function () {
 
     describe('Middleware Protection', function () {
         it('protects admin routes with authentication middleware', function () {
-            $response = $this->get('/api/admin/dashboard');
+            $response = $this->get('/admin/api/dashboard');
 
             $response->assertRedirect('/login');
         });
@@ -158,7 +158,7 @@ describe('Admin Permission System', function () {
         it('protects admin routes with admin permission middleware', function () {
             $this->actingAs($this->regularUser);
 
-            $response = $this->get('/api/admin/dashboard');
+            $response = $this->get('/admin/api/dashboard');
 
             $response->assertForbidden();
         });
