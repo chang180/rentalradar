@@ -75,7 +75,20 @@
       "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan make:class Services/FileUploadService --no-interaction)",
       "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan make:class Services/ScheduleService --no-interaction)",
       "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan make:class Services/UserManagementService --no-interaction)",
-      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan make:middleware CheckAdmin --no-interaction)"
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan make:middleware CheckAdmin --no-interaction)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan test)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan test tests/Feature/Auth/AuthenticationTest.php)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan test tests/Feature/Auth/AuthenticationTest.php::test_users_can_authenticate_using_the_login_screen)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan test tests/Feature/Auth/AuthenticationTest.php --filter=\"users can authenticate using the login screen\")",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan test tests/Feature/Auth/AuthenticationTest.php --filter=\"login screen can be rendered\")",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan test tests/Feature/Settings/PasswordUpdateTest.php)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan test tests/Feature/Settings/PasswordUpdateTest.php::test_password_can_be_updated)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan test tests/Feature/Settings/PasswordUpdateTest.php --filter=\"password can be updated\")",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan test tests/Feature/Settings/ProfileUpdateTest.php)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan test tests/Feature/MapDataControllerCacheTest.php)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan test tests/Feature/MapDataControllerCacheTest.php --filter=\"returns different cached data\")",
+      "Bash(git log:*)",
+      "mcp__ide__getDiagnostics"
     ]
   },
   "enableAllProjectMcpServers": true,
