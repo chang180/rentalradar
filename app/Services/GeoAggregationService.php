@@ -291,7 +291,17 @@ class GeoAggregationService
         // 快取未命中，載入完整的地理資料
         $geoCenters = $this->loadGeoCentersWithCache();
         
-        $center = $geoCenters[$city][$district] ?? null;
+        // 特例處理：嘉義縣 嘉義市 和 嘉義市 嘉義市 都對應到嘉義市
+        $searchCity = $city;
+        $searchDistrict = $district;
+        
+        if (($city === '嘉義縣' && $district === '嘉義市') || 
+            ($city === '嘉義市' && $district === '嘉義市')) {
+            $searchCity = '嘉義市';
+            $searchDistrict = '嘉義市';
+        }
+        
+        $center = $geoCenters[$searchCity][$searchDistrict] ?? null;
         $result = $center && isset($center['lat']) && isset($center['lng']) ? [
             'lat' => $center['lat'],
             'lng' => $center['lng']

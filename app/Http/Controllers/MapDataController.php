@@ -105,18 +105,25 @@ class MapDataController extends Controller
             ]);
         } elseif (($request->has('bounds') || $request->has(['north', 'south', 'east', 'west'])) && 
                   ($request->has('city') || $request->has('district'))) {
-            $query = \App\Models\Property::query()->geocoded();
-            $this->applyBounds($request, $query);
+            
+            // 特例處理：嘉義市需要查詢多個資料來源
+            if ($request->has('city') && $request->city === '嘉義市') {
+                $chiayiData = $this->handleChiayiSpecialCase($request->city, $request->district);
+                $properties = collect($chiayiData);
+            } else {
+                $query = \App\Models\Property::query()->geocoded();
+                $this->applyBounds($request, $query);
 
-            if ($request->has('city')) {
-                $query->byCity($request->city);
+                if ($request->has('city')) {
+                    $query->byCity($request->city);
+                }
+
+                if ($request->has('district')) {
+                    $query->byDistrict($request->district);
+                }
+
+                $properties = $query->limit($request->get('limit', 1000))->get();
             }
-
-            if ($request->has('district')) {
-                $query->byDistrict($request->district);
-            }
-
-            $properties = $query->limit($request->get('limit', 1000))->get();
 
             $monitor->mark('query_loaded');
 
@@ -257,7 +264,42 @@ class MapDataController extends Controller
         }
 
         // 快取未命中，從資料庫查詢
-        $districts = $this->geoAggregationService->getDistrictsByCity($city);
+        if ($city === '嘉義市') {
+            // 嘉義市特例：需要合併嘉義縣 嘉義市 和 嘉義市 的資料
+            $chiayiDistricts = collect();
+            
+            // 查詢嘉義縣 嘉義市 的資料
+            $chiayiCountyData = \App\Models\Property::where('city', '嘉義縣')
+                ->where('district', '嘉義市')
+                ->selectRaw('district, COUNT(*) as property_count, AVG(rent_per_ping) as avg_rent_per_ping')
+                ->groupBy('district')
+                ->get();
+            
+            // 查詢嘉義市其他行政區的資料
+            $chiayiCityData = \App\Models\Property::where('city', '嘉義市')
+                ->selectRaw('district, COUNT(*) as property_count, AVG(rent_per_ping) as avg_rent_per_ping')
+                ->groupBy('district')
+                ->get();
+            
+            // 合併資料
+            $allDistricts = $chiayiCountyData->concat($chiayiCityData);
+            
+            $districts = $allDistricts->map(function ($item) {
+                return [
+                    'district' => $item->district,
+                    'property_count' => (int) $item->property_count,
+                    'avg_rent_per_ping' => round((float) $item->avg_rent_per_ping, 2),
+                ];
+            })->groupBy('district')->map(function ($items, $district) {
+                return [
+                    'district' => $district,
+                    'property_count' => $items->sum('property_count'),
+                    'avg_rent_per_ping' => round($items->avg('avg_rent_per_ping'), 2),
+                ];
+            })->values();
+        } else {
+            $districts = $this->geoAggregationService->getDistrictsByCity($city);
+        }
 
         // 快取結果
         $this->mapCacheService->cacheDistricts($city, $districts->toArray());
@@ -475,6 +517,47 @@ class MapDataController extends Controller
         ];
 
         return $mapping[$city] ?? $city;
+    }
+
+    /**
+     * 處理嘉義市特殊情況的資料查詢
+     */
+    private function handleChiayiSpecialCase(string $city, string $district = null): array
+    {
+        // 如果是嘉義市，需要同時查詢嘉義縣 嘉義市 和 嘉義市 嘉義市 的資料
+        if ($city === '嘉義市') {
+            $query = \App\Models\Property::query()->geocoded();
+            
+            if ($district) {
+                // 如果有指定行政區，查詢該行政區的資料
+                $query->where(function ($q) use ($district) {
+                    $q->where(function ($subQ) {
+                        $subQ->where('city', '嘉義縣')
+                             ->where('district', '嘉義市');
+                    })->orWhere(function ($subQ) {
+                        $subQ->where('city', '嘉義市')
+                             ->where('district', '嘉義市');
+                    });
+                    
+                    if ($district !== '嘉義市') {
+                        $q->orWhere('city', '嘉義市')
+                          ->where('district', $district);
+                    }
+                });
+            } else {
+                // 如果沒有指定行政區，查詢所有嘉義市相關資料
+                $query->where(function ($q) {
+                    $q->where(function ($subQ) {
+                        $subQ->where('city', '嘉義縣')
+                             ->where('district', '嘉義市');
+                    })->orWhere('city', '嘉義市');
+                });
+            }
+            
+            return $query->get()->toArray();
+        }
+        
+        return [];
     }
 
     /**
