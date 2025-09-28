@@ -289,6 +289,34 @@ class GeoAggregationService
     }
 
     /**
+     * 取得城市中心點
+     */
+    public function getCityCenter(string $city): ?array
+    {
+        $geoCenters = $this->loadGeoCentersWithCache();
+        
+        // 檢查城市是否存在
+        if (isset($geoCenters[$city])) {
+            // 嘗試取得城市級別的座標（如果有的話）
+            if (isset($geoCenters[$city][$city])) {
+                return $geoCenters[$city][$city];
+            }
+            
+            // 如果沒有城市級別座標，使用第一個行政區的座標
+            $districts = $geoCenters[$city];
+            $firstDistrict = reset($districts);
+            if ($firstDistrict && isset($firstDistrict['lat']) && isset($firstDistrict['lng'])) {
+                return [
+                    'lat' => $firstDistrict['lat'],
+                    'lng' => $firstDistrict['lng']
+                ];
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * 為地理服務標準化城市名稱，處理台/臺等字符差異
      */
     private function normalizeCityNameForGeoService(string $city): string

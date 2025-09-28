@@ -52,6 +52,7 @@ Route::prefix('map')->group(function () {
     Route::get('/cities', [MapDataController::class, 'cities']);
     Route::get('/districts', [MapDataController::class, 'districts']);
     Route::get('/district-bounds', [MapDataController::class, 'districtBounds']);
+    Route::get('/city-center', [MapDataController::class, 'cityCenter']);
 
     // 基本資料路由 - 使用 MapDataController
     Route::get('/heatmap', [MapDataController::class, 'heatmapData']);

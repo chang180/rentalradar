@@ -517,7 +517,20 @@ const RentalMap = memo(() => {
                         if (data.success && data.data && data.data.length > 0) {
                             const firstDistrict = data.data[0];
                             // 移動地圖中心到第一個行政區，但不改變行政區選擇
-                            await navigateToDistrict(firstDistrict.district);
+                            try {
+                                await navigateToDistrict(firstDistrict.district);
+                            } catch (navErr) {
+                                console.error('Failed to navigate to district:', navErr);
+                                // 如果導航失敗，嘗試直接使用城市中心點
+                                const cityCenterResponse = await fetch(
+                                    `/api/map/city-center?city=${encodeURIComponent(selectedCity)}`,
+                                );
+                                const cityCenterData = await cityCenterResponse.json();
+                                if (cityCenterData.success && cityCenterData.center && mapRef.current) {
+                                    const { lat, lng } = cityCenterData.center;
+                                    mapRef.current.setView([lat, lng], 13);
+                                }
+                            }
                         }
                     } catch (err) {
                         console.error('Failed to navigate to first district:', err);

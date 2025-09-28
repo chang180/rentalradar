@@ -416,6 +416,25 @@ class MapDataController extends Controller
         ]);
     }
 
+    public function cityCenter(Request $request): JsonResponse
+    {
+        $city = $request->get('city');
+        
+        if (! $city) {
+            return response()->json([
+                'success' => false,
+                'message' => '請指定縣市',
+            ], 400);
+        }
+
+        $center = $this->geoAggregationService->getCityCenter($city);
+
+        return response()->json([
+            'success' => true,
+            'center' => $center,
+        ]);
+    }
+
     /**
      * 應用地圖邊界篩選
      */
