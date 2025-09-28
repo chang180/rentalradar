@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Models\FileUpload;
 use App\Models\Property;
 use App\Models\User;
+use App\Services\DataParserService;
+use App\Services\PermissionService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -13,6 +15,11 @@ use ZipArchive;
 
 class FileUploadService
 {
+    public function __construct(
+        private DataParserService $dataParserService,
+        private PermissionService $permissionService
+    ) {}
+
     private const ALLOWED_MIME_TYPES = [
         'application/zip',
         'text/csv',
@@ -21,10 +28,6 @@ class FileUploadService
     ];
 
     private const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
-
-    public function __construct(
-        private PermissionService $permissionService
-    ) {}
 
     public function validateFile(UploadedFile $file): array
     {
@@ -149,45 +152,53 @@ class FileUploadService
 
     private function processZipFile(string $filePath): array
     {
-        $zip = new ZipArchive();
-        $result = $zip->open($filePath);
-
-        if ($result !== true) {
-            return ['success' => false, 'error' => 'Cannot open ZIP file'];
-        }
-
-        $processedRecords = 0;
-        $duplicateRecords = 0;
-        $errors = [];
-
-        for ($i = 0; $i < $zip->numFiles; $i++) {
-            $filename = $zip->getNameIndex($i);
-
-            if (pathinfo($filename, PATHINFO_EXTENSION) === 'csv') {
-                $csvContent = $zip->getFromIndex($i);
-                $tempFile = tempnam(sys_get_temp_dir(), 'government_data_');
-                file_put_contents($tempFile, $csvContent);
-
-                $csvResult = $this->processCsvFile($tempFile);
-                $processedRecords += $csvResult['processed_records'] ?? 0;
-                $duplicateRecords += $csvResult['duplicate_records'] ?? 0;
-
-                if (!$csvResult['success']) {
-                    $errors[] = "Error processing {$filename}: " . ($csvResult['error'] ?? 'Unknown error');
+        try {
+            // 使用 DataParserService 來處理政府資料 ZIP 檔案
+            $result = $this->dataParserService->parseZipData($filePath);
+            
+            if ($result['success']) {
+                // 計算重複記錄數
+                $duplicateCount = 0;
+                foreach ($result['data'] as $record) {
+                    if ($record['serial_number'] && Property::serialNumberExists($record['serial_number'])) {
+                        $duplicateCount++;
+                    }
                 }
-
-                unlink($tempFile);
+                
+                // 儲存非重複的記錄到資料庫
+                $savedCount = 0;
+                foreach ($result['data'] as $record) {
+                    if (!$record['serial_number'] || !Property::serialNumberExists($record['serial_number'])) {
+                        Property::create($record);
+                        $savedCount++;
+                    }
+                }
+                
+                return [
+                    'success' => true,
+                    'processed_records' => count($result['data']),
+                    'duplicate_records' => $duplicateCount,
+                    'records_imported' => $savedCount,
+                    'records_skipped' => $duplicateCount,
+                    'processing_time' => $result['processing_time'] ?? 0,
+                ];
+            } else {
+                return [
+                    'success' => false,
+                    'error' => $result['error'] ?? 'Unknown error',
+                ];
             }
+        } catch (\Exception $e) {
+            Log::error('ZIP file processing failed', [
+                'file_path' => $filePath,
+                'error' => $e->getMessage(),
+            ]);
+            
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+            ];
         }
-
-        $zip->close();
-
-        return [
-            'success' => empty($errors),
-            'processed_records' => $processedRecords,
-            'duplicate_records' => $duplicateRecords,
-            'errors' => $errors,
-        ];
     }
 
     private function processCsvFile(string $filePath): array
