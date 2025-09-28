@@ -3,7 +3,7 @@ const path = require('path');
 
 // OAuth 設定
 const CLIENT_ID = '7a8573c37786a73a9affd9c04ab46202';
-const CLIENT_SECRET = 'fcf427689c053d61a6e22db10cc0663a';
+const CLIENT_SECRET = '464cafb8daaadedafe599cc7f31826d5';
 const REDIRECT_URI = 'http://localhost:8000/callback';
 
 // Linear API 端點

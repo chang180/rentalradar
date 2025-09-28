@@ -51,7 +51,9 @@
       "Read(//d/**)",
       "Bash(curl -s \"https://rentalradar.test/api/map/cities\")",
       "Bash(curl -s \"https://rentalradar.test/api/map/cities\" -H \"Accept: application/json\")",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(https://api.linear.app/graphql)",
+      "Bash(node:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

@@ -1,6 +1,37 @@
 const https = require('https');
+const fs = require('fs');
+const path = require('path');
 
-const LINEAR_API_KEY = 'key_f0d370ea684a4bcc29b3e99b0c41a8104526a4471c3259bfb5dbb01195d83089';
+// 安全地從 .env 讀取環境變數（不存儲在檔案中）
+function getEnvVariable(varName) {
+  // 首先檢查 process.env
+  if (process.env[varName]) {
+    return process.env[varName];
+  }
+
+  // 如果環境變數不存在，嘗試從 .env 檔案讀取
+  try {
+    const envPath = path.join(__dirname, '../../.env');
+    const envContent = fs.readFileSync(envPath, 'utf8');
+
+    const lines = envContent.split('\n');
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+      if (trimmedLine.startsWith(`${varName}=`)) {
+        return trimmedLine.split('=')[1].trim();
+      }
+    }
+  } catch (error) {
+    console.log(`⚠️  無法讀取 ${varName} 環境變數:`, error.message);
+  }
+
+  return null;
+}
+
+// 動態獲取 token，不存儲在檔案中
+function getLinearToken() {
+  return getEnvVariable('LINEAR_API_TOKEN');
+}
 
 // Linear API 端點
 const LINEAR_API_URL = 'https://api.linear.app/graphql';
@@ -29,11 +60,16 @@ async function createIssue(title, description, teamId) {
     }
   };
 
+  const linearToken = getLinearToken();
+  if (!linearToken) {
+    throw new Error('LINEAR_API_TOKEN 不存在於環境變數中');
+  }
+
   const options = {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': LINEAR_API_KEY
+      'Authorization': `Bearer ${linearToken}`
     }
   };
 
@@ -78,11 +114,16 @@ async function listTeamsAndProjects() {
     }
   `;
 
+  const linearToken = getLinearToken();
+  if (!linearToken) {
+    throw new Error('LINEAR_API_TOKEN 不存在於環境變數中');
+  }
+
   const options = {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': LINEAR_API_KEY
+      'Authorization': `Bearer ${linearToken}`
     }
   };
 
@@ -109,6 +150,15 @@ async function listTeamsAndProjects() {
 // 主要功能
 async function main() {
   try {
+    // 檢查 token 是否可以取得
+    const testToken = getLinearToken();
+    if (!testToken) {
+      console.log('❌ 無法取得 LINEAR_API_TOKEN 環境變數');
+      console.log('💡 請確認 .env 檔案中有設定 LINEAR_API_TOKEN 或在環境變數中設定');
+      return;
+    }
+
+    console.log('✅ LINEAR_API_TOKEN 環境變數取得成功');
     console.log('🔍 正在檢查 Linear API 連接...');
     
     // 列出 Teams 和 Projects

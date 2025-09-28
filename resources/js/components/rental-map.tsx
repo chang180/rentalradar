@@ -76,7 +76,7 @@ const debounce = (func: Function, wait: number) => {
 // 節流處理
 const throttle = (func: Function, limit: number) => {
     let inThrottle: boolean;
-    return function (...args: any[]) {
+    return function (this: any, ...args: any[]) {
         if (!inThrottle) {
             func.apply(this, args);
             inThrottle = true;
@@ -333,6 +333,7 @@ const RentalMap = memo(() => {
                     zoom: defaultZoom,
                 },
                 selectedDistrict && selectedDistrict.trim() !== '' ? selectedDistrict : undefined,
+                selectedCity && selectedCity.trim() !== '' ? selectedCity : undefined,
             );
             setIsInitialLoad(false);
         }, 100);
@@ -357,6 +358,7 @@ const RentalMap = memo(() => {
                     zoom,
                 },
                 selectedDistrict,
+                selectedCity,
             );
         }
     }, [selectedDistrict]);
@@ -394,27 +396,12 @@ const RentalMap = memo(() => {
     // 處理縣市選擇變更
     const handleCityChange = useCallback(async (city: string) => {
         setSelectedCity(city);
-        setSelectedDistrict(''); // 清空行政區選擇
+        setSelectedDistrict(''); // 預設選擇「全區」
         await fetchDistricts(city);
         
-        // 如果有選擇縣市，自動選擇第一個行政區
-        if (city) {
-            try {
-                const response = await fetch(
-                    `/api/map/districts?city=${encodeURIComponent(city)}`,
-                );
-                const data = await response.json();
-                if (data.success && data.data.length > 0) {
-                    const firstDistrict = data.data[0].district;
-                    setSelectedDistrict(firstDistrict);
-                    // 移動地圖到第一個行政區
-                    await navigateToDistrict(firstDistrict);
-                }
-            } catch (err) {
-                console.error('Failed to auto-select first district:', err);
-            }
-        }
-    }, [navigateToDistrict]);
+        // 選擇縣市時顯示該縣市的全部資料，預設為「全區」
+        // 用戶可以進一步選擇特定行政區
+    }, []);
 
     // 處理行政區選擇變更
     const handleDistrictChange = useCallback(
@@ -461,10 +448,10 @@ const RentalMap = memo(() => {
                   : '#22c55e';
 
         const icon = L.divIcon({
-            html: `<div class="marker-${priceCategory}" style="background-color: ${color}; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
+            html: `<div class="marker-${priceCategory}" style="background-color: ${color}; width: 18px; height: 18px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
             className: 'custom-marker',
-            iconSize: [12, 12],
-            iconAnchor: [6, 6],
+            iconSize: [18, 18],
+            iconAnchor: [9, 9],
         });
 
         iconCache.set(priceCategory, icon);
@@ -601,7 +588,8 @@ const RentalMap = memo(() => {
                         title="選擇行政區"
                         disabled={!selectedCity}
                     >
-                        <option value="">全部行政區</option>
+                        {!selectedCity && <option value="">全部行政區</option>}
+                        {selectedCity && <option value="">全區</option>}
                         {districts?.map((district) => (
                             <option
                                 key={district.district}

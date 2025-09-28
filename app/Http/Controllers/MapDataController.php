@@ -97,14 +97,7 @@ class MapDataController extends Controller
                         'price_prediction' => $this->mapDataService->formatPricePrediction($prediction),
                     ];
                 }),
-                'statistics' => [
-                    'count' => $properties->count(),
-                    'districts' => $properties->groupBy('district')->map->count(),
-                    'average_predicted_price' => $predictionSummary['average_price'] ?? null,
-                    'average_confidence' => $predictionSummary['average_confidence'] ?? null,
-                    'confidence_distribution' => $predictionSummary['confidence_distribution'] ?? [],
-                    'confidence_percentiles' => $predictionSummary['confidence_percentiles'] ?? [],
-                ],
+                'statistics' => $this->calculateStatisticsForBounds($properties, $filters, $predictionSummary),
             ];
 
             // 快取結果
@@ -140,7 +133,7 @@ class MapDataController extends Controller
 
             $responseData = [
                 'rentals' => $this->mapDataService->transformAggregatedToRentals($properties),
-                'statistics' => $this->mapDataService->calculateStatistics($aggregatedData), // 使用所有聚合資料計算統計
+                'statistics' => $this->mapDataService->calculateStatistics($properties),
             ];
 
             // 快取結果
@@ -194,6 +187,9 @@ class MapDataController extends Controller
                 'message' => '請指定縣市',
             ], 400);
         }
+
+        // 處理城市名稱不一致問題（台 vs 臺）
+        $city = $this->normalizeCityName($city);
 
         // 嘗試從快取取得行政區列表
         $cachedDistricts = $this->mapCacheService->getCachedDistricts($city);
@@ -382,5 +378,47 @@ class MapDataController extends Controller
                 ]),
             ],
         ]);
+    }
+
+    /**
+     * 為有 bounds 的請求計算統計資料
+     * 如果沒有選擇特定縣市，顯示全台統計；如果有選擇縣市，顯示該縣市統計
+     */
+    private function calculateStatisticsForBounds($properties, array $filters, array $predictionSummary): array
+    {
+        // 如果選擇了特定縣市，使用該縣市的統計資料
+        if (isset($filters['city'])) {
+            $normalizedCity = $this->normalizeCityName($filters['city']);
+            $cityData = $this->geoAggregationService->getAggregatedProperties(['city' => $normalizedCity]);
+            $baseStats = $this->mapDataService->calculateStatistics($cityData);
+        } else {
+            // 如果沒有選擇特定縣市，使用全台統計資料
+            $allData = $this->geoAggregationService->getAggregatedProperties([]);
+            $baseStats = $this->mapDataService->calculateStatistics($allData);
+        }
+
+        // 添加預測相關統計
+        $baseStats['average_predicted_price'] = $predictionSummary['average_price'] ?? null;
+        $baseStats['average_confidence'] = $predictionSummary['average_confidence'] ?? null;
+        $baseStats['confidence_distribution'] = $predictionSummary['confidence_distribution'] ?? [];
+        $baseStats['confidence_percentiles'] = $predictionSummary['confidence_percentiles'] ?? [];
+
+        return $baseStats;
+    }
+
+    /**
+     * 標準化城市名稱，處理台/臺等字符差異
+     */
+    private function normalizeCityName(string $city): string
+    {
+        // 處理常見的城市名稱差異
+        $mapping = [
+            '台中市' => '臺中市',
+            '台北市' => '臺北市',
+            '台南市' => '臺南市',
+            '台東縣' => '臺東縣',
+        ];
+
+        return $mapping[$city] ?? $city;
     }
 }

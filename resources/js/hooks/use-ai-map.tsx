@@ -37,6 +37,15 @@ interface Cluster {
         east: number;
         west: number;
     };
+    visual_level?: number;
+    price_stats?: {
+        min: number;
+        max: number;
+        avg: number;
+        median: number;
+    };
+    radius_km?: number;
+    density?: number;
 }
 
 interface Viewport {
@@ -77,7 +86,7 @@ export function useAIMap(options: UseAIMapOptions = {}) {
 
     // 載入地圖資料
     const loadMapData = useCallback(
-        async (viewport: Viewport, district?: string) => {
+        async (viewport: Viewport, district?: string, city?: string) => {
             setLoading(true);
             setError(null);
 
@@ -88,8 +97,12 @@ export function useAIMap(options: UseAIMapOptions = {}) {
                 if (district && district.trim() !== '') {
                     params.append('district', district);
                     params.append('zoom', viewport.zoom.toString());
+                } else if (city && city.trim() !== '') {
+                    // 如果選擇了縣市但沒有選擇行政區，不傳送視口範圍參數，讓後端返回該縣市的所有資料
+                    params.append('city', city);
+                    params.append('zoom', viewport.zoom.toString());
                 } else {
-                    // 只有在沒有選擇行政區時才傳送視口範圍
+                    // 只有在沒有選擇縣市和行政區時才傳送視口範圍（初始載入時）
                     params.append('north', viewport.north.toString());
                     params.append('south', viewport.south.toString());
                     params.append('east', viewport.east.toString());
@@ -142,7 +155,7 @@ export function useAIMap(options: UseAIMapOptions = {}) {
 
     // 優化的視口更新
     const updateViewport = useCallback(
-        async (newViewport: Viewport, district?: string) => {
+        async (newViewport: Viewport, district?: string, city?: string) => {
             currentViewportRef.current = newViewport;
 
             if (autoOptimize) {
@@ -164,7 +177,7 @@ export function useAIMap(options: UseAIMapOptions = {}) {
                 }
             }
 
-            await loadMapData(newViewport, district);
+            await loadMapData(newViewport, district, city);
             previousViewportRef.current = newViewport;
         },
         [loadMapData, properties, autoOptimize],

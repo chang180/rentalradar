@@ -28,7 +28,7 @@ import {
     Sparkles,
     TrendingUp,
 } from 'lucide-react';
-import { useMemo } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -61,16 +61,63 @@ export default function MarketAnalysisDashboard() {
         generateReport,
     } = useMarketAnalysis();
 
-    const districts = useMemo(() => {
-        if (!data) {
-            return [] as string[];
-        }
+    const [selectedCity, setSelectedCity] = useState<string>('');
+    const [cities, setCities] = useState<any[]>([]);
+    const [districts, setDistricts] = useState<{ district: string; property_count: number }[]>([]);
 
-        return data.price_comparison.districts
-            .map((district) => district.district)
-            .filter((value, index, array) => array.indexOf(value) === index)
-            .sort();
-    }, [data]);
+    // 獲取縣市列表
+    const fetchCities = useCallback(async () => {
+        try {
+            const response = await fetch('/api/map/cities');
+            const data = await response.json();
+            if (data.success) {
+                setCities(data.data);
+            }
+        } catch (err) {
+            console.error('Failed to fetch cities:', err);
+        }
+    }, []);
+
+    // 獲取行政區列表
+    const fetchDistricts = useCallback(async (city: string) => {
+        if (!city) {
+            setDistricts([]);
+            return;
+        }
+        try {
+            const response = await fetch(
+                `/api/map/districts?city=${encodeURIComponent(city)}`,
+            );
+            const data = await response.json();
+            if (data.success) {
+                setDistricts(data.data);
+            }
+        } catch (err) {
+            console.error('Failed to fetch districts:', err);
+        }
+    }, []);
+
+    // 處理縣市選擇變更
+    const handleCityChange = useCallback(async (city: string) => {
+        if (city === 'all') {
+            setSelectedCity('');
+            setDistricts([]);
+            void handleFilterChange({ district: undefined });
+            return;
+        }
+        
+        setSelectedCity(city);
+        await fetchDistricts(city);
+        
+        // 選擇縣市時顯示該縣市的全部資料，預設為「全區」
+        // 用戶可以進一步選擇特定行政區
+        void handleFilterChange({ district: undefined });
+    }, [fetchDistricts]);
+
+    // 初始化載入縣市列表
+    useEffect(() => {
+        void fetchCities();
+    }, [fetchCities]);
 
     const handleFilterChange = async (override: MarketAnalysisFilters) => {
         await refresh(override);
@@ -178,6 +225,25 @@ export default function MarketAnalysisDashboard() {
                         </Select>
 
                         <Select
+                            value={selectedCity || 'all'}
+                            onValueChange={(value) => {
+                                void handleCityChange(value);
+                            }}
+                        >
+                            <SelectTrigger className="w-32">
+                                <SelectValue placeholder="選擇縣市" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">全部縣市</SelectItem>
+                                {cities.map((city) => (
+                                    <SelectItem key={city.city} value={city.city}>
+                                        {city.city}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+
+                        <Select
                             value={filters.district ?? 'all'}
                             onValueChange={(value) => {
                                 if (value === 'all') {
@@ -193,10 +259,11 @@ export default function MarketAnalysisDashboard() {
                                 <SelectValue placeholder="所有區域" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="all">所有區域</SelectItem>
+                                {!selectedCity && <SelectItem value="all">所有區域</SelectItem>}
+                                {selectedCity && <SelectItem value="all">全區</SelectItem>}
                                 {districts.map((district) => (
-                                    <SelectItem key={district} value={district}>
-                                        {district}
+                                    <SelectItem key={district.district} value={district.district}>
+                                        {district.district} ({district.property_count})
                                     </SelectItem>
                                 ))}
                             </SelectContent>
