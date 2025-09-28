@@ -397,28 +397,63 @@ const RentalMap = memo(() => {
     const handleCityChange = useCallback(async (city: string) => {
         setSelectedCity(city);
         setSelectedDistrict(''); // 預設選擇「全區」
+        
+        // 獲取行政區資料
         await fetchDistricts(city);
         
-        // 選擇縣市時顯示該縣市的全部資料，預設為「全區」
-        // 用戶可以進一步選擇特定行政區
+        // 選擇縣市時，地圖中心跳到該縣市的第一個行政區
+        // 但行政區下拉選單仍顯示「全區」，讓用戶可以選擇特定行政區
+        if (city) {
+            try {
+                // 直接從 API 獲取該縣市的行政區列表
+                const response = await fetch(
+                    `/api/map/districts?city=${encodeURIComponent(city)}`,
+                );
+                const data = await response.json();
+                if (data.success && data.data && data.data.length > 0) {
+                    const firstDistrict = data.data[0];
+                    // 移動地圖中心到第一個行政區，但不改變行政區選擇
+                    await navigateToDistrict(firstDistrict.district);
+                }
+            } catch (err) {
+                console.error('Failed to navigate to first district:', err);
+            }
+        }
     }, []);
 
     // 處理行政區選擇變更
     const handleDistrictChange = useCallback(
-        (district: string) => {
+        async (district: string) => {
             setSelectedDistrict(district);
             if (district) {
                 navigateToDistrict(district);
             } else {
-                // 如果選擇"全部區域"，回到用戶位置或預設位置
-                if (userLocation) {
-                    if (mapRef.current) {
-                        mapRef.current.setView(userLocation, 15);
+                // 如果選擇"全區"
+                if (selectedCity) {
+                    // 如果有選擇縣市，移動到該縣市的第一個行政區
+                    try {
+                        const response = await fetch(
+                            `/api/map/districts?city=${encodeURIComponent(selectedCity)}`,
+                        );
+                        const data = await response.json();
+                        if (data.success && data.data && data.data.length > 0) {
+                            const firstDistrict = data.data[0];
+                            await navigateToDistrict(firstDistrict.district);
+                        }
+                    } catch (err) {
+                        console.error('Failed to navigate to first district:', err);
+                    }
+                } else {
+                    // 如果沒有選擇縣市，回到用戶位置或預設位置
+                    if (userLocation) {
+                        if (mapRef.current) {
+                            mapRef.current.setView(userLocation, 15);
+                        }
                     }
                 }
             }
         },
-        [navigateToDistrict, userLocation],
+        [navigateToDistrict, userLocation, selectedCity],
     );
 
     // 優化的視口變更處理，加入節流

@@ -275,9 +275,12 @@ php artisan tinker --execute="echo 'Has coordinates: ' . App\Models\Property::wh
 - ✅ **Redis 快取機制實現**
   - 為地理資料實現 Redis 快取機制，提升查詢性能 4-5 倍
   - 雙層快取策略：個別座標快取 + 完整資料快取
-  - 快取時間：24 小時，使用 Redis 資料庫 1
-  - 快取鍵格式：`rentalradar_database_rentalradar_cache_geo_coordinates:{city}:{district}`
-  - 保持原有資料庫快取，只對地理資料使用 Redis
+
+- ✅ **地圖導航 UX 重大優化**
+  - 選擇縣市時地圖自動跳到該縣市第一個行政區
+  - 智慧「全區」導航：有選擇縣市時移動到該縣市第一個行政區
+  - 保持行政區下拉選單顯示「全區」，符合使用者習慣
+  - 實現縣市範圍內的靈活導航，提升使用者體驗
 
 - ✅ **地圖功能全面優化**
   - 修復地圖頁面 property.area.toFixed 錯誤
