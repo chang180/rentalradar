@@ -338,7 +338,7 @@ const RentalMap = memo(() => {
                 mapRef.current.setView(coordinates, 12);
             }
         }
-    }, []);
+    }, [selectedCity]);
 
     // 性能監控
     const updatePerformanceMetrics = useCallback(() => {
@@ -458,8 +458,22 @@ const RentalMap = memo(() => {
                 const data = await response.json();
                 if (data.success && data.data && data.data.length > 0) {
                     const firstDistrict = data.data[0];
-                    // 移動地圖中心到第一個行政區，但不改變行政區選擇
-                    await navigateToDistrict(firstDistrict.district);
+                    // 移動地圖中心到第一個行政區，傳遞城市參數
+                    const params = new URLSearchParams();
+                    params.append('district', firstDistrict.district);
+                    params.append('city', city);
+                    
+                    const boundsResponse = await fetch(
+                        `/api/map/district-bounds?${params.toString()}`,
+                    );
+                    const boundsData = await boundsResponse.json();
+                    
+                    if (boundsData.success && boundsData.bounds && mapRef.current) {
+                        const { north, south, east, west } = boundsData.bounds;
+                        const centerLat = (north + south) / 2;
+                        const centerLng = (east + west) / 2;
+                        mapRef.current.setView([centerLat, centerLng], 13);
+                    }
                 }
             } catch (err) {
                 console.error('Failed to navigate to first district:', err);
