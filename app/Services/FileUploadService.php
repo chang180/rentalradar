@@ -184,6 +184,13 @@ class FileUploadService
                     // 分批儲存以避免記憶體問題
                     $chunks = array_chunk($recordsToSave, 100);
                     foreach ($chunks as $chunk) {
+                        // 為每筆記錄添加時間戳
+                        $now = now();
+                        foreach ($chunk as &$record) {
+                            $record['created_at'] = $now;
+                            $record['updated_at'] = $now;
+                        }
+                        
                         Property::insert($chunk);
                         $savedCount += count($chunk);
                     }
