@@ -20,10 +20,10 @@ class MarketAnalysisService
             // 生成快取鍵值，包含所有篩選條件
             $cacheKey = $this->generateCacheKey('market_analysis_dashboard', $filters);
             
-            // 嘗試從快取取得資料（快取 10 天，因為資料每 10 天更新一次）
-            $cachedData = Cache::get($cacheKey);
+            // 嘗試從 Redis 快取取得資料（快取 10 天，因為資料每 10 天更新一次）
+            $cachedData = Cache::store('redis')->get($cacheKey);
             if ($cachedData !== null) {
-                Log::info('Market analysis data served from cache', ['cache_key' => $cacheKey]);
+                Log::info('Market analysis data served from Redis cache', ['cache_key' => $cacheKey]);
                 return $cachedData;
             }
             
@@ -40,8 +40,8 @@ class MarketAnalysisService
 
             if (!$hasData) {
                 $emptyData = $this->buildEmptyDashboard($timeRange, $filters);
-                // 快取空資料 1 小時，避免重複查詢
-                Cache::put($cacheKey, $emptyData, now()->addHour());
+                // 快取空資料到 Redis 1 小時，避免重複查詢
+                Cache::store('redis')->put($cacheKey, $emptyData, now()->addHour());
                 return $emptyData;
             }
 
@@ -97,8 +97,8 @@ class MarketAnalysisService
                 ],
             ];
             
-            // 快取結果 10 天（因為資料每 10 天更新一次）
-            Cache::put($cacheKey, $result, now()->addDays(10));
+            // 快取結果到 Redis 10 天（因為資料每 10 天更新一次）
+            Cache::store('redis')->put($cacheKey, $result, now()->addDays(10));
             Log::info('Market analysis data cached', ['cache_key' => $cacheKey, 'property_count' => $properties->count()]);
             
             return $result;
@@ -118,10 +118,10 @@ class MarketAnalysisService
         // 生成報告快取鍵值
         $cacheKey = $this->generateCacheKey('market_analysis_report', $filters);
         
-        // 嘗試從快取取得報告
-        $cachedReport = Cache::get($cacheKey);
+        // 嘗試從 Redis 快取取得報告
+        $cachedReport = Cache::store('redis')->get($cacheKey);
         if ($cachedReport !== null) {
-            Log::info('Market analysis report served from cache', ['cache_key' => $cacheKey]);
+            Log::info('Market analysis report served from Redis cache', ['cache_key' => $cacheKey]);
             return $cachedReport;
         }
         
@@ -201,7 +201,7 @@ class MarketAnalysisService
         ];
         
         // 快取報告 10 天
-        Cache::put($cacheKey, $report, now()->addDays(10));
+        Cache::store('redis')->put($cacheKey, $report, now()->addDays(10));
         Log::info('Market analysis report cached', ['cache_key' => $cacheKey]);
         
         return $report;

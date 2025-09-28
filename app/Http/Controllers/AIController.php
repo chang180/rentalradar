@@ -51,8 +51,8 @@ class AIController extends Controller
         // 建立快取鍵
         $cacheKey = 'ai_analysis_' . md5(json_encode($request->all()));
 
-        // 檢查快取
-        $cached = Cache::get($cacheKey);
+        // 檢查 Redis 快取
+        $cached = Cache::store('redis')->get($cacheKey);
         if ($cached) {
             $monitor->mark('cache_hit');
             return response()->json([
@@ -90,8 +90,8 @@ class AIController extends Controller
 
             $monitor->mark('analysis_complete');
 
-            // 快取結果
-            Cache::put($cacheKey, $result['data'], 3600); // 1小時快取
+            // 快取結果到 Redis
+            Cache::store('redis')->put($cacheKey, $result['data'], 3600); // 1小時快取
 
             return response()->json([
                 'success' => true,
