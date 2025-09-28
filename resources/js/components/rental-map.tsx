@@ -254,9 +254,15 @@ const RentalMap = memo(() => {
         if (!district || !mapRef.current) return;
 
         try {
-            // 動態獲取該行政區的實際座標範圍
+            // 動態獲取該行政區的實際座標範圍，包含城市參數
+            const params = new URLSearchParams();
+            params.append('district', district);
+            if (selectedCity) {
+                params.append('city', selectedCity);
+            }
+            
             const response = await fetch(
-                `/api/map/district-bounds?district=${encodeURIComponent(district)}`,
+                `/api/map/district-bounds?${params.toString()}`,
             );
             const data = await response.json();
 
@@ -478,6 +484,7 @@ const RentalMap = memo(() => {
                         const data = await response.json();
                         if (data.success && data.data && data.data.length > 0) {
                             const firstDistrict = data.data[0];
+                            // 移動地圖中心到第一個行政區，但不改變行政區選擇
                             await navigateToDistrict(firstDistrict.district);
                         }
                     } catch (err) {

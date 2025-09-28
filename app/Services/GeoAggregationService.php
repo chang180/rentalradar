@@ -260,6 +260,35 @@ class GeoAggregationService
     }
 
     /**
+     * 根據城市和行政區取得邊界資訊
+     */
+    public function getDistrictBoundsByCity(string $city, string $district): ?array
+    {
+        $geoCenters = $this->loadGeoCentersWithCache();
+        
+        // 檢查指定城市是否有該行政區
+        if (isset($geoCenters[$city][$district])) {
+            $center = $geoCenters[$city][$district];
+            $lat = $center['lat'];
+            $lng = $center['lng'];
+
+            // 計算約 5km 的半徑邊界
+            $latOffset = 0.045; // 約 5km
+            $lngOffset = 0.045; // 約 5km
+
+            return [
+                'north' => $lat + $latOffset,
+                'south' => $lat - $latOffset,
+                'east' => $lng + $lngOffset,
+                'west' => $lng - $lngOffset,
+            ];
+        }
+
+        // 如果沒找到，回退到一般查詢
+        return $this->getDistrictBounds($district);
+    }
+
+    /**
      * 為地理服務標準化城市名稱，處理台/臺等字符差異
      */
     private function normalizeCityNameForGeoService(string $city): string

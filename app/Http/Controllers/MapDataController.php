@@ -394,6 +394,8 @@ class MapDataController extends Controller
     public function districtBounds(Request $request): JsonResponse
     {
         $district = $request->get('district');
+        $city = $request->get('city');
+        
         if (! $district) {
             return response()->json([
                 'success' => false,
@@ -401,7 +403,12 @@ class MapDataController extends Controller
             ], 400);
         }
 
-        $bounds = $this->geoAggregationService->getDistrictBounds($district);
+        // 如果有城市參數，使用城市+行政區的組合查詢
+        if ($city) {
+            $bounds = $this->geoAggregationService->getDistrictBoundsByCity($city, $district);
+        } else {
+            $bounds = $this->geoAggregationService->getDistrictBounds($district);
+        }
 
         return response()->json([
             'success' => true,
