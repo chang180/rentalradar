@@ -31,5 +31,5 @@ export const apiRequest = async (url: string, options: RequestInit = {}) => {
 
 // 專門用於管理員 API 的請求函數
 export const adminApiRequest = async (endpoint: string, options: RequestInit = {}) => {
-    return apiRequest(`/api/admin${endpoint}`, options);
+    return apiRequest(`/admin/api${endpoint}`, options);
 };

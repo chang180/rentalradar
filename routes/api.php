@@ -128,7 +128,7 @@ Route::prefix('dashboard')->group(function () {
 });
 
 // 權限管理 API (需要管理員權限)
-Route::middleware(['auth:web'])->prefix('admin')->group(function () {
+Route::middleware(['auth:web', 'admin'])->prefix('admin')->group(function () {
     // 管理員儀表板
     Route::get('/dashboard', [AdminController::class, 'dashboard']);
     Route::get('/permissions', [AdminController::class, 'getUserPermissions']);

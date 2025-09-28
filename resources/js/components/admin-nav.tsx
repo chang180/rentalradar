@@ -13,7 +13,8 @@ import {
     Calendar, 
     Shield,
     FileText,
-    Settings
+    Settings,
+    BarChart3
 } from 'lucide-react';
 
 const adminNavItems: NavItem[] = [
@@ -33,9 +34,9 @@ const adminNavItems: NavItem[] = [
         icon: Calendar,
     },
     {
-        title: '權限管理',
-        href: '/admin/permissions',
-        icon: Shield,
+        title: '效能監控',
+        href: '/admin/performance',
+        icon: BarChart3,
     },
 ];
 

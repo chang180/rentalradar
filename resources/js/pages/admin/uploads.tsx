@@ -18,8 +18,9 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { useAdminCheck } from '@/hooks/useAdmin';
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import { 
+    ArrowLeft,
     Upload, 
     FileText, 
     CheckCircle, 
@@ -237,6 +238,15 @@ export default function AdminUploads() {
 
             <div className="container mx-auto py-8">
                 <div className="mb-8">
+                    <div className="flex items-center gap-4 mb-4">
+                        <Link 
+                            href="/dashboard" 
+                            className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+                        >
+                            <ArrowLeft className="h-4 w-4" />
+                            返回儀表板
+                        </Link>
+                    </div>
                     <h1 className="text-3xl font-bold text-gray-900">檔案上傳管理</h1>
                     <p className="mt-2 text-gray-600">
                         管理政府資料檔案上傳和處理

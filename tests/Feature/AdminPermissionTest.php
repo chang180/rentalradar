@@ -189,13 +189,6 @@ describe('Admin Permission System', function () {
             $response->assertSuccessful();
         });
 
-        it('serves admin permission management page', function () {
-            $this->actingAs($this->adminUser);
-
-            $response = $this->get('/admin/permissions');
-
-            $response->assertSuccessful();
-        });
 
         it('denies access to admin pages for regular users', function () {
             $this->actingAs($this->regularUser);

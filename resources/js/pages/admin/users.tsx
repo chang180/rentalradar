@@ -19,8 +19,9 @@ import {
 } from '@/components/ui/table';
 import { useAdminCheck } from '@/hooks/useAdmin';
 import { adminApiRequest } from '@/utils/api';
-import { Head, router } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { 
+    ArrowLeft,
     Plus, 
     Search, 
     Shield, 
@@ -74,7 +75,8 @@ export default function AdminUsers() {
                 ...(roleFilter !== 'all' && { role: roleFilter }),
             });
 
-            const data: UsersResponse = await adminApiRequest(`/users?${params}`);
+            const response = await adminApiRequest(`/users?${params}`);
+            const data: UsersResponse = response.data;
             setUsers(data.users);
             setPagination(data.pagination);
         } catch (error) {
@@ -152,6 +154,15 @@ export default function AdminUsers() {
 
             <div className="container mx-auto py-8">
                 <div className="mb-8">
+                    <div className="flex items-center gap-4 mb-4">
+                        <Link 
+                            href="/dashboard" 
+                            className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+                        >
+                            <ArrowLeft className="h-4 w-4" />
+                            返回儀表板
+                        </Link>
+                    </div>
                     <h1 className="text-3xl font-bold text-gray-900">使用者管理</h1>
                     <p className="mt-2 text-gray-600">
                         管理系統使用者帳號和權限

@@ -71,9 +71,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('map');
     })->name('map');
 
-    Route::get('performance', function () {
-        return Inertia::render('PerformanceDashboard');
-    })->name('performance');
 
     Route::get('analysis', function () {
         return Inertia::render('MarketAnalysisDashboard');
@@ -97,9 +94,44 @@ Route::middleware(['auth', 'verified'])->group(function () {
             return Inertia::render('admin/schedules');
         })->name('admin.schedules');
 
-        Route::get('permissions', function () {
-            return Inertia::render('admin/permissions');
-        })->name('admin.permissions');
+        Route::get('performance', function () {
+            return Inertia::render('PerformanceDashboard');
+        })->name('admin.performance');
+
+
+        // 管理員 API 路由 - 使用 web 認證
+        Route::prefix('api')->group(function () {
+            Route::get('/dashboard', [App\Http\Controllers\AdminController::class, 'dashboard']);
+            Route::get('/permissions', [App\Http\Controllers\AdminController::class, 'getUserPermissions']);
+            Route::post('/clear-cache', [App\Http\Controllers\AdminController::class, 'clearPermissionCache']);
+            
+            // 使用者管理
+            Route::get('/users', [App\Http\Controllers\AdminController::class, 'getUsers']);
+            Route::post('/users/{user}/promote', [App\Http\Controllers\AdminController::class, 'promoteUser']);
+            Route::post('/users/{user}/demote', [App\Http\Controllers\AdminController::class, 'demoteUser']);
+            Route::delete('/users/{user}', [App\Http\Controllers\AdminController::class, 'deleteUser']);
+            
+            // 檔案上傳管理
+            Route::post('/uploads', [App\Http\Controllers\FileUploadController::class, 'upload']);
+            Route::get('/uploads', [App\Http\Controllers\FileUploadController::class, 'getUploadHistory']);
+            Route::get('/uploads/{uploadId}', [App\Http\Controllers\FileUploadController::class, 'getUploadDetails']);
+            Route::post('/uploads/{uploadId}/process', [App\Http\Controllers\FileUploadController::class, 'processUpload']);
+            Route::delete('/uploads/{uploadId}', [App\Http\Controllers\FileUploadController::class, 'deleteUpload']);
+            Route::get('/uploads/stats', [App\Http\Controllers\FileUploadController::class, 'getUploadStats']);
+            Route::post('/uploads/validate', [App\Http\Controllers\FileUploadController::class, 'validateFile']);
+            
+            // 排程管理
+            Route::get('/schedules', [App\Http\Controllers\ScheduleController::class, 'getSchedules']);
+            Route::get('/schedules/{taskName}', [App\Http\Controllers\ScheduleController::class, 'getSchedule']);
+            Route::post('/schedules', [App\Http\Controllers\ScheduleController::class, 'createSchedule']);
+            Route::put('/schedules/{taskName}', [App\Http\Controllers\ScheduleController::class, 'updateSchedule']);
+            Route::delete('/schedules/{taskName}', [App\Http\Controllers\ScheduleController::class, 'deleteSchedule']);
+            Route::post('/schedules/{taskName}/execute', [App\Http\Controllers\ScheduleController::class, 'executeSchedule']);
+            Route::get('/schedules/{taskName}/history', [App\Http\Controllers\ScheduleController::class, 'getExecutionHistory']);
+            Route::get('/schedules/stats', [App\Http\Controllers\ScheduleController::class, 'getScheduleStats']);
+            Route::get('/schedules/{taskName}/status', [App\Http\Controllers\ScheduleController::class, 'checkScheduleStatus']);
+            Route::post('/schedules/initialize', [App\Http\Controllers\ScheduleController::class, 'initializeDefaultSchedules']);
+        });
     });
 });
 

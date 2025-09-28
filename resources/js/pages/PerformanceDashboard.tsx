@@ -8,6 +8,9 @@ import {
 import { PerformanceMonitor } from '../components/PerformanceMonitor';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { PerformanceUtils } from '../utils/PerformanceUtils';
+import { useAdminCheck } from '../hooks/useAdmin';
+import { Link } from '@inertiajs/react';
+import { ArrowLeft, Shield } from 'lucide-react';
 
 interface DashboardMetrics {
     timestamp: number;
@@ -42,6 +45,7 @@ interface UserBehavior {
 }
 
 export const PerformanceDashboard: React.FC = () => {
+    const isAdmin = useAdminCheck();
     const { isConnected } = useWebSocket();
     const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
     const [errorLogs, setErrorLogs] = useState<ErrorLog[]>([]);
@@ -233,7 +237,7 @@ export const PerformanceDashboard: React.FC = () => {
             case 'info':
                 return 'text-blue-600 bg-blue-50 border-blue-200';
             default:
-                return 'text-gray-600 bg-gray-50 border-gray-200';
+                return 'text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-700';
         }
     };
 
@@ -252,28 +256,61 @@ export const PerformanceDashboard: React.FC = () => {
 
     if (isLoading) {
         return (
-            <div className="flex min-h-screen items-center justify-center bg-gray-50">
+            <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-700 dark:bg-gray-900">
                 <LoadingIndicator size="lg" text="載入效能監控儀表板..." />
             </div>
         );
     }
 
-    return (
-        <div className="min-h-screen bg-gray-50">
-            {/* 標題列 */}
-            <div className="border-b bg-white shadow-sm">
-                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                    <div className="flex h-16 items-center justify-between">
-                        <div className="flex items-center">
-                            <h1 className="text-xl font-semibold text-gray-900">
-                                效能監控儀表板
-                            </h1>
-                            <div className="ml-4">
-                                <ConnectionStatus showDetails={false} />
-                            </div>
-                        </div>
+    if (!isAdmin) {
+        return (
+            <div className="container mx-auto py-8">
+                <div className="text-center">
+                    <Shield className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500 dark:text-gray-400" />
+                    <h2 className="mt-4 text-lg font-semibold text-gray-900 dark:text-gray-100 dark:text-gray-100">
+                        權限不足
+                    </h2>
+                    <p className="mt-2 text-gray-600 dark:text-gray-300 dark:text-gray-400">
+                        您沒有權限存取此頁面。
+                    </p>
+                    <Link 
+                        href="/dashboard" 
+                        className="mt-4 inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:text-gray-100 dark:text-gray-400 dark:hover:text-gray-100 transition-colors"
+                    >
+                        <ArrowLeft className="h-4 w-4" />
+                        返回儀表板
+                    </Link>
+                </div>
+            </div>
+        );
+    }
 
-                        <div className="flex items-center space-x-4">
+    return (
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-700 dark:bg-gray-900">
+            {/* 標題列 */}
+            <div className="border-b bg-white dark:bg-gray-800 shadow-sm">
+                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                    <div className="py-4">
+                        <div className="flex items-center gap-4 mb-4">
+                            <Link 
+                                href="/dashboard" 
+                                className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:text-gray-100 dark:text-gray-400 dark:hover:text-gray-100 transition-colors"
+                            >
+                                <ArrowLeft className="h-4 w-4" />
+                                返回儀表板
+                            </Link>
+                        </div>
+                        <div className="flex h-16 items-center justify-between">
+                            <div className="flex items-center">
+                                <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100 dark:text-gray-100">
+                                    效能監控儀表板
+                                </h1>
+                                <div className="ml-4">
+                                    <ConnectionStatus showDetails={false} />
+                                </div>
+                            </div>
+
+                            <div className="flex items-center space-x-4">
                             <select
                                 value={timeRange}
                                 onChange={(e) =>
@@ -293,13 +330,14 @@ export const PerformanceDashboard: React.FC = () => {
                             >
                                 重新整理
                             </button>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
             {/* 標籤導航 */}
-            <div className="border-b bg-white">
+            <div className="border-b bg-white dark:bg-gray-800">
                 <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                     <nav className="flex space-x-8">
                         {[
@@ -313,8 +351,8 @@ export const PerformanceDashboard: React.FC = () => {
                                 onClick={() => setSelectedTab(tab.id as any)}
                                 className={`border-b-2 px-1 py-4 text-sm font-medium ${
                                     selectedTab === tab.id
-                                        ? 'border-blue-500 text-blue-600'
-                                        : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                                        ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                                        : 'border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
                                 }`}
                             >
                                 <span className="mr-2">{tab.icon}</span>
@@ -331,7 +369,7 @@ export const PerformanceDashboard: React.FC = () => {
                     <div className="space-y-6">
                         {/* 關鍵指標卡片 */}
                         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-                            <div className="rounded-lg bg-white p-6 shadow">
+                            <div className="rounded-lg bg-white dark:bg-gray-800 p-6 shadow">
                                 <div className="flex items-center">
                                     <div className="flex-shrink-0">
                                         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100">
@@ -341,10 +379,10 @@ export const PerformanceDashboard: React.FC = () => {
                                         </div>
                                     </div>
                                     <div className="ml-4">
-                                        <p className="text-sm font-medium text-gray-500">
+                                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400 dark:text-gray-400">
                                             響應時間
                                         </p>
-                                        <p className="text-2xl font-semibold text-gray-900">
+                                        <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100 dark:text-gray-100">
                                             {metrics?.responseTime?.toFixed(
                                                 0,
                                             ) || '0'}
@@ -354,7 +392,7 @@ export const PerformanceDashboard: React.FC = () => {
                                 </div>
                             </div>
 
-                            <div className="rounded-lg bg-white p-6 shadow">
+                            <div className="rounded-lg bg-white dark:bg-gray-800 p-6 shadow">
                                 <div className="flex items-center">
                                     <div className="flex-shrink-0">
                                         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100">
@@ -364,10 +402,10 @@ export const PerformanceDashboard: React.FC = () => {
                                         </div>
                                     </div>
                                     <div className="ml-4">
-                                        <p className="text-sm font-medium text-gray-500">
+                                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
                                             記憶體使用
                                         </p>
-                                        <p className="text-2xl font-semibold text-gray-900">
+                                        <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
                                             {metrics?.memoryUsage?.toFixed(1) ||
                                                 '0'}
                                             MB
@@ -376,7 +414,7 @@ export const PerformanceDashboard: React.FC = () => {
                                 </div>
                             </div>
 
-                            <div className="rounded-lg bg-white p-6 shadow">
+                            <div className="rounded-lg bg-white dark:bg-gray-800 p-6 shadow">
                                 <div className="flex items-center">
                                     <div className="flex-shrink-0">
                                         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-yellow-100">
@@ -386,17 +424,17 @@ export const PerformanceDashboard: React.FC = () => {
                                         </div>
                                     </div>
                                     <div className="ml-4">
-                                        <p className="text-sm font-medium text-gray-500">
+                                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
                                             活躍連接
                                         </p>
-                                        <p className="text-2xl font-semibold text-gray-900">
+                                        <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
                                             {metrics?.activeConnections || 0}
                                         </p>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="rounded-lg bg-white p-6 shadow">
+                            <div className="rounded-lg bg-white dark:bg-gray-800 p-6 shadow">
                                 <div className="flex items-center">
                                     <div className="flex-shrink-0">
                                         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-100">
@@ -406,10 +444,10 @@ export const PerformanceDashboard: React.FC = () => {
                                         </div>
                                     </div>
                                     <div className="ml-4">
-                                        <p className="text-sm font-medium text-gray-500">
+                                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
                                             錯誤率
                                         </p>
-                                        <p className="text-2xl font-semibold text-gray-900">
+                                        <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
                                             {metrics?.errorRate?.toFixed(2) ||
                                                 '0.00'}
                                             %
@@ -422,13 +460,13 @@ export const PerformanceDashboard: React.FC = () => {
                         {/* 效能監控組件 */}
                         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                             <PerformanceMonitor showDetails={true} />
-                            <div className="rounded-lg bg-white p-6 shadow">
-                                <h3 className="mb-4 text-lg font-semibold text-gray-900">
+                            <div className="rounded-lg bg-white dark:bg-gray-800 p-6 shadow">
+                                <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-gray-100">
                                     系統狀態
                                 </h3>
                                 <div className="space-y-3">
                                     <div className="flex justify-between">
-                                        <span className="text-sm text-gray-600">
+                                        <span className="text-sm text-gray-600 dark:text-gray-300">
                                             WebSocket 連接
                                         </span>
                                         <span
@@ -438,10 +476,10 @@ export const PerformanceDashboard: React.FC = () => {
                                         </span>
                                     </div>
                                     <div className="flex justify-between">
-                                        <span className="text-sm text-gray-600">
+                                        <span className="text-sm text-gray-600 dark:text-gray-300">
                                             快取命中率
                                         </span>
-                                        <span className="text-sm font-medium text-gray-900">
+                                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                                             {metrics?.cacheHitRate?.toFixed(
                                                 1,
                                             ) || '0.0'}
@@ -449,18 +487,18 @@ export const PerformanceDashboard: React.FC = () => {
                                         </span>
                                     </div>
                                     <div className="flex justify-between">
-                                        <span className="text-sm text-gray-600">
+                                        <span className="text-sm text-gray-600 dark:text-gray-300">
                                             查詢次數
                                         </span>
-                                        <span className="text-sm font-medium text-gray-900">
+                                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                                             {metrics?.queryCount || 0}
                                         </span>
                                     </div>
                                     <div className="flex justify-between">
-                                        <span className="text-sm text-gray-600">
+                                        <span className="text-sm text-gray-600 dark:text-gray-300">
                                             吞吐量
                                         </span>
-                                        <span className="text-sm font-medium text-gray-900">
+                                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                                             {metrics?.throughput?.toFixed(0) ||
                                                 '0'}{' '}
                                             req/min
@@ -474,9 +512,9 @@ export const PerformanceDashboard: React.FC = () => {
 
                 {selectedTab === 'errors' && (
                     <div className="space-y-6">
-                        <div className="rounded-lg bg-white shadow">
-                            <div className="border-b border-gray-200 px-6 py-4">
-                                <h3 className="text-lg font-semibold text-gray-900">
+                        <div className="rounded-lg bg-white dark:bg-gray-800 shadow">
+                            <div className="border-b border-gray-200 dark:border-gray-700 px-6 py-4">
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                                     錯誤日誌
                                 </h3>
                             </div>
@@ -497,26 +535,26 @@ export const PerformanceDashboard: React.FC = () => {
                                                         >
                                                             {error.level.toUpperCase()}
                                                         </span>
-                                                        <span className="text-sm text-gray-500">
+                                                        <span className="text-sm text-gray-500 dark:text-gray-400">
                                                             {formatTime(
                                                                 error.timestamp,
                                                             )}
                                                         </span>
                                                     </div>
-                                                    <p className="mt-1 text-sm text-gray-900">
+                                                    <p className="mt-1 text-sm text-gray-900 dark:text-gray-100">
                                                         {error.message}
                                                     </p>
                                                     {error.url && (
-                                                        <p className="mt-1 text-xs text-gray-500">
+                                                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                                                             URL: {error.url}
                                                         </p>
                                                     )}
                                                     {error.stack && (
                                                         <details className="mt-2">
-                                                            <summary className="cursor-pointer text-xs text-gray-500">
+                                                            <summary className="cursor-pointer text-xs text-gray-500 dark:text-gray-400">
                                                                 查看堆疊追蹤
                                                             </summary>
-                                                            <pre className="mt-2 overflow-x-auto rounded bg-gray-50 p-2 text-xs text-gray-600">
+                                                            <pre className="mt-2 overflow-x-auto rounded bg-gray-50 dark:bg-gray-700 p-2 text-xs text-gray-600 dark:text-gray-300">
                                                                 {error.stack}
                                                             </pre>
                                                         </details>
@@ -533,9 +571,9 @@ export const PerformanceDashboard: React.FC = () => {
 
                 {selectedTab === 'users' && (
                     <div className="space-y-6">
-                        <div className="rounded-lg bg-white shadow">
-                            <div className="border-b border-gray-200 px-6 py-4">
-                                <h3 className="text-lg font-semibold text-gray-900">
+                        <div className="rounded-lg bg-white dark:bg-gray-800 shadow">
+                            <div className="border-b border-gray-200 dark:border-gray-700 px-6 py-4">
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                                     使用者行為分析
                                 </h3>
                             </div>
@@ -550,22 +588,22 @@ export const PerformanceDashboard: React.FC = () => {
                                                     </span>
                                                 </div>
                                                 <div>
-                                                    <p className="text-sm font-medium text-gray-900">
+                                                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                                                         使用者 {behavior.userId}
                                                     </p>
-                                                    <p className="text-sm text-gray-500">
+                                                    <p className="text-sm text-gray-500 dark:text-gray-400">
                                                         {behavior.action} -{' '}
                                                         {behavior.page}
                                                     </p>
                                                 </div>
                                             </div>
                                             <div className="text-right">
-                                                <p className="text-sm text-gray-900">
+                                                <p className="text-sm text-gray-900 dark:text-gray-100">
                                                     {formatDuration(
                                                         behavior.duration,
                                                     )}
                                                 </p>
-                                                <p className="text-xs text-gray-500">
+                                                <p className="text-xs text-gray-500 dark:text-gray-400">
                                                     {formatTime(
                                                         behavior.timestamp,
                                                     )}
@@ -573,7 +611,7 @@ export const PerformanceDashboard: React.FC = () => {
                                             </div>
                                         </div>
                                         {behavior.metadata && (
-                                            <div className="mt-2 rounded bg-gray-50 p-2 text-xs text-gray-600">
+                                            <div className="mt-2 rounded bg-gray-50 dark:bg-gray-700 p-2 text-xs text-gray-600 dark:text-gray-300">
                                                 <pre>
                                                     {JSON.stringify(
                                                         behavior.metadata,
