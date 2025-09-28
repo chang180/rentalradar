@@ -52,6 +52,7 @@
         "laravel-echo": "^2.2.4",
         "laravel-vite-plugin": "^2.0",
         "leaflet": "^1.9.4",
+        "leaflet.fullscreen": "^4.0.0",
         "lucide-react": "^0.475.0",
         "pusher-js": "^8.4.0",
         "react": "^19.0.0",

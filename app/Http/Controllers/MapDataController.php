@@ -476,4 +476,180 @@ class MapDataController extends Controller
 
         return $mapping[$city] ?? $city;
     }
+
+    /**
+     * 獲取行政區統計資料
+     */
+    public function districtStats(Request $request): JsonResponse
+    {
+        $monitor = PerformanceMonitor::start('map.district_stats');
+        $connection = DB::connection();
+        $connection->flushQueryLog();
+        $connection->enableQueryLog();
+
+        // 應用邊界篩選
+        $query = \App\Models\Property::query()->geocoded();
+        $this->applyBounds($request, $query);
+
+        if ($request->has('city')) {
+            $query->byCity($request->city);
+        }
+
+        if ($request->has('district')) {
+            $query->byDistrict($request->district);
+        }
+
+        // 按行政區分組統計
+        $districtStats = $query
+            ->selectRaw('
+                city,
+                district,
+                COUNT(*) as property_count,
+                AVG(rent_per_ping) as avg_rent_per_ping,
+                MIN(rent_per_ping) as min_rent_per_ping,
+                MAX(rent_per_ping) as max_rent_per_ping,
+                AVG(area_ping) as avg_area_ping,
+                AVG(latitude) as center_lat,
+                AVG(longitude) as center_lng
+            ')
+            ->groupBy('city', 'district')
+            ->having('property_count', '>', 0)
+            ->orderBy('property_count', 'desc')
+            ->get();
+
+        $monitor->mark('query_complete');
+        $queryCount = count($connection->getQueryLog());
+        $connection->disableQueryLog();
+
+        $districts = $districtStats->map(function ($stat) {
+            return [
+                'id' => $stat->city . '_' . $stat->district,
+                'city' => $stat->city,
+                'district' => $stat->district,
+                'center' => [
+                    'lat' => (float) $stat->center_lat,
+                    'lng' => (float) $stat->center_lng,
+                ],
+                'count' => (int) $stat->property_count,
+                'avg_rent_per_ping' => round((float) $stat->avg_rent_per_ping, 2),
+                'min_rent_per_ping' => round((float) $stat->min_rent_per_ping, 2),
+                'max_rent_per_ping' => round((float) $stat->max_rent_per_ping, 2),
+                'avg_area_ping' => round((float) $stat->avg_area_ping, 2),
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'districts' => $districts,
+                'total_districts' => $districts->count(),
+                'total_properties' => $districtStats->sum('property_count'),
+            ],
+            'meta' => [
+                'performance' => $monitor->summary([
+                    'query_count' => $queryCount,
+                ]),
+            ],
+        ]);
+    }
+
+    /**
+     * 獲取價格分析資料
+     */
+    public function priceAnalysis(Request $request): JsonResponse
+    {
+        $monitor = PerformanceMonitor::start('map.price_analysis');
+        $connection = DB::connection();
+        $connection->flushQueryLog();
+        $connection->enableQueryLog();
+
+        // 應用邊界篩選
+        $query = \App\Models\Property::query()->geocoded();
+        $this->applyBounds($request, $query);
+
+        if ($request->has('city')) {
+            $query->byCity($request->city);
+        }
+
+        if ($request->has('district')) {
+            $query->byDistrict($request->district);
+        }
+
+        $properties = $query
+            ->select('latitude', 'longitude', 'rent_per_ping', 'total_rent')
+            ->limit($request->get('limit', 2000))
+            ->get();
+
+        $monitor->mark('query_complete');
+
+        // 計算價格區間
+        $rents = $properties->pluck('rent_per_ping')->filter()->sort();
+        $minRent = $rents->min() ?? 0;
+        $maxRent = $rents->max() ?? 0;
+        $avgRent = $rents->avg() ?? 0;
+
+        // 定義價格等級
+        $priceLevels = [
+            'low' => ['min' => $minRent, 'max' => $avgRent * 0.7, 'color' => '#22c55e'], // 綠色
+            'medium' => ['min' => $avgRent * 0.7, 'max' => $avgRent * 1.3, 'color' => '#f59e0b'], // 橙色
+            'high' => ['min' => $avgRent * 1.3, 'max' => $avgRent * 1.8, 'color' => '#ef4444'], // 紅色
+            'premium' => ['min' => $avgRent * 1.8, 'max' => $maxRent, 'color' => '#8b5cf6'], // 紫色
+        ];
+
+        $pricePoints = $properties->map(function ($property) use ($priceLevels, $avgRent, $minRent, $maxRent) {
+            $rent = (float) $property->rent_per_ping;
+            
+            // 判斷價格等級
+            $level = 'medium';
+            $color = $priceLevels['medium']['color'];
+            
+            if ($rent <= $avgRent * 0.7) {
+                $level = 'low';
+                $color = $priceLevels['low']['color'];
+            } elseif ($rent <= $avgRent * 1.3) {
+                $level = 'medium';
+                $color = $priceLevels['medium']['color'];
+            } elseif ($rent <= $avgRent * 1.8) {
+                $level = 'high';
+                $color = $priceLevels['high']['color'];
+            } else {
+                $level = 'premium';
+                $color = $priceLevels['premium']['color'];
+            }
+
+            return [
+                'lat' => (float) $property->latitude,
+                'lng' => (float) $property->longitude,
+                'rent_per_ping' => $rent,
+                'total_rent' => (float) $property->total_rent,
+                'level' => $level,
+                'color' => $color,
+                'weight' => $maxRent > $minRent ? min(1, max(0.1, ($rent - $minRent) / ($maxRent - $minRent))) : 0.5,
+            ];
+        });
+
+        $monitor->mark('transform_complete');
+        $queryCount = count($connection->getQueryLog());
+        $connection->disableQueryLog();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'price_points' => $pricePoints,
+                'price_levels' => $priceLevels,
+                'statistics' => [
+                    'total_properties' => $properties->count(),
+                    'min_rent' => round($minRent, 2),
+                    'max_rent' => round($maxRent, 2),
+                    'avg_rent' => round($avgRent, 2),
+                    'median_rent' => round($rents->median() ?? 0, 2),
+                ],
+            ],
+            'meta' => [
+                'performance' => $monitor->summary([
+                    'query_count' => $queryCount,
+                ]),
+            ],
+        ]);
+    }
 }

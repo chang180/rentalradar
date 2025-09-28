@@ -46,6 +46,13 @@ interface Cluster {
     };
     radius_km?: number;
     density?: number;
+    // 行政區統計相關屬性
+    city?: string;
+    district?: string;
+    avg_rent_per_ping?: number;
+    min_rent_per_ping?: number;
+    max_rent_per_ping?: number;
+    avg_area_ping?: number;
 }
 
 interface Viewport {
@@ -183,12 +190,75 @@ export function useAIMap(options: UseAIMapOptions = {}) {
         [loadMapData, properties, autoOptimize],
     );
 
+    // 載入行政區統計資料
+    const loadDistrictStats = useCallback(async () => {
+        if (!currentViewportRef.current) return;
+        
+        setLoading(true);
+        try {
+            const viewport = currentViewportRef.current;
+            const params = new URLSearchParams();
+            params.append('north', viewport.north.toString());
+            params.append('south', viewport.south.toString());
+            params.append('east', viewport.east.toString());
+            params.append('west', viewport.west.toString());
+            params.append('zoom', viewport.zoom.toString());
+
+            const response = await fetch(`/api/map/district-stats?${params}`);
+            const data = await response.json();
+
+            if (data.success) {
+                setClusters(data.data.districts || []);
+            }
+        } catch (err) {
+            setError('獲取行政區統計時發生錯誤');
+            console.error('District stats error:', err);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    // 載入價格分析資料
+    const loadPriceAnalysis = useCallback(async () => {
+        if (!currentViewportRef.current) return;
+        
+        setLoading(true);
+        try {
+            const viewport = currentViewportRef.current;
+            const params = new URLSearchParams();
+            params.append('north', viewport.north.toString());
+            params.append('south', viewport.south.toString());
+            params.append('east', viewport.east.toString());
+            params.append('west', viewport.west.toString());
+            params.append('zoom', viewport.zoom.toString());
+
+            const response = await fetch(`/api/map/price-analysis?${params}`);
+            const data = await response.json();
+
+            if (data.success) {
+                setHeatmapData(data.data.price_points || []);
+            }
+        } catch (err) {
+            setError('獲取價格分析時發生錯誤');
+            console.error('Price analysis error:', err);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
     // 切換顯示模式
     const toggleDisplayMode = useCallback(
-        (mode: 'properties' | 'clusters' | 'heatmap') => {
+        async (mode: 'properties' | 'clusters' | 'heatmap') => {
             setDisplayMode(mode);
+            
+            // 根據模式載入相應的資料
+            if (mode === 'clusters') {
+                await loadDistrictStats();
+            } else if (mode === 'heatmap') {
+                await loadPriceAnalysis();
+            }
         },
-        [],
+        [loadDistrictStats, loadPriceAnalysis],
     );
 
     // 獲取 AI 聚合

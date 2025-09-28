@@ -1,5 +1,7 @@
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import 'leaflet.fullscreen';
+import 'leaflet.fullscreen/Control.FullScreen.css';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     CircleMarker,
@@ -118,6 +120,33 @@ const MapEventHandler = memo(
         return null;
     },
 );
+
+// 全螢幕控制組件
+const FullscreenControl = memo(() => {
+    const map = useMapEvents({});
+    
+    useEffect(() => {
+        if (map) {
+            // 添加全螢幕控制
+            const fullscreenControl = new (L.Control as any).FullScreen({
+                position: 'topleft',
+                title: {
+                    'false': '進入全螢幕',
+                    'true': '退出全螢幕'
+                }
+            });
+            
+            map.addControl(fullscreenControl);
+            
+            // 清理函數
+            return () => {
+                map.removeControl(fullscreenControl);
+            };
+        }
+    }, [map]);
+
+    return null;
+});
 
 // 性能監控接口
 interface PerformanceMetrics {
@@ -465,11 +494,10 @@ const RentalMap = memo(() => {
     );
 
     // 優化的圖標創建，使用緩存
-    const createCustomIcon = useCallback((totalRent: number, area: number) => {
-        // 計算每坪租金（將平方公尺轉換為坪數）
-        const rentPerPing = totalRent / (area / 3.30579);
+    const createCustomIcon = useCallback((rentPerPing: number, area: number) => {
+        // 直接使用每坪租金進行分類
         const priceCategory =
-            rentPerPing > 1000 ? 'high' : rentPerPing > 600 ? 'medium' : 'low';
+            rentPerPing > 1000 ? 'high' : rentPerPing >= 600 ? 'medium' : 'low';
 
         if (iconCache.has(priceCategory)) {
             return iconCache.get(priceCategory)!;
@@ -648,9 +676,9 @@ const RentalMap = memo(() => {
                         className="rounded-md border border-gray-300 bg-white px-3 py-1 text-gray-900 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
                         title="選擇地圖顯示模式"
                     >
-                        <option value="properties">區域統計</option>
-                        <option value="clusters">智慧群組</option>
-                        <option value="heatmap">租金熱力圖</option>
+                        <option value="properties">個別標記</option>
+                        <option value="clusters">區域統計</option>
+                        <option value="heatmap">價格分析</option>
                     </select>
                 </div>
 
@@ -668,26 +696,34 @@ const RentalMap = memo(() => {
                         </div>
                     </button>
                     <button
-                        onClick={() => getAIClusters('kmeans', 15)}
+                        onClick={() => toggleDisplayMode('clusters')}
                         disabled={loading}
-                        className="group relative rounded bg-blue-600 px-3 py-1 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
-                        title="將附近的租屋標記合併成群組，讓地圖更清晰易讀。適合查看區域密度。"
+                        className={`group relative rounded px-3 py-1 text-sm text-white hover:opacity-80 disabled:opacity-50 ${
+                            displayMode === 'clusters' 
+                                ? 'bg-blue-700 ring-2 ring-blue-300' 
+                                : 'bg-blue-600 hover:bg-blue-700'
+                        }`}
+                        title="顯示各行政區的租屋統計資訊，包含平均租金和租屋數量。"
                     >
-                        智慧群組
+                        區域統計
                         <div className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 transform rounded-lg bg-gray-900 px-3 py-2 text-xs whitespace-nowrap text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-                            將附近的租屋標記合併成群組，讓地圖更清晰易讀
+                            顯示各行政區的租屋統計資訊，包含平均租金和租屋數量
                             <div className="absolute top-full left-1/2 -translate-x-1/2 transform border-4 border-transparent border-t-gray-900"></div>
                         </div>
                     </button>
                     <button
-                        onClick={() => getAIHeatmap('medium')}
+                        onClick={() => toggleDisplayMode('heatmap')}
                         disabled={loading}
-                        className="group relative rounded bg-green-600 px-3 py-1 text-sm text-white hover:bg-green-700 disabled:opacity-50"
-                        title="顯示租金密度分布，顏色越深表示租金越高。適合分析價格趨勢。"
+                        className={`group relative rounded px-3 py-1 text-sm text-white hover:opacity-80 disabled:opacity-50 ${
+                            displayMode === 'heatmap' 
+                                ? 'bg-green-700 ring-2 ring-green-300' 
+                                : 'bg-green-600 hover:bg-green-700'
+                        }`}
+                        title="顯示不同價格區間的租屋分布，顏色代表價格等級。"
                     >
-                        租金熱力圖
+                        價格分析
                         <div className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 transform rounded-lg bg-gray-900 px-3 py-2 text-xs whitespace-nowrap text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-                            顯示租金密度分布，顏色越深表示租金越高
+                            顯示不同價格區間的租屋分布，顏色代表價格等級
                             <div className="absolute top-full left-1/2 -translate-x-1/2 transform border-4 border-transparent border-t-gray-900"></div>
                         </div>
                     </button>
@@ -715,8 +751,8 @@ const RentalMap = memo(() => {
                     {displayMode === 'properties' &&
                         `顯示 ${properties?.length || 0} 個租屋標記`}
                     {displayMode === 'clusters' &&
-                        `顯示 ${clusters?.length || 0} 個智慧群組`}
-                    {displayMode === 'heatmap' && `租金密度分布圖`}
+                        `顯示 ${clusters?.length || 0} 個行政區統計`}
+                    {displayMode === 'heatmap' && `顯示 ${heatmapData?.length || 0} 個價格分析點`}
                     {loading && ' (載入中...)'}
                     {locationError && (
                         <span className="ml-2 text-xs text-red-500">
@@ -745,6 +781,7 @@ const RentalMap = memo(() => {
                     />
 
                     <MapEventHandler onViewportChange={handleViewportChange} />
+                    <FullscreenControl />
 
                     {/* 聚合區域標記 */}
                     {displayMode === 'properties' &&
@@ -871,54 +908,42 @@ const RentalMap = memo(() => {
                             </Marker>
                         ))}
 
-                    {/* AI 聚合標記 - 增強視覺效果 */}
+                    {/* 行政區統計標記 */}
                     {displayMode === 'clusters' &&
-                        clusters?.map((cluster) => {
-                            // 使用視覺等級來確定大小和顏色
-                            const visualLevel =
-                                cluster.visual_level ||
-                                Math.min(
-                                    5,
-                                    Math.max(
-                                        1,
-                                        Math.floor(cluster.count / 10) + 1,
-                                    ),
-                                );
-                            const baseSize = 15;
-                            const size = Math.min(
-                                Math.max(baseSize + visualLevel * 6, 15),
-                                70,
-                            );
+                        clusters?.map((district) => {
+                            // 根據租屋數量確定大小
+                            const count = district.count || 0;
+                            const size = Math.min(Math.max(count / 5, 8), 25);
 
-                            // 基於價格統計選擇顏色
-                            const priceStats = cluster.price_stats;
+                            // 根據平均租金選擇顏色
+                            const avgRent = district.avg_rent_per_ping || 0;
                             let color = '#22c55e'; // 預設綠色
                             let borderColor = '#16a34a';
 
-                            if (priceStats && priceStats.avg > 0) {
-                                if (priceStats.avg >= 40000) {
+                            if (avgRent > 0) {
+                                if (avgRent >= 1000) {
                                     color = '#dc2626'; // 高價紅色
                                     borderColor = '#991b1b';
-                                } else if (priceStats.avg >= 25000) {
+                                } else if (avgRent >= 600) {
                                     color = '#f97316'; // 中價橙色
                                     borderColor = '#ea580c';
-                                } else {
+                                } else if (avgRent >= 300) {
                                     color = '#eab308'; // 低價黃色
                                     borderColor = '#ca8a04';
+                                } else {
+                                    color = '#22c55e'; // 超低價綠色
+                                    borderColor = '#16a34a';
                                 }
-                            } else if (cluster.count > 50) {
-                                color = '#6366f1'; // 大量群集藍色
-                                borderColor = '#4f46e5';
                             }
 
                             return (
                                 <CircleMarker
-                                    key={cluster.id}
+                                    key={district.id}
                                     center={[
-                                        cluster.center.lat,
-                                        cluster.center.lng,
+                                        district.center.lat,
+                                        district.center.lng,
                                     ]}
-                                    radius={size / 3}
+                                    radius={size}
                                     pathOptions={{
                                         fillColor: color,
                                         color: borderColor,
@@ -931,7 +956,7 @@ const RentalMap = memo(() => {
                                         <div className="min-w-72 p-3">
                                             <div className="mb-3 flex items-center justify-between">
                                                 <h3 className="font-semibold text-gray-900">
-                                                    AI 聚合區域
+                                                    {district.city} {district.district}
                                                 </h3>
                                                 <span
                                                     className={`rounded px-2 py-1 text-xs font-medium text-white`}
@@ -939,7 +964,7 @@ const RentalMap = memo(() => {
                                                         backgroundColor: color,
                                                     }}
                                                 >
-                                                    等級 {visualLevel}
+                                                    {count} 筆
                                                 </span>
                                             </div>
 
@@ -947,135 +972,57 @@ const RentalMap = memo(() => {
                                                 <div className="space-y-1">
                                                     <div className="flex justify-between">
                                                         <span className="text-gray-600">
-                                                            物件數量：
+                                                            租屋數量：
                                                         </span>
                                                         <span className="font-medium">
-                                                            {cluster.count}
+                                                            {count} 筆
                                                         </span>
                                                     </div>
                                                     <div className="flex justify-between">
                                                         <span className="text-gray-600">
-                                                            覆蓋半徑：
+                                                            平均面積：
                                                         </span>
                                                         <span className="font-medium">
-                                                            {cluster.radius_km?.toFixed(
-                                                                2,
-                                                            )}{' '}
-                                                            km
+                                                            {district.avg_area_ping?.toFixed(1)} 坪
                                                         </span>
                                                     </div>
-                                                    {cluster.density && (
-                                                        <div className="flex justify-between">
-                                                            <span className="text-gray-600">
-                                                                密度：
-                                                            </span>
-                                                            <span className="font-medium">
-                                                                {cluster.density.toFixed(
-                                                                    1,
-                                                                )}
-                                                                /km²
-                                                            </span>
-                                                        </div>
-                                                    )}
                                                 </div>
 
-                                                {priceStats && (
-                                                    <div className="space-y-1">
-                                                        <div className="flex justify-between">
-                                                            <span className="text-gray-600">
-                                                                平均租金：
-                                                            </span>
-                                                            <span className="font-medium text-blue-600">
-                                                                {formatCurrency(
-                                                                    priceStats.avg,
-                                                                )}
-                                                            </span>
-                                                        </div>
-                                                        <div className="flex justify-between">
-                                                            <span className="text-gray-600">
-                                                                租金範圍：
-                                                            </span>
-                                                            <span className="text-xs font-medium text-green-600">
-                                                                {formatCurrency(
-                                                                    priceStats.min,
-                                                                )}{' '}
-                                                                -{' '}
-                                                                {formatCurrency(
-                                                                    priceStats.max,
-                                                                )}
-                                                            </span>
-                                                        </div>
-                                                        <div className="flex justify-between">
-                                                            <span className="text-gray-600">
-                                                                中位數：
-                                                            </span>
-                                                            <span className="font-medium">
-                                                                {formatCurrency(
-                                                                    priceStats.median,
-                                                                )}
-                                                            </span>
-                                                        </div>
+                                                <div className="space-y-1">
+                                                    <div className="flex justify-between">
+                                                        <span className="text-gray-600">
+                                                            平均租金：
+                                                        </span>
+                                                        <span className="font-medium text-blue-600">
+                                                            {avgRent.toLocaleString()} 元/坪
+                                                        </span>
                                                     </div>
-                                                )}
+                                                    <div className="flex justify-between">
+                                                        <span className="text-gray-600">
+                                                            租金範圍：
+                                                        </span>
+                                                        <span className="text-xs font-medium text-green-600">
+                                                            {district.min_rent_per_ping?.toLocaleString()} - {district.max_rent_per_ping?.toLocaleString()} 元/坪
+                                                        </span>
+                                                    </div>
+                                                    </div>
                                             </div>
 
-                                            {/* 價格分佈視覺化 */}
-                                            {priceStats && (
-                                                <div className="mt-3 border-t border-gray-200 pt-3">
-                                                    <div className="mb-1 text-xs text-gray-600">
-                                                        價格分佈
-                                                    </div>
-                                                    <div className="flex h-2 overflow-hidden rounded bg-gray-200">
-                                                        <div
-                                                            className="bg-green-500"
-                                                            style={{
-                                                                width: '33.33%',
-                                                            }}
-                                                            title={`低價: ${formatCurrency(priceStats.min)}`}
-                                                        />
-                                                        <div
-                                                            className="bg-yellow-500"
-                                                            style={{
-                                                                width: '33.33%',
-                                                            }}
-                                                            title={`中價: ${formatCurrency(priceStats.median)}`}
-                                                        />
-                                                        <div
-                                                            className="bg-red-500"
-                                                            style={{
-                                                                width: '33.34%',
-                                                            }}
-                                                            title={`高價: ${formatCurrency(priceStats.max)}`}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            )}
                                         </div>
                                     </Popup>
                                 </CircleMarker>
                             );
                         })}
 
-                    {/* 熱力圖點 - 增強視覺效果 */}
+                    {/* 價格分析點 */}
                     {displayMode === 'heatmap' &&
                         heatmapData?.map((point, index) => {
-                            // 使用進階顏色和大小計算
-                            const radius =
-                                point.radius ||
-                                Math.max(3, Math.min(15, 5 + point.weight * 8));
-                            const color =
-                                point.color ||
-                                (point.weight > 0.7
-                                    ? 'rgba(255, 0, 0, 0.8)'
-                                    : point.weight > 0.4
-                                      ? 'rgba(255, 255, 0, 0.7)'
-                                      : 'rgba(0, 255, 0, 0.6)');
-                            const borderColor =
-                                point.weight > 0.7
-                                    ? '#dc2626'
-                                    : point.weight > 0.4
-                                      ? '#ca8a04'
-                                      : '#16a34a';
+                            // 根據價格等級確定大小和顏色
+                            const radius = Math.max(5, Math.min(15, 8 + point.weight * 5));
+                            const color = point.color || '#f59e0b';
+                            const borderColor = point.level === 'premium' ? '#6b21a8' : 
+                                               point.level === 'high' ? '#dc2626' :
+                                               point.level === 'medium' ? '#f59e0b' : '#22c55e';
 
                             return (
                                 <CircleMarker
@@ -1094,52 +1041,35 @@ const RentalMap = memo(() => {
                                     <Popup>
                                         <div className="min-w-48 p-2">
                                             <h4 className="mb-2 font-semibold text-gray-900">
-                                                熱力圖區域
+                                                價格分析點
                                             </h4>
                                             <div className="space-y-1 text-sm">
                                                 <div className="flex justify-between">
                                                     <span className="text-gray-600">
-                                                        權重：
+                                                        價格等級：
                                                     </span>
-                                                    <span className="font-medium">
-                                                        {(
-                                                            (point.weight || 0) * 100
-                                                        ).toFixed(1)}
-                                                        %
+                                                    <span className="font-medium" style={{ color: color }}>
+                                                        {point.level === 'premium' ? '高級' :
+                                                         point.level === 'high' ? '高價' :
+                                                         point.level === 'medium' ? '中價' : '低價'}
                                                     </span>
                                                 </div>
-                                                {point.count && (
-                                                    <div className="flex justify-between">
-                                                        <span className="text-gray-600">
-                                                            資料點：
-                                                        </span>
-                                                        <span className="font-medium">
-                                                            {point.count}
-                                                        </span>
-                                                    </div>
-                                                )}
-                                                {point.avg_price && (
-                                                    <div className="flex justify-between">
-                                                        <span className="text-gray-600">
-                                                            平均租金：
-                                                        </span>
-                                                        <span className="font-medium text-blue-600">
-                                                            {formatCurrency(
-                                                                point.avg_price,
-                                                            )}
-                                                        </span>
-                                                    </div>
-                                                )}
-                                                {point.price_range && (
-                                                    <div className="flex justify-between">
-                                                        <span className="text-gray-600">
-                                                            價格區間：
-                                                        </span>
-                                                        <span className="font-medium text-green-600">
-                                                            {point.price_range}
-                                                        </span>
-                                                    </div>
-                                                )}
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">
+                                                        每坪租金：
+                                                    </span>
+                                                    <span className="font-medium text-blue-600">
+                                                        {point.rent_per_ping?.toLocaleString()} 元/坪
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">
+                                                        總租金：
+                                                    </span>
+                                                    <span className="font-medium text-green-600">
+                                                        {point.total_rent?.toLocaleString()} 元
+                                                    </span>
+                                                </div>
                                                 {point.intensity && (
                                                     <div className="flex justify-between">
                                                         <span className="text-gray-600">
@@ -1167,3 +1097,4 @@ const RentalMap = memo(() => {
 });
 
 export default RentalMap;
+

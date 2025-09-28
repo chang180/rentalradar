@@ -59,6 +59,8 @@ Route::prefix('map')->group(function () {
     // AI 相關路由 - 使用 MapAIController
     Route::get('/clusters', [MapAIController::class, 'clusters']);
     Route::get('/ai-heatmap', [MapAIController::class, 'aiHeatmap']);
+    Route::get('/district-stats', [MapDataController::class, 'districtStats']);
+    Route::get('/price-analysis', [MapDataController::class, 'priceAnalysis']);
     Route::get('/predict-prices', [MapAIController::class, 'predictPrices']);
     Route::get('/optimized-data', [MapAIController::class, 'optimizedData']);
 
