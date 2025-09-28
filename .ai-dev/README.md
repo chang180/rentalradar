@@ -17,11 +17,45 @@
   - `ai-team-config.json` - AI 團隊配置
   - `AI-TEAM-GUIDE.md` - AI 團隊協作指南
 
-### 核心工具
-- `core-tools/` - 開發和專案管理工具
-  - `linear-oauth-integration.cjs` - Linear OAuth 整合
-  - `test-linear-api.cjs` - Linear API 測試
-  - `README.md` - 核心工具文檔
+### 🔧 核心工具 (重要！)
+- `core-tools/` - **開發和專案管理工具**
+  - `linear-oauth-integration.cjs` - **Linear OAuth 整合和 Issues 管理**
+    - 支援 OAuth 認證流程
+    - 完整的 Issues CRUD 操作
+    - 狀態更新和專案管理
+    - **使用方式**: `node .ai-dev/core-tools/linear-oauth-integration.cjs <command>`
+  - `test-linear-api.cjs` - Linear API 測試工具
+  - `README.md` - 詳細的核心工具使用文檔
+  - **⚠️ 重要**: 這是管理 Linear Issues 的主要工具，包含所有必要的功能
+
+## 🛠️ 核心工具使用指南
+
+### Linear Issues 管理
+**主要工具**: `linear-oauth-integration.cjs`
+
+#### 常用指令
+```bash
+# 查看所有 Issues
+node .ai-dev/core-tools/linear-oauth-integration.cjs list
+
+# 查看可用狀態
+node .ai-dev/core-tools/linear-oauth-integration.cjs states
+
+# 更新 Issue 狀態
+node .ai-dev/core-tools/linear-oauth-integration.cjs update <issue-id> <state-id>
+
+# 建立新 Issue
+node .ai-dev/core-tools/linear-oauth-integration.cjs create <team-id> "Title" "Description"
+```
+
+#### 重要狀態 ID
+- **Done**: `9fbe935a-aff3-4627-88a3-74353a55c221`
+- **In Progress**: `a8c3ca26-39f0-4728-93ba-4130050d1abe`
+
+#### 重要 Team ID
+- **DevStream-Core**: `40b1bdfd-2caa-4306-9fc4-8c4f2d646cec`
+
+**⚠️ 注意**: 這是唯一可用的 Linear 管理工具，包含完整的 OAuth 認證和 Issues 管理功能。
 
 ## 🚀 系統現況
 
