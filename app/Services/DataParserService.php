@@ -20,7 +20,7 @@ class DataParserService
     public function parseZipData(string $filePath): array
     {
         try {
-            $zipPath = Storage::path($filePath);
+            $zipPath = $filePath; // 直接使用傳入的檔案路徑
             $extractPath = storage_path('app/temp/extracted');
 
             // 確保解壓目錄存在

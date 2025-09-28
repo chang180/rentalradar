@@ -106,7 +106,7 @@ class FileUploadService
         try {
             $fileUpload->update(['upload_status' => 'processing']);
 
-            $filePath = Storage::path($fileUpload->upload_path);
+            $filePath = Storage::disk('local')->path($fileUpload->upload_path);
 
             if ($fileUpload->file_type === 'application/zip') {
                 $result = $this->processZipFile($filePath);
