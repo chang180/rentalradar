@@ -179,8 +179,20 @@ class TaiwanGeoCenterService
     public static function getDataSourceInfo(): array
     {
         try {
-            $jsonContent = Storage::get('taiwan_geo_centers.json');
+            $jsonPath = __DIR__.'/../../database/data/taiwan_geo_centers.json';
+            if (! file_exists($jsonPath)) {
+                throw new \Exception('JSON file not found at: '.$jsonPath);
+            }
+
+            $jsonContent = file_get_contents($jsonPath);
+            if ($jsonContent === false) {
+                throw new \Exception('Failed to read JSON file');
+            }
+
             $data = json_decode($jsonContent, true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                throw new \Exception('Invalid JSON format: '.json_last_error_msg());
+            }
 
             return [
                 'data_source' => $data['data_source'] ?? '政府開放資料平台',
