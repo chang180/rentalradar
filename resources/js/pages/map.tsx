@@ -28,6 +28,8 @@ export default function Map({
     const [isInitialLoading, setIsInitialLoading] = useState(true);
     const [loadingError, setLoadingError] = useState<string | null>(null);
     const [retryCount, setRetryCount] = useState(0);
+    const [statistics, setStatistics] = useState<any>(null);
+    const [properties, setProperties] = useState<any[]>([]);
 
     // 檢查地圖資料載入狀態
     useEffect(() => {
@@ -368,15 +370,54 @@ export default function Map({
                     />
 
                     <div className="flex flex-1 flex-col">
-                        {/* 標題區域 */}
+                        {/* 標題區域與統計概覽 */}
                         <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
-                            <div>
-                                <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
-                                    台灣租屋市場地圖
-                                </h1>
-                                <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                                    探索全台租屋市場熱點，發現最適合的租屋區域
-                                </p>
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+                                        台灣租屋市場地圖
+                                    </h1>
+                                    <p className="mt-2 text-base text-gray-600 dark:text-gray-400">
+                                        探索全台租屋市場熱點，發現最適合的租屋區域
+                                    </p>
+                                </div>
+                                {/* 統計概覽移到右側 */}
+                                <div className="hidden md:flex items-center gap-6 text-base">
+                                    <div className="text-center">
+                                        <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                                            {properties?.length || 0}
+                                        </div>
+                                        <div className="text-sm text-gray-600 dark:text-gray-400">
+                                            熱門區域
+                                        </div>
+                                    </div>
+                                    <div className="text-center">
+                                        <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                                            {statistics?.total_properties?.toLocaleString() || 0}
+                                        </div>
+                                        <div className="text-sm text-gray-600 dark:text-gray-400">
+                                            總租屋數
+                                        </div>
+                                    </div>
+                                    <div className="text-center">
+                                        <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                                            {statistics?.cities ? Object.keys(statistics.cities).length : 0}
+                                        </div>
+                                        <div className="text-sm text-gray-600 dark:text-gray-400">
+                                            涵蓋縣市
+                                        </div>
+                                    </div>
+                                    <div className="text-center">
+                                        <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
+                                            {statistics?.avg_rent_per_ping
+                                                ? Math.round(statistics.avg_rent_per_ping).toLocaleString()
+                                                : 0}
+                                        </div>
+                                        <div className="text-sm text-gray-600 dark:text-gray-400">
+                                            平均每坪租金
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -406,7 +447,11 @@ export default function Map({
 
                         {/* 地圖容器 - 佔用剩餘空間 */}
                         <div className="flex-1 bg-white dark:bg-gray-800">
-                            <RentalMap />
+                            <RentalMap onStatsUpdate={(stats, props) => {
+                                // 更新統計數據用於標題區域顯示
+                                setStatistics(stats);
+                                setProperties(props);
+                            }} />
                         </div>
                     </div>
                 </AppContent>

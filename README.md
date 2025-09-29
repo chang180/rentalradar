@@ -1,322 +1,114 @@
 # RentalRadar 🏠
 
-> **AI-Powered Rental Market Analytics Platform**  
-> *Scan the rental market with AI precision*
+> **AI 驅動的租屋市場分析平台**  
+> *用 AI 精準掃描租屋市場*
 
-## 🎯 Project Overview
+## 🎯 專案概述
 
-RentalRadar is an AI-powered rental market analytics platform that integrates government open data to provide intelligent rental market insights. This project aims to be the first activation case of the government open data platform, showcasing AI-driven development capabilities and data analysis skills.
+RentalRadar 是一個整合政府開放資料的 AI 租屋市場分析平台，提供智能化的租屋市場洞察。本專案旨在成為政府開放資料平台的首個活化案例，展示 AI 驅動開發能力與資料分析技能。
 
-### Core Features
-- 🤖 **AI-Driven Analysis**: Intelligent data cleaning, anomaly detection, geocoding
-- 🗺️ **Interactive Maps**: Leaflet.js + AI-optimized visualization experience
-- 📊 **Deep Statistical Analysis**: Trend prediction and market insights
-- 👥 **User Reporting System**: Reputation scoring and weight calculation mechanisms
-- 🏆 **Government Platform Showcase**: Innovative application of government open data
-- 🔐 **Complete Permission Management**: Admin permission control, user management, file upload permissions
-- 📈 **Performance Monitoring**: Real-time system monitoring and performance analysis dashboard
-- 🚀 **High-Performance Data Processing**: Optimized for 500K+ records with intelligent caching
+### 核心功能
+- 🤖 **AI 驅動分析**: 智能資料清理、異常檢測、地理編碼
+- 🗺️ **互動式地圖**: Leaflet.js + AI 優化視覺化體驗
+- 📊 **深度統計分析**: 趨勢預測與市場洞察
+- 👥 **使用者回報系統**: 信譽評分與權重計算機制
+- 🏆 **政府平台展示**: 政府開放資料創新應用
+- 🔐 **完整權限管理**: 管理員權限控制、使用者管理、檔案上傳權限
+- 📈 **效能監控**: 即時系統監控與效能分析儀表板
+- 🚀 **高效能資料處理**: 針對 50 萬筆以上記錄優化，具備智能快取
 
-## 🏗️ Technical Architecture
+## 🏗️ 技術架構
 
-### Backend
-- **Framework**: Laravel 12 + PHP 8.4
-- **Database**: SQLite (development) + MySQL (production)
-- **Development Environment**: Laravel Herd
-- **Authentication**: Laravel Fortify
-- **Caching**: Redis with intelligent multi-layer caching
-- **Performance**: Optimized for 500K+ property records
+### 後端
+- **框架**: Laravel 12 + PHP 8.4
+- **資料庫**: SQLite (開發) + MySQL (生產)
+- **開發環境**: Laravel Herd
+- **身份驗證**: Laravel Fortify
+- **快取**: Redis 多層智能快取
 
-### Frontend
-- **Framework**: React + Inertia.js
-- **Maps**: Leaflet.js + AI optimization
-- **Charts**: Chart.js
-- **Styling**: Tailwind CSS v4
+### 前端
+- **框架**: React + Inertia.js
+- **地圖**: Leaflet.js + AI 優化
+- **圖表**: Chart.js
+- **樣式**: Tailwind CSS v4
 
-### AI Features
-- **Data Processing**: Intelligent cleaning and geocoding
-- **Anomaly Detection**: Machine learning algorithms
-- **Statistical Analysis**: Deep data mining
-- **Map Optimization**: Performance tuning and rendering optimization
-- **Multi-AI Collaboration**: Claude + Claude Code + Codex team development
+### AI 功能
+- **資料處理**: 智能清理與地理編碼
+- **異常檢測**: 機器學習演算法
+- **統計分析**: 深度資料探勘
+- **多 AI 協作**: Claude + Claude Code + Codex 團隊開發
 
-### Performance Optimizations
-- **Statistics Tables**: Pre-computed district and city statistics (247 districts + 20 cities)
-- **Intelligent Caching**: Multi-layer caching strategy (hot/warm/cold regions)
-- **Event-Driven Updates**: Automatic statistics updates on data changes
-- **Database Indexes**: Optimized indexes for 500K+ records
-- **Query Optimization**: 80%+ performance improvement on aggregated queries
+## 📊 資料來源
 
-## 📊 Data Sources
+- **政府資料**: 不動產租賃實價登錄資料
+- **更新頻率**: 每 10 天一次 (每月 1、11、21 日)
+- **資料格式**: CSV 和 XML
+- **下載連結**: [政府資料開放平台](https://data.moi.gov.tw/MoiOD/System/DownloadFile.aspx?DATA=F85D101E-1453-49B2-892D-36234CF9303D)
 
-- **Government Data**: Real estate rental price registration data
-- **Update Frequency**: Every 10 days (1st, 11th, 21st of each month)
-- **Data Format**: CSV and XML
-- **Download Link**: [Government Open Data Platform](https://data.moi.gov.tw/MoiOD/System/DownloadFile.aspx?DATA=F85D101E-1453-49B2-892D-36234CF9303D)
-
-## 🚀 Development Progress
-
-### Phase 1: Project Initialization ✅
-- [x] Laravel 12 + React project setup
-- [x] Development environment configuration (Herd)
-- [x] Git repository initialization
-- [x] README.md creation
-
-### Phase 2: AI Data Processing ✅
-- [x] AI data cleaning algorithms
-- [x] AI anomaly detection (Codex development)
-- [x] Multi-AI collaboration system
-- [x] Linear project management integration
-- [x] AI geocoding system
-- [x] Government data download mechanism
-- [x] AI rental price prediction model (DEV-27)
-- [x] Recommendation engine system
-- [x] Anomaly detection service
-- [x] Risk assessment system
-
-### Phase 3: AI Map System ✅
-- [x] Leaflet.js integration
-- [x] AI-optimized map rendering
-- [x] Heatmap functionality
-- [x] Interactive markers
-- [x] Aggregation algorithm optimization (DEV-25)
-
-### Phase 4: AI Statistical Analysis ✅
-- [x] Trend prediction algorithms
-- [x] Market analysis functionality
-- [x] Recommendation system
-- [x] Performance optimization
-- [x] Advanced data analysis dashboard (DEV-26)
-
-### Phase 5: User Reporting System ✅
-- [x] User registration verification
-- [x] Weight calculation mechanism
-- [x] Reputation scoring system
-- [x] Data quality control
-- [x] Performance monitoring system (DEV-22, DEV-23)
-
-### Phase 6: Permission Management System ✅
-- [x] Admin permission control
-- [x] User management system
-- [x] File upload permissions
-- [x] Schedule management
-- [x] Performance monitoring dashboard
-
-### Phase 7: Data Processing Performance Optimization ✅
-- [x] Statistics tables implementation (district_statistics, city_statistics)
-- [x] Intelligent caching system
-- [x] Event-driven statistics updates
-- [x] Database performance optimization
-- [x] Dashboard controller optimization
-
-### Phase 8: Government Platform Application 📋
-- [ ] Activation application
-- [ ] Project showcase page
-- [ ] Technical documentation
-- [ ] Demo video
-
-## 🎯 Success Metrics
-
-### Technical Metrics
-- [x] AI data processing accuracy > 95%
-- [x] Map loading speed < 2 seconds
-- [x] AI statistical analysis response < 1 second
-- [x] System stability > 99%
-- [x] Query performance improvement 80%+ (500K+ records)
-
-### Showcase Metrics
-- [ ] Government platform activation application
-- [ ] Portfolio website integration
-- [ ] Complete technical documentation
-- [ ] Demo showcase video
-
-## 🛠️ Development Environment Setup
+## 🚀 快速開始
 
 ```bash
-# Install dependencies
+# 安裝相依套件
 composer install
 npm install
 
-# Environment setup
+# 環境設定
 cp .env.example .env
 php artisan key:generate
 
-# Database setup
+# 資料庫設定
 php artisan migrate
 
-# Populate statistics tables
-php artisan statistics:populate
-
-# Development server
+# 開發伺服器
 php artisan serve
 npm run dev
 ```
 
-## 📥 Data Download and Processing
+## 📈 專案狀態
 
-### Download Government Rental Data
-```bash
-# Download and process latest rental data
-php artisan rental:process
+### 已完成功能 ✅
+- [x] AI 資料處理與清理系統
+- [x] 互動式地圖視覺化
+- [x] 統計分析與趨勢預測
+- [x] 使用者回報與信譽系統
+- [x] 完整權限管理系統
+- [x] 高效能資料處理優化
 
-# Download and process data (with cleanup)
-php artisan rental:process --cleanup
+### 進行中 📋
+- [ ] 政府平台活化申請
+- [ ] 專案展示頁面
+- [ ] 完整技術文件
+- [ ] 展示影片
 
-# Download and process data (with validation)
-php artisan rental:process --validate
+## 🎯 成功指標
 
-# Download and process data (with geocoding)
-php artisan rental:process --geocode
+- ✅ AI 資料處理準確率 > 95%
+- ✅ 地圖載入速度 < 2 秒
+- ✅ AI 統計分析回應 < 1 秒
+- ✅ 系統穩定性 > 99%
+- ✅ 查詢效能提升 80%+ (50 萬筆以上記錄)
 
-# Download and process data (with notifications)
-php artisan rental:process --notify
+## 📚 文件
 
-# Complete processing workflow (all options)
-php artisan rental:process --cleanup --validate --geocode --notify
-```
+- [開發文件](docs/README.md) - 完整技術文件與開發指南
+- [API 文件](docs/api/map-api-specification.md) - 地圖 API 規格說明
+- [架構文件](docs/architecture/phase-3-architecture.md) - 系統架構設計
+- [部署文件](docs/deployment/) - 部署相關指南
+- [政府資料系統](docs/government-data-system.md) - 政府資料整合說明
 
-### Data Processing Description
-- **Data Source**: Government real estate rental price registration data
-- **Update Frequency**: Every 10 days (1st, 11th, 21st of each month)
-- **Data Format**: ZIP files containing CSV and XML files
-- **Processing Content**:
-  - Parse CSV files (real estate rental, building real estate rental)
-  - County mapping (via manifest.csv)
-  - Time format conversion (Republic of China year to Western year)
-  - Area unit conversion (square meters to ping)
-  - Rent recalculation (rent per ping)
-  - Data validation and cleaning
-  - Batch save to database
+## 🤝 貢獻
 
-### Database Structure
-```sql
--- Main fields
-city                    -- County/City
-district               -- Administrative district
-latitude               -- Latitude (reserved for geocoding)
-longitude              -- Longitude (reserved for geocoding)
-is_geocoded            -- Whether geocoded
-rental_type            -- Rental type
-total_rent             -- Total rent
-rent_per_ping          -- Rent per ping
-rent_date              -- Rental date
-building_type          -- Building type
-area_ping              -- Area (ping)
-building_age           -- Building age
-bedrooms               -- Number of bedrooms
-living_rooms           -- Number of living rooms
-bathrooms              -- Number of bathrooms
-has_elevator           -- Has elevator
-has_management_organization -- Has management organization
-has_furniture          -- Has furniture
-```
+本專案採用 AI 主導的開發模式，所有程式碼均由 AI 生成與優化。歡迎提供回饋與建議！
 
-### Performance Optimization Features
-- **Statistics Tables**: Pre-computed statistics for 247 districts and 20 cities
-- **Intelligent Caching**: Multi-layer caching with hot/warm/cold region strategies
-- **Event-Driven Updates**: Automatic statistics updates when data changes
-- **Database Indexes**: Optimized indexes for high-performance queries
-- **Query Optimization**: 80%+ performance improvement on aggregated queries
+## 📄 授權
 
-## 📝 Development Log
-
-### 2025-09-28 (Major Performance Optimization)
-- ✅ **Data Processing Performance Optimization** (DEV-33)
-  - Implemented statistics tables (district_statistics, city_statistics)
-  - Added intelligent multi-layer caching system
-  - Event-driven statistics updates
-  - Database performance optimization
-  - Dashboard controller optimization for 500K+ records
-  - Query performance improvement 80%+
-
-### 2025-09-28 (Permission Management System)
-- ✅ **Complete Permission Management System** (DEV-32)
-  - Admin permission control and user management
-  - File upload permissions and processing
-  - Schedule management system
-  - Performance monitoring dashboard
-  - API security with CSRF token protection
-
-### 2025-09-27 (AI Features Core Services)
-- ✅ **AI Features Core Services Complete** (DEV-27)
-  - Complete rental price prediction model training system
-  - Machine learning-based rental price prediction and market trend analysis
-  - Personalized and popular recommendation system
-  - Price and market anomaly detection
-  - Investment risk assessment
-  - Time series analysis: rental trend analysis, seasonal pattern detection, future prediction
-  - Complete RESTful API endpoints and controller implementation
-  - 114 tests all passed, 848 assertions successful
-  - Code format check passed, all IDE errors fixed
-
-### 2025-09-27 (Database Structure Refactoring and Test Fixes)
-- ✅ **Major Database Structure Refactoring Complete**
-  - Redesigned `properties` table structure, optimized field naming and data types
-  - Removed old fields and added new optimized fields
-  - Created new migration files for structure optimization
-
-- ✅ **Comprehensive Test Fixes Complete**
-  - Fixed **25 failed tests** → **0 failures**, all **118 tests passing**
-  - Updated `PropertyFactory` to match new database structure
-  - Fixed `AIModelTrainingService` data processing logic
-  - Updated `MarketAnalysisService` queries and statistics functionality
-  - Fixed all field references in controllers and services
-  - Resolved SQLite file locking issues, switched to in-memory database for testing
-  - Updated all test files with new test data structure
-
-## 🔄 Development Workflow
-
-### 📋 Pre-Commit Checklist
-Before each commit, please check the following items:
-
-1. **Linear Status Update**
-   - Check if there are completed Linear Issues that need status updates
-   - Use tools to update status: `node .ai-dev/core-tools/linear-issues.cjs update DEV-XX Done`
-   - Common status IDs:
-     - In Progress: `a8c3ca26-39f0-4728-93ba-4130050d1abe`
-     - Done: `9fbe935a-aff3-4627-88a3-74353a55c221`
-
-2. **Code Check**
-   - Run `npm run build` to ensure build success
-   - Run `php artisan test` to ensure tests pass
-   - Run `vendor/bin/pint --dirty` to ensure code formatting is correct
-
-3. **Documentation Update**
-   - Update `.ai-dev/PROGRESS.md` to record completed work
-   - Update `README.md` development log (if needed)
-
-### 🚀 Standard Commit Process
-```bash
-# 1. Check Linear status
-node .ai-dev/core-tools/linear-issues.cjs list
-
-# 2. Update completed Issue status
-node .ai-dev/core-tools/linear-issues.cjs update DEV-XX Done
-
-# 3. Check code
-npm run build
-php artisan test
-vendor/bin/pint --dirty
-
-# 4. Commit changes
-git add .
-git commit -m "feat: describe completed functionality"
-git push
-```
-
-## 🤝 Contributing Guidelines
-
-This project adopts an AI-led development model, with all code generated and optimized by AI. Feedback and suggestions are welcome!
-
-## 📄 License
-
-MIT License
+MIT 授權條款
 
 ---
 
-**🚀 Project Code**: RentalRadar  
-**👨‍💻 Development Mode**: Full AI-led  
-**📅 Expected Completion**: 9 weeks  
-**🎯 Final Goal**: Government platform activation application showcase + portfolio highlight
+**🚀 專案代碼**: RentalRadar  
+**👨‍💻 開發模式**: 全 AI 主導  
+**📅 預期完成**: 9 週  
+**🎯 最終目標**: 政府平台活化申請展示 + 作品集亮點
 
-*"Let every renter find a good house with data!"* 🏠✨
+*"讓每個租屋者都能透過資料找到好房子！"* 🏠✨
