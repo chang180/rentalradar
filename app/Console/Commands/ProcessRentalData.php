@@ -172,6 +172,17 @@ class ProcessRentalData extends Command
         $this->info('⏱️ 總時間: '.round($totalTime, 2).' 秒');
         $this->info('📊 處理速度: '.round($parseResult['processed_count'] / $totalTime, 2).' 筆/秒');
 
+        // 步驟 8: 生成統計資料
+        $this->info("\n📊 步驟 8: 生成統計資料...");
+        try {
+            $this->call('statistics:populate', [
+                '--chunk' => 1000,
+            ]);
+            $this->info('✅ 統計資料生成完成!');
+        } catch (\Exception $e) {
+            $this->warn('⚠️ 統計資料生成失敗: '.$e->getMessage());
+        }
+
         // 發送成功通知
         if ($shouldNotify) {
             Event::dispatch(new DataDownloadCompleted($downloadResult));
