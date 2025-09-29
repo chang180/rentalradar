@@ -31,6 +31,9 @@ class PropertyFactory extends Factory
         $longitude = fake()->longitude(121.450, 121.650);
 
         return [
+            // 資料驗證資訊
+            'serial_number' => fake()->unique()->numerify('GOV-####-####-####'),
+
             // 基本位置資訊
             'city' => $city,
             'district' => $district,

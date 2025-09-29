@@ -26,6 +26,7 @@ class AdvancedPricePredictionTest extends TestCase
         // 建立測試用的租賃物件
         $properties = [
             [
+                'serial_number' => 'TEST-001-001-001',
                 'city' => '台北市',
                 'district' => '大安區',
                 'building_type' => '住宅大樓',
@@ -46,6 +47,7 @@ class AdvancedPricePredictionTest extends TestCase
                 'longitude' => 121.5650,
             ],
             [
+                'serial_number' => 'TEST-001-002-001',
                 'city' => '台北市',
                 'district' => '信義區',
                 'building_type' => '華廈',
@@ -66,6 +68,7 @@ class AdvancedPricePredictionTest extends TestCase
                 'longitude' => 121.5700,
             ],
             [
+                'serial_number' => 'TEST-001-003-001',
                 'city' => '台北市',
                 'district' => '中山區',
                 'building_type' => '公寓',
