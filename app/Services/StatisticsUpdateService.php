@@ -74,7 +74,7 @@ class StatisticsUpdateService
             'min_rent' => $stats->min_rent,
             'max_rent' => $stats->max_rent,
             'avg_area_ping' => $stats->avg_area_ping,
-            'avg_building_age' => $stats->avg_building_age,
+            'avg_building_age' => $stats->avg_building_age ?? 0,
             'elevator_ratio' => $stats->elevator_ratio,
             'management_ratio' => $stats->management_ratio,
             'furniture_ratio' => $stats->furniture_ratio,

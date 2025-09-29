@@ -107,7 +107,7 @@ class FileUploadService
             // 設定執行時間和記憶體限制
             ini_set('max_execution_time', 0); // 無限制執行時間
             ini_set('memory_limit', '2G'); // 增加記憶體限制
-            
+
             $fileUpload->update(['upload_status' => 'processing']);
 
             if ($fileUpload->file_type === 'application/zip') {
@@ -131,6 +131,21 @@ class FileUploadService
 
                 // 處理完成後清理上傳檔案
                 $this->cleanupUploadFile($fileUpload);
+
+                // 生成統計資料
+                try {
+                    \Illuminate\Support\Facades\Artisan::call('statistics:populate', [
+                        '--chunk' => 1000,
+                    ]);
+                    Log::info('Statistics generated after file upload', [
+                        'file_upload_id' => $fileUpload->id,
+                    ]);
+                } catch (\Exception $e) {
+                    Log::warning('Failed to generate statistics after file upload', [
+                        'file_upload_id' => $fileUpload->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
 
                 return true;
             } else {
@@ -162,7 +177,7 @@ class FileUploadService
             // 設定執行時間和記憶體限制
             ini_set('max_execution_time', 0); // 無限制執行時間
             ini_set('memory_limit', '2G'); // 增加記憶體限制
-            
+
             // 直接使用 FileUpload 物件中的相對路徑，這樣更可靠
             $storagePath = $fileUpload->upload_path;
             $filePath = $storagePath; // 為了在 catch 區塊中使用
@@ -180,7 +195,7 @@ class FileUploadService
                 $existingSerialNumbers = [];
                 $chunkSize = 500; // SQLite 安全限制
                 $serialNumberChunks = array_chunk($serialNumbers, $chunkSize);
-                
+
                 foreach ($serialNumberChunks as $chunk) {
                     $existing = Property::whereIn('serial_number', $chunk)
                         ->pluck('serial_number')
