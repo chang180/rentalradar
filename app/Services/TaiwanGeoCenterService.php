@@ -24,7 +24,7 @@ class TaiwanGeoCenterService
     {
         if (self::$geoCenters === null) {
             try {
-                $jsonPath = __DIR__.'/../../storage/app/taiwan_geo_centers.json';
+                $jsonPath = __DIR__.'/../../database/data/taiwan_geo_centers.json';
                 if (! file_exists($jsonPath)) {
                     throw new \Exception('JSON file not found at: '.$jsonPath);
                 }
