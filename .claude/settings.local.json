@@ -106,7 +106,11 @@
       "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan storage:link)",
       "Bash(ln:*)",
       "Bash(NODE_OPTIONS=\"--max-old-space-size=1024\" npm run build)",
-      "Bash(ping:*)"
+      "Bash(ping:*)",
+      "Bash(git config:*)",
+      "Bash(git remote set-url:*)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan tinker --execute=\"use App\\Models\\FileUpload; echo ''FileUpload table exists: '' . (Schema::hasTable(''file_uploads'') ? ''YES'' : ''NO'') . PHP_EOL;\")",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan tinker --execute=\"\necho ''Properties count: '' . \\App\\Models\\Property::count() . PHP_EOL;\necho ''Rentals count: '' . \\App\\Models\\Rental::count() . PHP_EOL;\necho ''Districts count: '' . \\App\\Models\\District::count() . PHP_EOL;\necho ''Cities count: '' . \\App\\Models\\City::count() . PHP_EOL;\necho PHP_EOL;\necho ''Sample properties:'' . PHP_EOL;\n\\App\\Models\\Property::limit(3)->get([''id'', ''address'', ''latitude'', ''longitude''])->each(function($p) {\n    echo \"\"ID: {$p->id}, Address: {$p->address}, Lat: {$p->latitude}, Lng: {$p->longitude}\"\" . PHP_EOL;\n});\necho PHP_EOL;\necho ''Sample rentals:'' . PHP_EOL;\n\\App\\Models\\Rental::limit(3)->get([''id'', ''property_id'', ''price''])->each(function($r) {\n    echo \"\"ID: {$r->id}, Property ID: {$r->property_id}, Price: {$r->price}\"\" . PHP_EOL;\n});\n\")"
     ]
   },
   "enableAllProjectMcpServers": true,
