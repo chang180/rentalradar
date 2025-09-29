@@ -12,6 +12,12 @@ return new class extends Migration
     public function up(): void
     {
         // 由於 SQLite 不支援直接刪除欄位，我們需要重建表格
+        // 先刪除依賴 properties 表的表
+        Schema::dropIfExists('risk_assessments');
+        Schema::dropIfExists('anomalies');
+        Schema::dropIfExists('recommendations');
+        Schema::dropIfExists('predictions');
+
         Schema::dropIfExists('properties');
 
         Schema::create('properties', function (Blueprint $table) {
@@ -47,6 +53,59 @@ return new class extends Migration
 
             $table->timestamps();
         });
+
+        // 重新創建依賴表
+        Schema::create('predictions', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('property_id')->nullable()->constrained()->cascadeOnDelete();
+            $table->string('model_version')->index();
+            $table->decimal('predicted_price', 12, 2);
+            $table->decimal('confidence', 5, 4);
+            $table->decimal('range_min', 12, 2)->nullable();
+            $table->decimal('range_max', 12, 2)->nullable();
+            $table->json('breakdown')->nullable();
+            $table->json('explanations')->nullable();
+            $table->json('metadata')->nullable();
+            $table->timestamps();
+            $table->index(['property_id', 'created_at']);
+        });
+
+        Schema::create('recommendations', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('property_id')->nullable()->constrained()->cascadeOnDelete();
+            $table->string('type')->default('general');
+            $table->string('title');
+            $table->text('summary')->nullable();
+            $table->json('reasons')->nullable();
+            $table->json('metadata')->nullable();
+            $table->decimal('score', 5, 2)->nullable();
+            $table->timestamps();
+            $table->index(['type', 'created_at']);
+        });
+
+        Schema::create('anomalies', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('property_id')->nullable()->constrained()->cascadeOnDelete();
+            $table->string('category');
+            $table->string('severity');
+            $table->text('description');
+            $table->json('context')->nullable();
+            $table->json('resolution')->nullable();
+            $table->timestamps();
+            $table->index(['category', 'severity']);
+        });
+
+        Schema::create('risk_assessments', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('property_id')->nullable()->constrained()->cascadeOnDelete();
+            $table->string('risk_level');
+            $table->decimal('risk_score', 5, 2);
+            $table->json('factors')->nullable();
+            $table->json('suggestions')->nullable();
+            $table->json('metadata')->nullable();
+            $table->timestamps();
+            $table->index(['risk_level', 'created_at']);
+        });
     }
 
     /**
@@ -55,6 +114,12 @@ return new class extends Migration
     public function down(): void
     {
         // 如果需要回滾，重建原來的表格結構
+        // 先刪除依賴 properties 表的表
+        Schema::dropIfExists('risk_assessments');
+        Schema::dropIfExists('anomalies');
+        Schema::dropIfExists('recommendations');
+        Schema::dropIfExists('predictions');
+
         Schema::dropIfExists('properties');
 
         Schema::create('properties', function (Blueprint $table) {
