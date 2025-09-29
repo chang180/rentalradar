@@ -57,12 +57,32 @@ export const adminFileUploadRequest = async (endpoint: string, formData: FormDat
         ...options,
     };
 
-    const response = await fetch(`/admin/api${endpoint}`, config);
-    
-    if (!response.ok) {
-        console.error('API 回應錯誤:', response.status, response.statusText);
-        throw new Error(`API 請求失敗: ${response.status} ${response.statusText}`);
-    }
+    try {
+        const response = await fetch(`/admin/api${endpoint}`, config);
+        
+        if (!response.ok) {
+            console.error('API 回應錯誤:', response.status, response.statusText);
+            
+            // 針對特定錯誤提供更詳細的訊息
+            if (response.status === 419) {
+                throw new Error(`API 請求失敗: 419 - CSRF token 過期，請重新整理頁面`);
+            } else if (response.status === 504) {
+                throw new Error(`API 請求失敗: 504 - 伺服器處理超時，請稍後再試`);
+            } else if (response.status === 413) {
+                throw new Error(`API 請求失敗: 413 - 檔案太大，請選擇較小的檔案`);
+            } else if (response.status === 403) {
+                throw new Error(`API 請求失敗: 403 - 權限不足`);
+            } else {
+                throw new Error(`API 請求失敗: ${response.status} ${response.statusText}`);
+            }
+        }
 
-    return response.json();
+        return response.json();
+    } catch (error) {
+        // 如果是網路錯誤或超時
+        if (error.name === 'TypeError' && error.message.includes('fetch')) {
+            throw new Error('網路連線錯誤，請檢查網路連線');
+        }
+        throw error;
+    }
 };

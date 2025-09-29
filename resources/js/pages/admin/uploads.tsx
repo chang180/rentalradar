@@ -115,20 +115,43 @@ export default function AdminUploads() {
             const formData = new FormData();
             formData.append('file', selectedFile);
 
-            const response = await adminFileUploadRequest('/uploads', formData);
+            // 增加超時設定和重試機制
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 300000); // 5分鐘超時
 
-            // 重新載入上傳記錄
-            loadUploads(pagination.current_page, status);
-            alert('檔案上傳成功！');
-            
-            // 清除選中的檔案
-            setSelectedFile(null);
-            if (fileInputRef.current) {
-                fileInputRef.current.value = '';
+            try {
+                const response = await adminFileUploadRequest('/uploads', formData, {
+                    signal: controller.signal,
+                });
+
+                clearTimeout(timeoutId);
+
+                // 重新載入上傳記錄
+                loadUploads(pagination.current_page, status);
+                alert('檔案上傳成功！');
+                
+                // 清除選中的檔案
+                setSelectedFile(null);
+                if (fileInputRef.current) {
+                    fileInputRef.current.value = '';
+                }
+            } catch (error) {
+                clearTimeout(timeoutId);
+                
+                if (error.name === 'AbortError') {
+                    alert('檔案上傳超時，請檢查檔案大小或網路連線');
+                } else if (error.message.includes('419')) {
+                    alert('會話已過期，請重新整理頁面後再試');
+                    window.location.reload();
+                } else if (error.message.includes('504')) {
+                    alert('伺服器處理超時，請稍後再試或聯繫管理員');
+                } else {
+                    alert(`檔案上傳失敗：${error.message}`);
+                }
+                throw error;
             }
         } catch (error) {
             console.error('檔案上傳失敗:', error);
-            alert('檔案上傳失敗');
         } finally {
             setUploading(false);
         }
@@ -140,16 +163,36 @@ export default function AdminUploads() {
             // 添加到處理中列表
             setProcessingUploads(prev => new Set(prev).add(uploadId));
             
-            await adminApiRequest(`/uploads/${uploadId}/process`, {
-                method: 'POST',
-            });
+            // 增加超時設定
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 600000); // 10分鐘超時
 
-            // 重新載入上傳記錄
-            loadUploads(pagination.current_page, status);
-            alert('檔案處理已開始！');
+            try {
+                await adminApiRequest(`/uploads/${uploadId}/process`, {
+                    method: 'POST',
+                    signal: controller.signal,
+                });
+
+                clearTimeout(timeoutId);
+
+                // 重新載入上傳記錄
+                loadUploads(pagination.current_page, status);
+                alert('檔案處理已開始！');
+            } catch (error) {
+                clearTimeout(timeoutId);
+                
+                if (error.name === 'AbortError') {
+                    alert('檔案處理超時，請稍後再試');
+                } else if (error.message.includes('419')) {
+                    alert('會話已過期，請重新整理頁面後再試');
+                    window.location.reload();
+                } else {
+                    alert(`檔案處理失敗：${error.message}`);
+                }
+                throw error;
+            }
         } catch (error) {
             console.error('檔案處理失敗:', error);
-            alert('檔案處理失敗');
         } finally {
             // 從處理中列表移除
             setProcessingUploads(prev => {
