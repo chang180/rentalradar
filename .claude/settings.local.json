@@ -102,7 +102,11 @@
       "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan statistics:populate --no-interaction)",
       "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan make:test OptimizedGeoAggregationServiceTest --no-interaction)",
       "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan test tests/Feature/OptimizedGeoAggregationServiceTest.php --no-interaction)",
-      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan test tests/Feature/OptimizedGeoAggregationServiceTest.php)"
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan test tests/Feature/OptimizedGeoAggregationServiceTest.php)",
+      "Bash(/c/Users/chang180/.config/herd/bin/php84.bat artisan storage:link)",
+      "Bash(ln:*)",
+      "Bash(NODE_OPTIONS=\"--max-old-space-size=1024\" npm run build)",
+      "Bash(ping:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

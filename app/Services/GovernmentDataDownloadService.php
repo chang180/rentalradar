@@ -11,14 +11,44 @@ class GovernmentDataDownloadService
 {
     private string $baseUrl = 'https://data.moi.gov.tw/MoiOD/System/DownloadFile.aspx';
     private string $dataId = 'F85D101E-1453-49B2-892D-36234CF9303D';
-    private int $maxRetries = 3;
-    private int $retryDelay = 5; // seconds
+    private int $maxRetries = 5;
+    private int $retryDelay = 10; // seconds
+
+    /**
+     * 檢查服務器連接性
+     */
+    private function checkConnectivity(): bool
+    {
+        try {
+            $response = Http::timeout(10)->get('https://data.moi.gov.tw/');
+            return $response->status() < 500;
+        } catch (\Exception $e) {
+            Log::warning('Government server connectivity check failed', [
+                'error' => $e->getMessage()
+            ]);
+            return false;
+        }
+    }
 
     /**
      * 下載政府租賃實價登錄資料
      */
     public function downloadRentalData(string $format = 'csv'): array
     {
+        // 先檢查連接性
+        if (!$this->checkConnectivity()) {
+            $error = 'Government data server is unreachable. This may be due to geographic restrictions or network issues.';
+            Log::error($error);
+
+            return [
+                'success' => false,
+                'error' => $error,
+                'attempts' => 0,
+                'failed_at' => now()->toISOString(),
+                'suggestion' => 'Try using a VPN with Taiwan location or contact your hosting provider about network access to Taiwan government servers.'
+            ];
+        }
+
         $startTime = microtime(true);
         $attempts = 0;
         $lastError = null;
@@ -115,7 +145,9 @@ class GovernmentDataDownloadService
             'User-Agent' => 'RentalRadar/1.0 (taiwan.rental.radar@gmail.com)',
             'Accept' => $format === 'xml' ? 'application/xml' : 'text/csv',
         ])
-        ->timeout(60)
+        ->timeout(180)
+        ->connectTimeout(60)
+        ->retry(2, 5000)
         ->get($this->baseUrl, $params);
     }
 
