@@ -203,9 +203,19 @@ php artisan cache:clear
 在 Hostinger 控制台的 **Advanced** → **Cron Jobs** 中新增：
 
 ```bash
-# 每分鐘執行 Laravel 排程
+# 每分鐘執行 Laravel 排程（包含隊列處理）
+# 這會執行所有在 routes/console.php 中定義的排程任務，包括隊列處理
 * * * * * cd /path/to/your/app && php artisan schedule:run >> /dev/null 2>&1
 ```
+
+**重要說明**：
+- 這個 cron job 會每分鐘執行一次，觸發 Laravel 的排程系統
+- Laravel 排程系統會自動執行 `routes/console.php` 中定義的所有任務
+- 包括隊列處理任務（`queue:work --stop-when-empty`），會自動處理檔案上傳等異步任務
+- 如果 Hostinger 不支援每分鐘執行，可以改為每 5 分鐘：
+  ```bash
+  */5 * * * * cd /path/to/your/app && php artisan schedule:run >> /dev/null 2>&1
+  ```
 
 #### 4.2 配置資料保留排程
 在 `.env` 檔案中新增：

@@ -17,6 +17,33 @@ Artisan::command('inspire', function () {
 |
 */
 
+/*
+|--------------------------------------------------------------------------
+| 隊列處理排程任務
+|--------------------------------------------------------------------------
+|
+| 適用於共享主機環境（如 Hostinger）
+| 使用 queue:work --stop-when-empty 每次只處理現有任務，不會長時間運行
+| 建議設定為每分鐘執行一次（如果主機支援）
+|
+*/
+
+// 每分鐘處理隊列任務（適用於共享主機）
+Schedule::command('queue:work --stop-when-empty --tries=3 --timeout=300')
+    ->everyMinute()
+    ->withoutOverlapping(5) // 5 分鐘內不重複執行
+    ->runInBackground()
+    ->name('process-queue-jobs')
+    ->onOneServer();
+
+// 每 5 分鐘處理隊列任務（備用方案，如果每分鐘執行有問題）
+// Schedule::command('queue:work --stop-when-empty --tries=3 --timeout=300')
+//     ->everyFiveMinutes()
+//     ->withoutOverlapping(10)
+//     ->runInBackground()
+//     ->name('process-queue-jobs-backup')
+//     ->onOneServer();
+
 // 每 5 分鐘監控系統健康狀態
 Schedule::command('monitor:health --send-alerts')
     ->everyFiveMinutes()

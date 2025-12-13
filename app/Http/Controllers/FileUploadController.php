@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\ProcessFileUploadJob;
 use App\Models\FileUpload;
 use App\Services\FileUploadService;
 use App\Services\PermissionService;
@@ -60,14 +61,17 @@ class FileUploadController extends Controller
             $uploadResult = $this->fileUploadService->uploadFile($file, $user);
 
             if ($uploadResult) {
+                // 將檔案處理加入隊列，異步執行
+                ProcessFileUploadJob::dispatch($uploadResult->id);
+
                 return response()->json([
                     'success' => true,
-                    'message' => '檔案上傳成功',
+                    'message' => '檔案上傳成功，正在後台處理中',
                     'data' => [
                         'upload_id' => $uploadResult->id,
                         'filename' => $uploadResult->original_filename,
                         'file_size' => $uploadResult->file_size,
-                        'upload_status' => $uploadResult->upload_status,
+                        'upload_status' => 'pending',
                     ],
                 ]);
             } else {
@@ -201,23 +205,24 @@ class FileUploadController extends Controller
                 ], 400);
             }
 
-            $result = $this->fileUploadService->processUpload($upload);
-
-            if ($result) {
-                return response()->json([
-                    'success' => true,
-                    'message' => '檔案處理已開始',
-                    'data' => [
-                        'upload_id' => $upload->id,
-                        'status' => $upload->fresh()->upload_status,
-                    ],
-                ]);
-            } else {
+            if ($upload->upload_status === 'processing') {
                 return response()->json([
                     'success' => false,
-                    'message' => '檔案處理失敗',
-                ], 500);
+                    'message' => '檔案正在處理中',
+                ], 400);
             }
+
+            // 將檔案處理加入隊列，異步執行
+            ProcessFileUploadJob::dispatch($upload->id);
+
+            return response()->json([
+                'success' => true,
+                'message' => '檔案處理已加入隊列，正在後台處理中',
+                'data' => [
+                    'upload_id' => $upload->id,
+                    'status' => 'pending',
+                ],
+            ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
