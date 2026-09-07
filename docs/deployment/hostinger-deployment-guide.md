@@ -210,7 +210,9 @@ php artisan cache:clear
 
 這是唯一需要的 Cron Job。`routes/console.php` 裡所有排程任務（政府資料下載、隊列處理、系統監控、資料保留清理）都由 Laravel 的排程器統一調度，`schedule:run` 每分鐘執行一次時會自動判斷哪些任務到期該跑。
 
-其中「隊列處理」這項（`queue:work --stop-when-empty`，每分鐘執行）是共享主機環境的關鍵：Hostinger 不能常駐執行 `php artisan queue:work`，所以改用排程每分鐘啟動一次、處理完現有任務就結束的方式。管理員上傳的檔案（`ProcessFileUploadJob`）與其他隊列任務都是靠這個排程項目觸發實際處理，因此**若 Cron Job 沒設定好，上傳的檔案會卡在「處理中」狀態，永遠不會完成**。確認 `.env` 的 `QUEUE_CONNECTION=database`（本專案預設）即可，不需要額外安裝 Redis 或 Supervisor。
+其中「隊列處理」這項（`queue:work --stop-when-empty --max-time=50`，每分鐘執行）是共享主機環境的關鍵：Hostinger 不能常駐執行 `php artisan queue:work`，所以改用排程每分鐘啟動一次、處理完現有任務就結束的方式。管理員上傳的檔案（`ProcessFileUploadJob`）與其他隊列任務都是靠這個排程項目觸發實際處理，因此**若 Cron Job 沒設定好，上傳的檔案會卡在「處理中」狀態，永遠不會完成**。確認 `.env` 的 `QUEUE_CONNECTION=database`（本專案預設）即可，不需要額外安裝 Redis 或 Supervisor。
+
+**`--max-time=50` 這個上限務必保留**：如果佇列曾經很久沒有 worker 處理（例如 Cron Job 中斷過一段時間）而堆積了大量任務，單次 `queue:work` 執行時間可能遠超過 `withoutOverlapping` 的鎖定時間（5 分鐘）。鎖一旦過期，下一分鐘的排程會誤判「沒有任務在跑」而再啟動一個新的 `queue:work`，行程會逐分鐘疊加，最終可能把共享主機帳號的行程數／記憶體配額吃光，連帶影響網站本身與其他排程任務。`--max-time=50` 讓每次執行最多跑 50 秒就自動結束，確保單次執行時間遠低於鎖定時間，佇列堆積時會分成多次執行慢慢清完，而不是疊加行程。
 
 如果 Hostinger 方案不支援每分鐘執行，可以改為每 5 分鐘（隊列處理與其他排程任務都會延遲最多 5 分鐘才觸發）：
 ```bash

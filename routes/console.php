@@ -23,26 +23,22 @@ Artisan::command('inspire', function () {
 |--------------------------------------------------------------------------
 |
 | 適用於共享主機環境（如 Hostinger）
-| 使用 queue:work --stop-when-empty 每次只處理現有任務，不會長時間運行
-| 建議設定為每分鐘執行一次（如果主機支援）
+| --max-time 是關鍵：單次執行最多跑 50 秒就自動結束，下一分鐘的 cron
+| 再接著處理剩下的。沒有這個上限時，若佇列堆積（例如長時間沒有 worker
+| 在跑導致累積上萬筆任務），單次執行會遠超過 withoutOverlapping 的鎖定
+| 時間，導致鎖過期、下一分鐘又疊加啟動一個新的 queue:work，行程數在
+| 共享主機上會越疊越多，最終可能把整個帳號的行程/記憶體配額吃光。
+| 保留 --stop-when-empty 讓佇列真的清空時可以提早結束，不用跑滿 50 秒。
 |
 */
 
-// 每分鐘處理隊列任務（適用於共享主機）
-Schedule::command('queue:work --stop-when-empty --tries=3 --timeout=300')
+// 每分鐘處理隊列任務（適用於共享主機；每次最多跑 50 秒，避免堆積時鎖失效疊加行程）
+Schedule::command('queue:work --stop-when-empty --max-time=50 --tries=3 --timeout=300')
     ->everyMinute()
-    ->withoutOverlapping(5) // 5 分鐘內不重複執行
+    ->withoutOverlapping(5) // 5 分鐘內不重複執行；正常單次執行不會超過 50 秒，5 分鐘緩衝足夠
     ->runInBackground()
     ->name('process-queue-jobs')
     ->onOneServer();
-
-// 每 5 分鐘處理隊列任務（備用方案，如果每分鐘執行有問題）
-// Schedule::command('queue:work --stop-when-empty --tries=3 --timeout=300')
-//     ->everyFiveMinutes()
-//     ->withoutOverlapping(10)
-//     ->runInBackground()
-//     ->name('process-queue-jobs-backup')
-//     ->onOneServer();
 
 // 每 5 分鐘監控系統健康狀態
 Schedule::command('monitor:health --send-alerts')
