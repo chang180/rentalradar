@@ -203,13 +203,19 @@ php artisan cache:clear
 在 Hostinger 控制台的 **Advanced** → **Cron Jobs** 中新增：
 
 ```bash
-# 每分鐘執行 Laravel 排程
+# 每分鐘執行 Laravel 排程（包含隊列處理）
+# 這會執行所有在 routes/console.php 中定義的排程任務，包括隊列處理
 * * * * * cd /path/to/your/app && php artisan schedule:run >> /dev/null 2>&1
 ```
 
 這是唯一需要的 Cron Job。`routes/console.php` 裡所有排程任務（政府資料下載、隊列處理、系統監控、資料保留清理）都由 Laravel 的排程器統一調度，`schedule:run` 每分鐘執行一次時會自動判斷哪些任務到期該跑。
 
 其中「隊列處理」這項（`queue:work --stop-when-empty`，每分鐘執行）是共享主機環境的關鍵：Hostinger 不能常駐執行 `php artisan queue:work`，所以改用排程每分鐘啟動一次、處理完現有任務就結束的方式。管理員上傳的檔案（`ProcessFileUploadJob`）與其他隊列任務都是靠這個排程項目觸發實際處理，因此**若 Cron Job 沒設定好，上傳的檔案會卡在「處理中」狀態，永遠不會完成**。確認 `.env` 的 `QUEUE_CONNECTION=database`（本專案預設）即可，不需要額外安裝 Redis 或 Supervisor。
+
+如果 Hostinger 方案不支援每分鐘執行，可以改為每 5 分鐘（隊列處理與其他排程任務都會延遲最多 5 分鐘才觸發）：
+```bash
+*/5 * * * * cd /path/to/your/app && php artisan schedule:run >> /dev/null 2>&1
+```
 
 #### 4.2 配置資料保留排程
 在 `.env` 檔案中新增：

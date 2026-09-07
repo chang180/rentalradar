@@ -10,10 +10,10 @@
         "herd": {
             "command": "php",
             "args": [
-                "C:/Users/chang180/.config/herd/bin/herd-mcp.phar"
+                "/Applications/Herd.app/Contents/Resources/herd-mcp.phar"
             ],
             "env": {
-                "SITE_PATH": "D:\\coding\\rentalradar"
+                "SITE_PATH": "/Users/changchien-wen/Herd/rentalradar"
             }
         }
     }
