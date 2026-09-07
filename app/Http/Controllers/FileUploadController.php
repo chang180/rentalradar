@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\ProcessFileUploadJob;
 use App\Models\FileUpload;
 use App\Services\FileUploadService;
 use App\Services\PermissionService;
@@ -23,8 +24,8 @@ class FileUploadController extends Controller
     public function upload(Request $request): JsonResponse
     {
         $user = Auth::user();
-        
-        if (!$this->permissionService->checkUploadPermission($user)) {
+
+        if (! $this->permissionService->checkUploadPermission($user)) {
             return response()->json([
                 'message' => '權限不足',
                 'error' => 'Insufficient permissions',
@@ -40,7 +41,7 @@ class FileUploadController extends Controller
         // 檢查 PHP 上傳限制
         $maxUploadSize = ini_get('upload_max_filesize');
         $maxPostSize = ini_get('post_max_size');
-        
+
         $validator = Validator::make($request->all(), [
             'file' => 'required|file|max:204800', // 200MB
         ], [
@@ -60,14 +61,17 @@ class FileUploadController extends Controller
             $uploadResult = $this->fileUploadService->uploadFile($file, $user);
 
             if ($uploadResult) {
+                // 將檔案處理加入隊列，異步執行
+                ProcessFileUploadJob::dispatch($uploadResult->id);
+
                 return response()->json([
                     'success' => true,
-                    'message' => '檔案上傳成功',
+                    'message' => '檔案上傳成功，正在後台處理中',
                     'data' => [
                         'upload_id' => $uploadResult->id,
                         'filename' => $uploadResult->original_filename,
                         'file_size' => $uploadResult->file_size,
-                        'upload_status' => $uploadResult->upload_status,
+                        'upload_status' => 'pending',
                     ],
                 ]);
             } else {
@@ -79,7 +83,7 @@ class FileUploadController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => '檔案上傳失敗：' . $e->getMessage(),
+                'message' => '檔案上傳失敗：'.$e->getMessage(),
             ], 500);
         }
     }
@@ -90,8 +94,8 @@ class FileUploadController extends Controller
     public function getUploadHistory(Request $request): JsonResponse
     {
         $user = Auth::user();
-        
-        if (!$this->permissionService->checkUploadPermission($user)) {
+
+        if (! $this->permissionService->checkUploadPermission($user)) {
             return response()->json([
                 'message' => '權限不足',
                 'error' => 'Insufficient permissions',
@@ -113,7 +117,7 @@ class FileUploadController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => '無法載入上傳歷史：' . $e->getMessage(),
+                'message' => '無法載入上傳歷史：'.$e->getMessage(),
             ], 500);
         }
     }
@@ -124,8 +128,8 @@ class FileUploadController extends Controller
     public function getUploadDetails(int $uploadId): JsonResponse
     {
         $user = Auth::user();
-        
-        if (!$this->permissionService->checkUploadPermission($user)) {
+
+        if (! $this->permissionService->checkUploadPermission($user)) {
             return response()->json([
                 'message' => '權限不足',
                 'error' => 'Insufficient permissions',
@@ -137,7 +141,7 @@ class FileUploadController extends Controller
                 ->where('user_id', $user->id)
                 ->first();
 
-            if (!$upload) {
+            if (! $upload) {
                 return response()->json([
                     'success' => false,
                     'message' => '找不到指定的上傳記錄',
@@ -163,7 +167,7 @@ class FileUploadController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => '無法載入上傳詳情：' . $e->getMessage(),
+                'message' => '無法載入上傳詳情：'.$e->getMessage(),
             ], 500);
         }
     }
@@ -174,8 +178,8 @@ class FileUploadController extends Controller
     public function processUpload(int $uploadId): JsonResponse
     {
         $user = Auth::user();
-        
-        if (!$this->permissionService->checkUploadPermission($user)) {
+
+        if (! $this->permissionService->checkUploadPermission($user)) {
             return response()->json([
                 'message' => '權限不足',
                 'error' => 'Insufficient permissions',
@@ -187,7 +191,7 @@ class FileUploadController extends Controller
                 ->where('user_id', $user->id)
                 ->first();
 
-            if (!$upload) {
+            if (! $upload) {
                 return response()->json([
                     'success' => false,
                     'message' => '找不到指定的上傳記錄',
@@ -201,27 +205,28 @@ class FileUploadController extends Controller
                 ], 400);
             }
 
-            $result = $this->fileUploadService->processUpload($upload);
-
-            if ($result) {
-                return response()->json([
-                    'success' => true,
-                    'message' => '檔案處理已開始',
-                    'data' => [
-                        'upload_id' => $upload->id,
-                        'status' => $upload->fresh()->upload_status,
-                    ],
-                ]);
-            } else {
+            if ($upload->upload_status === 'processing') {
                 return response()->json([
                     'success' => false,
-                    'message' => '檔案處理失敗',
-                ], 500);
+                    'message' => '檔案正在處理中',
+                ], 400);
             }
+
+            // 將檔案處理加入隊列，異步執行
+            ProcessFileUploadJob::dispatch($upload->id);
+
+            return response()->json([
+                'success' => true,
+                'message' => '檔案處理已加入隊列，正在後台處理中',
+                'data' => [
+                    'upload_id' => $upload->id,
+                    'status' => 'pending',
+                ],
+            ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => '檔案處理失敗：' . $e->getMessage(),
+                'message' => '檔案處理失敗：'.$e->getMessage(),
             ], 500);
         }
     }
@@ -232,8 +237,8 @@ class FileUploadController extends Controller
     public function deleteUpload(int $uploadId): JsonResponse
     {
         $user = Auth::user();
-        
-        if (!$this->permissionService->checkUploadPermission($user)) {
+
+        if (! $this->permissionService->checkUploadPermission($user)) {
             return response()->json([
                 'message' => '權限不足',
                 'error' => 'Insufficient permissions',
@@ -245,7 +250,7 @@ class FileUploadController extends Controller
                 ->where('user_id', $user->id)
                 ->first();
 
-            if (!$upload) {
+            if (! $upload) {
                 return response()->json([
                     'success' => false,
                     'message' => '找不到指定的上傳記錄',
@@ -276,7 +281,7 @@ class FileUploadController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => '刪除失敗：' . $e->getMessage(),
+                'message' => '刪除失敗：'.$e->getMessage(),
             ], 500);
         }
     }
@@ -287,8 +292,8 @@ class FileUploadController extends Controller
     public function getUploadStats(): JsonResponse
     {
         $user = Auth::user();
-        
-        if (!$this->permissionService->checkUploadPermission($user)) {
+
+        if (! $this->permissionService->checkUploadPermission($user)) {
             return response()->json([
                 'message' => '權限不足',
                 'error' => 'Insufficient permissions',
@@ -306,7 +311,7 @@ class FileUploadController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => '無法載入統計資料：' . $e->getMessage(),
+                'message' => '無法載入統計資料：'.$e->getMessage(),
             ], 500);
         }
     }
@@ -317,8 +322,8 @@ class FileUploadController extends Controller
     public function validateFile(Request $request): JsonResponse
     {
         $user = Auth::user();
-        
-        if (!$this->permissionService->checkUploadPermission($user)) {
+
+        if (! $this->permissionService->checkUploadPermission($user)) {
             return response()->json([
                 'message' => '權限不足',
                 'error' => 'Insufficient permissions',
@@ -356,7 +361,7 @@ class FileUploadController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => '檔案驗證失敗：' . $e->getMessage(),
+                'message' => '檔案驗證失敗：'.$e->getMessage(),
             ], 500);
         }
     }

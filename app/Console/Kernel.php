@@ -13,11 +13,11 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule): void
     {
         // 政府資料下載排程
-        // 每月 1、11、21 日 02:00 執行
-        $schedule->command('government:download --format=csv --parse --save')
-            ->monthlyOn(1, '02:00')
-            ->monthlyOn(11, '02:00')
-            ->monthlyOn(21, '02:00')
+        // 每日 02:00 檢查一次；官方實際只在每月 1、11、21 日發布新資料，
+        // --skip-if-unchanged 會在內容沒變時直接跳過解析與寫入資料庫，
+        // 改成每日檢查是為了在錯過或延後發布日時，最慢隔天就能自動補上，不必依賴固定日期猜測。
+        $schedule->command('government:download --format=csv --parse --save --skip-if-unchanged')
+            ->dailyAt('02:00')
             ->name('government-data-download')
             ->withoutOverlapping()
             ->runInBackground();

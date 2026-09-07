@@ -5,14 +5,17 @@ namespace App\Console\Commands;
 use App\Services\DataParserService;
 use App\Services\GovernmentDataDownloadService;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
 
 class DownloadGovernmentData extends Command
 {
     protected $signature = 'government:download
-                            {--format=csv : 資料格式 (csv、xml 或 zip)}
+                            {--format=csv : 資料格式 (csv 或 xml，內容皆為 ZIP)}
                             {--parse : 下載後立即解析資料}
                             {--save : 解析後儲存到資料庫}
-                            {--cleanup : 清理舊檔案}';
+                            {--cleanup : 清理舊檔案}
+                            {--skip-if-unchanged : 若內容與上次成功處理的版本相同則跳過解析與儲存，適合每日排程}';
 
     protected $description = '下載政府租賃實價登錄資料';
 
@@ -59,18 +62,23 @@ class DownloadGovernmentData extends Command
         $this->info("⏱️ 時間: {$downloadResult['download_time']} 秒");
         $this->info("🔄 嘗試: {$downloadResult['attempts']} 次");
 
-        // 解析資料
+        // 內容簽章比對：官方每月僅在 1、11、21 日發布新資料，
+        // 每日排程若內容跟上次成功處理的版本相同就直接跳過，避免每天重複解析、寫入資料庫
+        $cacheKey = "government_data:last_signature:{$format}";
+        $signature = $this->downloadService->fileSignature($downloadResult['file_path']);
+
+        if ($this->option('skip-if-unchanged') && Cache::get($cacheKey) === $signature) {
+            $this->info('ℹ️ 資料內容與上次成功處理的版本相同，跳過解析與儲存。');
+            Storage::delete($downloadResult['file_path']);
+
+            return self::SUCCESS;
+        }
+
+        // 解析資料（內容一律為 ZIP，統一走 parseZipData）
         if ($shouldParse) {
             $this->info('🔍 開始解析資料...');
 
-            // 根據格式選擇解析方法
-            if ($format === 'zip') {
-                $parseResult = $this->parserService->parseZipData($downloadResult['file_path']);
-            } elseif ($format === 'xml') {
-                $parseResult = $this->parserService->parseXmlData($downloadResult['file_path']);
-            } else {
-                $parseResult = $this->parserService->parseCsvData($downloadResult['file_path']);
-            }
+            $parseResult = $this->parserService->parseZipData($downloadResult['file_path']);
 
             if (! $parseResult['success']) {
                 $this->error("❌ 解析失敗: {$parseResult['error']}");
@@ -82,7 +90,7 @@ class DownloadGovernmentData extends Command
             $this->info("📊 處理: {$parseResult['processed_count']} 筆");
             $this->info("❌ 錯誤: {$parseResult['error_count']} 筆");
 
-            if ($format === 'zip' && isset($parseResult['csv_files_count'])) {
+            if (isset($parseResult['csv_files_count'])) {
                 $this->info("📁 CSV 檔案數: {$parseResult['csv_files_count']} 個");
             }
 
@@ -107,6 +115,9 @@ class DownloadGovernmentData extends Command
                     return self::FAILURE;
                 }
             }
+
+            // 這一版內容已成功解析（並視選項儲存），記住簽章供下次比對
+            Cache::put($cacheKey, $signature, now()->addDays(45));
         }
 
         // 顯示統計資訊

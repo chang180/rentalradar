@@ -43,7 +43,7 @@ RentalRadar 是一個整合政府開放資料的 AI 租屋市場分析平台，�
 - **政府資料**: 不動產租賃實價登錄資料
 - **更新頻率**: 每 10 天一次 (每月 1、11、21 日)
 - **資料格式**: CSV 和 XML
-- **下載連結**: [政府資料開放平台](https://data.moi.gov.tw/MoiOD/System/DownloadFile.aspx?DATA=F85D101E-1453-49B2-892D-36234CF9303D)
+- **下載連結**: [內政部不動產交易實價查詢服務網](https://plvr.land.moi.gov.tw/opendata/lvr_landCcsv.zip)（原 data.moi.gov.tw 端點已停用，2026-09-07 確認遷移）
 
 ## 🚀 快速開始
 

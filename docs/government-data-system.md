@@ -97,12 +97,15 @@ php artisan government:test --full
 
 ## 🔧 配置設定
 
-### 環境變數
-```env
-# 政府資料下載設定
-GOVERNMENT_DATA_BASE_URL=https://data.moi.gov.tw/MoiOD/System/DownloadFile.aspx
-GOVERNMENT_DATA_ID=F85D101E-1453-49B2-892D-36234CF9303D
+### 下載端點
+下載網址寫死在 `app/Services/GovernmentDataDownloadService.php`，未走 `.env` 設定（2026-09-07 修正前的 `GOVERNMENT_DATA_BASE_URL` / `GOVERNMENT_DATA_ID` 範例已停用，僅保留作歷史紀錄）：
+```
+CSV: https://plvr.land.moi.gov.tw/opendata/lvr_landCcsv.zip
+XML: https://plvr.land.moi.gov.tw/opendata/lvr_landCxml.zip
+```
+內容一律為 ZIP（內含全國各縣市 `*_lvr_land_c.csv` 主檔、`_build`／`_land`／`_park` 附檔、`manifest.csv`、`build_time.xml`），對應 [data.gov.tw/dataset/25118](https://data.gov.tw/dataset/25118)。
 
+```env
 # 地理編碼設定
 GEOCODING_SERVICE_URL=https://nominatim.openstreetmap.org/search
 GEOCODING_USER_AGENT=RentalRadar/1.0 (taiwan.rental.radar@gmail.com)
@@ -111,11 +114,12 @@ GEOCODING_USER_AGENT=RentalRadar/1.0 (taiwan.rental.radar@gmail.com)
 ### 排程設定
 ```php
 // app/Console/Kernel.php
-$schedule->command('government:download --format=csv --parse --save')
-    ->monthlyOn(1, '02:00')
-    ->monthlyOn(11, '02:00')
-    ->monthlyOn(21, '02:00');
+// 每日檢查一次；--skip-if-unchanged 會在內容跟上次成功處理的版本相同時
+// 直接跳過解析與寫入資料庫，官方實際發布日（每月 1、11、21 日）以外的執行成本極低
+$schedule->command('government:download --format=csv --parse --save --skip-if-unchanged')
+    ->dailyAt('02:00');
 ```
+Hostinger hPanel 沒有常駐的 `php artisan schedule:work`，需在 hPanel 的 Cron Jobs 建立一個「每分鐘」執行 `php artisan schedule:run` 的排程，由 Laravel 排程器自行判斷是否輪到執行上述任務。
 
 ## 📈 效能指標
 
@@ -144,7 +148,7 @@ $schedule->command('government:download --format=csv --parse --save')
 #### 1. 下載失敗
 ```bash
 # 檢查網路連線
-curl -I https://data.moi.gov.tw/MoiOD/System/DownloadFile.aspx
+curl -I https://plvr.land.moi.gov.tw/opendata/lvr_landCcsv.zip
 
 # 檢查系統狀態
 php artisan government:maintenance --status
@@ -195,7 +199,7 @@ grep "政府資料" storage/logs/laravel.log
 
 ### 政府資料來源
 - [政府開放資料平台](https://data.gov.tw/dataset/25118)
-- [直接下載連結](https://data.moi.gov.tw/MoiOD/System/DownloadFile.aspx?DATA=F85D101E-1453-49B2-892D-36234CF9303D)
+- [直接下載連結（CSV ZIP）](https://plvr.land.moi.gov.tw/opendata/lvr_landCcsv.zip)
 
 ### Laravel 功能
 - [Laravel HTTP Client](https://laravel.com/docs/12.x/http-client)

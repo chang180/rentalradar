@@ -8,30 +8,14 @@ use Illuminate\Support\Facades\Log;
 class IntelligentCacheService
 {
     /**
-     * 快取層級定義
+     * 快取層級定義（可透過 config/intelligent-cache.php 依環境覆寫 store）
+     *
+     * @return array<string, array{store: string, ttl: int, description: string}>
      */
-    private const CACHE_LAYERS = [
-        'hot' => [
-            'store' => 'redis',
-            'ttl' => 3600, // 1小時
-            'description' => '熱門行政區資料',
-        ],
-        'warm' => [
-            'store' => 'redis',
-            'ttl' => 1800, // 30分鐘
-            'description' => '一般行政區資料',
-        ],
-        'cold' => [
-            'store' => 'database',
-            'ttl' => 7200, // 2小時
-            'description' => '冷門行政區資料',
-        ],
-        'temp' => [
-            'store' => 'array',
-            'ttl' => 300, // 5分鐘
-            'description' => '臨時計算結果',
-        ],
-    ];
+    private function cacheLayers(): array
+    {
+        return config('intelligent-cache.layers');
+    }
 
     /**
      * 熱門行政區列表（基於查詢頻率）
@@ -69,8 +53,8 @@ class IntelligentCacheService
     public function get(string $key, string $city, string $district, ?callable $callback = null)
     {
         $layer = $this->getCacheLayer($city, $district);
-        $store = self::CACHE_LAYERS[$layer]['store'];
-        $ttl = self::CACHE_LAYERS[$layer]['ttl'];
+        $store = $this->cacheLayers()[$layer]['store'];
+        $ttl = $this->cacheLayers()[$layer]['ttl'];
 
         $cacheKey = $this->buildCacheKey($key, $city, $district, $layer);
 
@@ -116,8 +100,8 @@ class IntelligentCacheService
     public function put(string $key, $data, string $city, string $district, ?int $ttl = null): void
     {
         $layer = $this->getCacheLayer($city, $district);
-        $store = self::CACHE_LAYERS[$layer]['store'];
-        $defaultTtl = self::CACHE_LAYERS[$layer]['ttl'];
+        $store = $this->cacheLayers()[$layer]['store'];
+        $defaultTtl = $this->cacheLayers()[$layer]['ttl'];
 
         $cacheKey = $this->buildCacheKey($key, $city, $district, $layer);
 
@@ -139,7 +123,7 @@ class IntelligentCacheService
         $layers = ['hot', 'warm', 'cold'];
 
         foreach ($layers as $layer) {
-            $store = self::CACHE_LAYERS[$layer]['store'];
+            $store = $this->cacheLayers()[$layer]['store'];
             $cacheKey = $this->buildCacheKey('*', $city, $district, $layer);
 
             // 清除該行政區的所有快取
@@ -160,7 +144,7 @@ class IntelligentCacheService
         $layers = ['hot', 'warm', 'cold'];
 
         foreach ($layers as $layer) {
-            $store = self::CACHE_LAYERS[$layer]['store'];
+            $store = $this->cacheLayers()[$layer]['store'];
             $cacheKey = $this->buildCacheKey('*', $city, '*', $layer);
 
             $this->clearCacheByPattern($store, $cacheKey);
@@ -218,7 +202,7 @@ class IntelligentCacheService
     {
         $stats = [];
 
-        foreach (self::CACHE_LAYERS as $layer => $config) {
+        foreach ($this->cacheLayers() as $layer => $config) {
             $store = $config['store'];
             $stats[$layer] = [
                 'store' => $store,
@@ -256,7 +240,7 @@ class IntelligentCacheService
     private function promoteToHotCache(string $key, $data, string $city, string $district): void
     {
         $hotKey = $this->buildCacheKey('promoted', $city, $district, 'hot');
-        Cache::store('redis')->put($hotKey, $data, 3600);
+        Cache::store($this->cacheLayers()['hot']['store'])->put($hotKey, $data, 3600);
     }
 
     /**

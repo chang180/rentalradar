@@ -2,16 +2,26 @@
 
 namespace App\Services;
 
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Carbon\Carbon;
 
 class GovernmentDataDownloadService
 {
-    private string $baseUrl = 'https://data.moi.gov.tw/MoiOD/System/DownloadFile.aspx';
-    private string $dataId = 'F85D101E-1453-49B2-892D-36234CF9303D';
+    /**
+     * 內政部不動產租賃實價登錄批次資料（ZIP，內含全國各縣市 CSV/XML）。
+     * 舊的 data.moi.gov.tw/MoiOD/System/DownloadFile.aspx 端點已停用連線（從本主機測試為連線逾時），
+     * 現行官方下載服務改為 plvr.land.moi.gov.tw，對照 data.gov.tw/dataset/25118 之資源網址。
+     */
+    private string $csvZipUrl = 'https://plvr.land.moi.gov.tw/opendata/lvr_landCcsv.zip';
+
+    private string $xmlZipUrl = 'https://plvr.land.moi.gov.tw/opendata/lvr_landCxml.zip';
+
+    private string $connectivityCheckUrl = 'https://plvr.land.moi.gov.tw/';
+
     private int $maxRetries = 5;
+
     private int $retryDelay = 10; // seconds
 
     /**
@@ -20,12 +30,14 @@ class GovernmentDataDownloadService
     private function checkConnectivity(): bool
     {
         try {
-            $response = Http::timeout(10)->get('https://data.moi.gov.tw/');
+            $response = Http::timeout(10)->get($this->connectivityCheckUrl);
+
             return $response->status() < 500;
         } catch (\Exception $e) {
             Log::warning('Government server connectivity check failed', [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return false;
         }
     }
@@ -36,7 +48,7 @@ class GovernmentDataDownloadService
     public function downloadRentalData(string $format = 'csv'): array
     {
         // 先檢查連接性
-        if (!$this->checkConnectivity()) {
+        if (! $this->checkConnectivity()) {
             $error = 'Government data server is unreachable. This may be due to geographic restrictions or network issues.';
             Log::error($error);
 
@@ -45,7 +57,7 @@ class GovernmentDataDownloadService
                 'error' => $error,
                 'attempts' => 0,
                 'failed_at' => now()->toISOString(),
-                'suggestion' => 'Try using a VPN with Taiwan location or contact your hosting provider about network access to Taiwan government servers.'
+                'suggestion' => 'Try using a VPN with Taiwan location or contact your hosting provider about network access to Taiwan government servers.',
             ];
         }
 
@@ -58,26 +70,26 @@ class GovernmentDataDownloadService
                 $attempts++;
                 Log::info("開始下載政府資料 (嘗試 {$attempts}/{$this->maxRetries})", [
                     'format' => $format,
-                    'timestamp' => now()->toISOString()
+                    'timestamp' => now()->toISOString(),
                 ]);
 
                 $response = $this->makeDownloadRequest($format);
-                
+
                 if ($response->successful()) {
                     $filename = $this->generateFilename($format);
                     $filePath = "government-data/{$filename}";
-                    
+
                     // 儲存檔案
                     Storage::put($filePath, $response->body());
-                    
+
                     $fileSize = Storage::size($filePath);
                     $downloadTime = microtime(true) - $startTime;
-                    
-                    Log::info("政府資料下載成功", [
+
+                    Log::info('政府資料下載成功', [
                         'filename' => $filename,
                         'file_size' => $fileSize,
                         'download_time' => round($downloadTime, 2),
-                        'format' => $format
+                        'format' => $format,
                     ]);
 
                     return [
@@ -88,22 +100,22 @@ class GovernmentDataDownloadService
                         'download_time' => round($downloadTime, 2),
                         'format' => $format,
                         'attempts' => $attempts,
-                        'downloaded_at' => now()->toISOString()
+                        'downloaded_at' => now()->toISOString(),
                     ];
                 } else {
                     $lastError = "HTTP {$response->status()}: {$response->body()}";
-                    Log::warning("下載失敗", [
+                    Log::warning('下載失敗', [
                         'status' => $response->status(),
                         'attempt' => $attempts,
-                        'error' => $lastError
+                        'error' => $lastError,
                     ]);
                 }
             } catch (\Exception $e) {
                 $lastError = $e->getMessage();
-                Log::error("下載過程中發生錯誤", [
+                Log::error('下載過程中發生錯誤', [
                     'attempt' => $attempts,
                     'error' => $lastError,
-                    'trace' => $e->getTraceAsString()
+                    'trace' => $e->getTraceAsString(),
                 ]);
             }
 
@@ -114,51 +126,57 @@ class GovernmentDataDownloadService
         }
 
         // 所有嘗試都失敗了
-        Log::error("政府資料下載最終失敗", [
+        Log::error('政府資料下載最終失敗', [
             'attempts' => $attempts,
             'last_error' => $lastError,
-            'format' => $format
+            'format' => $format,
         ]);
 
         return [
             'success' => false,
             'error' => $lastError,
             'attempts' => $attempts,
-            'failed_at' => now()->toISOString()
+            'failed_at' => now()->toISOString(),
         ];
     }
 
     /**
      * 執行下載請求
+     *
+     * 無論選擇 csv 或 xml，回應內容都是 ZIP 壓縮檔（官方僅提供這兩種批次壓縮包）。
      */
     private function makeDownloadRequest(string $format): \Illuminate\Http\Client\Response
     {
-        $params = [
-            'DATA' => $this->dataId
-        ];
-
-        if ($format === 'xml') {
-            $params['format'] = 'xml';
-        }
+        $url = $format === 'xml' ? $this->xmlZipUrl : $this->csvZipUrl;
 
         return Http::withHeaders([
             'User-Agent' => 'RentalRadar/1.0 (taiwan.rental.radar@gmail.com)',
-            'Accept' => $format === 'xml' ? 'application/xml' : 'text/csv',
+            'Accept' => 'application/zip, application/octet-stream',
         ])
-        ->timeout(180)
-        ->connectTimeout(60)
-        ->retry(2, 5000)
-        ->get($this->baseUrl, $params);
+            ->timeout(180)
+            ->connectTimeout(60)
+            ->retry(2, 5000)
+            ->get($url);
     }
 
     /**
-     * 生成檔案名稱
+     * 生成檔案名稱（內容一律為 ZIP）
      */
     private function generateFilename(string $format): string
     {
+        $variant = $format === 'xml' ? 'xml' : 'csv';
         $date = now()->format('Y-m-d');
         $timestamp = now()->format('H-i-s');
-        return "rental-data-{$date}-{$timestamp}.{$format}";
+
+        return "rental-data-{$variant}-{$date}-{$timestamp}.zip";
+    }
+
+    /**
+     * 計算已下載檔案內容的簽章（sha1），供排程比對資料是否有變化。
+     */
+    public function fileSignature(string $filePath): string
+    {
+        return sha1(Storage::get($filePath));
     }
 
     /**
@@ -184,13 +202,13 @@ class GovernmentDataDownloadService
                 'latest_file' => $latestFile,
                 'file_size' => Storage::size($latestFile),
                 'last_modified' => Carbon::createFromTimestamp($latestTime)->toISOString(),
-                'age_hours' => Carbon::createFromTimestamp($latestTime)->diffInHours(now())
+                'age_hours' => Carbon::createFromTimestamp($latestTime)->diffInHours(now()),
             ];
         }
 
         return [
             'has_data' => false,
-            'message' => '沒有找到政府資料檔案'
+            'message' => '沒有找到政府資料檔案',
         ];
     }
 
@@ -214,16 +232,16 @@ class GovernmentDataDownloadService
             }
         }
 
-        Log::info("清理舊檔案完成", [
+        Log::info('清理舊檔案完成', [
             'deleted_count' => $deletedCount,
             'deleted_size' => $deletedSize,
-            'days_kept' => $daysToKeep
+            'days_kept' => $daysToKeep,
         ]);
 
         return [
             'deleted_count' => $deletedCount,
             'deleted_size' => $deletedSize,
-            'days_kept' => $daysToKeep
+            'days_kept' => $daysToKeep,
         ];
     }
 
@@ -247,7 +265,7 @@ class GovernmentDataDownloadService
             'total_files' => $fileCount,
             'total_size' => $totalSize,
             'formats' => $formats,
-            'average_size' => $fileCount > 0 ? round($totalSize / $fileCount) : 0
+            'average_size' => $fileCount > 0 ? round($totalSize / $fileCount) : 0,
         ];
     }
 }

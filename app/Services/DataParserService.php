@@ -461,12 +461,9 @@ class DataParserService
                 DB::transaction(function () use ($batch, &$savedCount, &$errorCount, &$errors) {
                     foreach ($batch as $index => $record) {
                         try {
-                            // 檢查是否已存在相同記錄（基於縣市、行政區、租金和日期）
-                            $existing = Property::where('city', $record['city'])
-                                ->where('district', $record['district'])
-                                ->where('total_rent', $record['total_rent'])
-                                ->where('rent_date', $record['rent_date'])
-                                ->where('building_type', $record['building_type'])
+                            // 以政府資料序號（serial_number，資料表唯一鍵）判斷是否已存在，
+                            // 避免不同交易恰好城市／行政區／租金／日期／建物型態相同時被誤判成同一筆而覆蓋掉
+                            $existing = Property::where('serial_number', $record['serial_number'])
                                 ->first();
 
                             if ($existing) {

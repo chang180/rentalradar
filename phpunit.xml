@@ -23,6 +23,8 @@
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="CACHE_STORE" value="array"/>
         <env name="DB_CONNECTION" value="testing"/>
+        <env name="INTELLIGENT_CACHE_HOT_STORE" value="array"/>
+        <env name="INTELLIGENT_CACHE_WARM_STORE" value="array"/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="QUEUE_CONNECTION" value="sync"/>

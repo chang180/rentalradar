@@ -277,58 +277,150 @@ class FileUploadService
         try {
             $processedRecords = 0;
             $duplicateRecords = 0;
+            $skippedRecords = 0;
             $duplicateSerialNumbers = [];
+            $errors = [];
 
             $handle = fopen($filePath, 'r');
             if (! $handle) {
                 return ['success' => false, 'error' => 'Cannot read CSV file'];
             }
 
+            // 讀取並清理標題行（移除 BOM）
             $header = fgetcsv($handle);
             if (! $header) {
                 fclose($handle);
 
-                return ['success' => false, 'error' => 'Invalid CSV format'];
+                return ['success' => false, 'error' => 'Invalid CSV format: Cannot read header'];
             }
 
+            // 清理標題行的 BOM 和空白字符
+            $header = array_map(function ($col) {
+                return trim($col, "\xEF\xBB\xBF \t\n\r\0\x0B");
+            }, $header);
+
+            Log::info('Processing CSV file', [
+                'file_path' => $filePath,
+                'header_count' => count($header),
+                'header' => $header,
+            ]);
+
+            $lineNumber = 1;
             while (($row = fgetcsv($handle)) !== false) {
-                if (empty($row) || count($row) < count($header)) {
+                $lineNumber++;
+
+                // 跳過空行
+                if (empty($row) || (count($row) === 1 && trim($row[0]) === '')) {
                     continue;
                 }
 
-                $data = array_combine($header, $row);
-                $result = $this->processPropertyRecord($data);
+                // 如果欄位數量不匹配，嘗試調整
+                if (count($row) !== count($header)) {
+                    Log::warning('CSV row column count mismatch', [
+                        'line' => $lineNumber,
+                        'expected' => count($header),
+                        'actual' => count($row),
+                    ]);
 
-                if ($result['processed']) {
-                    $processedRecords++;
+                    // 如果欄位太少，跳過
+                    if (count($row) < count($header)) {
+                        $skippedRecords++;
+
+                        continue;
+                    }
+
+                    // 如果欄位太多，只取前 N 個
+                    $row = array_slice($row, 0, count($header));
                 }
 
-                if ($result['duplicate']) {
-                    $duplicateRecords++;
-                    if ($result['serial_number']) {
-                        $duplicateSerialNumbers[] = $result['serial_number'];
+                try {
+                    $data = array_combine($header, $row);
+                    if ($data === false) {
+                        Log::warning('Failed to combine CSV row with header', [
+                            'line' => $lineNumber,
+                            'header_count' => count($header),
+                            'row_count' => count($row),
+                        ]);
+                        $skippedRecords++;
+
+                        continue;
                     }
+
+                    $result = $this->processPropertyRecord($data);
+
+                    if ($result['processed']) {
+                        $processedRecords++;
+                    } elseif ($result['duplicate']) {
+                        $duplicateRecords++;
+                        if ($result['serial_number']) {
+                            $duplicateSerialNumbers[] = $result['serial_number'];
+                        }
+                    } else {
+                        $skippedRecords++;
+                        if (isset($result['error'])) {
+                            $errors[] = "Line {$lineNumber}: {$result['error']}";
+                        }
+                    }
+                } catch (\Exception $e) {
+                    Log::error('Error processing CSV row', [
+                        'line' => $lineNumber,
+                        'error' => $e->getMessage(),
+                    ]);
+                    $skippedRecords++;
+                    $errors[] = "Line {$lineNumber}: {$e->getMessage()}";
                 }
             }
 
             fclose($handle);
 
+            Log::info('CSV processing completed', [
+                'file_path' => $filePath,
+                'processed' => $processedRecords,
+                'duplicates' => $duplicateRecords,
+                'skipped' => $skippedRecords,
+            ]);
+
             return [
                 'success' => true,
                 'processed_records' => $processedRecords,
                 'duplicate_records' => $duplicateRecords,
+                'skipped_records' => $skippedRecords,
                 'duplicate_serial_numbers' => $duplicateSerialNumbers,
+                'errors' => $errors,
             ];
         } catch (\Exception $e) {
+            Log::error('CSV file processing failed', [
+                'file_path' => $filePath,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
             return ['success' => false, 'error' => $e->getMessage()];
         }
     }
 
     private function processPropertyRecord(array $data): array
     {
+        // 先獲取 serial_number 並清理
         $serialNumber = $data['編號'] ?? $data['序號'] ?? $data['serial_number'] ?? null;
+        $serialNumber = $serialNumber ? trim((string) $serialNumber) : null;
 
-        if ($serialNumber && Property::serialNumberExists($serialNumber)) {
+        // 如果 serial_number 為空或 null，直接跳過
+        if (empty($serialNumber)) {
+            Log::warning('Skipping property record due to missing serial_number', [
+                'data_keys' => array_keys($data),
+            ]);
+
+            return [
+                'processed' => false,
+                'duplicate' => false,
+                'serial_number' => null,
+                'error' => 'Missing required field: serial_number',
+            ];
+        }
+
+        // 檢查是否已存在
+        if (Property::serialNumberExists($serialNumber)) {
             return [
                 'processed' => false,
                 'duplicate' => true,
@@ -338,34 +430,123 @@ class FileUploadService
 
         $normalizedData = $this->normalizePropertyData($data);
 
-        Property::create($normalizedData);
+        // 再次確認 serial_number 不為空（防止 normalizePropertyData 返回空值）
+        if (empty($normalizedData['serial_number'])) {
+            Log::warning('Skipping property record due to empty serial_number after normalization', [
+                'original_serial_number' => $serialNumber,
+                'data_keys' => array_keys($data),
+            ]);
 
-        return [
-            'processed' => true,
-            'duplicate' => false,
-            'serial_number' => $serialNumber,
-        ];
+            return [
+                'processed' => false,
+                'duplicate' => false,
+                'serial_number' => null,
+                'error' => 'Serial number is empty after normalization',
+            ];
+        }
+
+        // 驗證必填欄位
+        $requiredFields = ['city', 'district', 'serial_number', 'rental_type', 'total_rent', 'rent_per_ping', 'rent_date', 'building_type', 'area_ping'];
+        $missingFields = [];
+
+        foreach ($requiredFields as $field) {
+            $value = $normalizedData[$field] ?? null;
+            // 檢查是否為 null、空字串或只包含空白字符
+            if ($value === null || $value === '' || (is_string($value) && trim($value) === '')) {
+                $missingFields[] = $field;
+            }
+        }
+
+        if (! empty($missingFields)) {
+            Log::warning('Skipping property record due to missing required fields', [
+                'missing_fields' => $missingFields,
+                'serial_number' => $normalizedData['serial_number'] ?? null,
+                'data_keys' => array_keys($data),
+            ]);
+
+            return [
+                'processed' => false,
+                'duplicate' => false,
+                'serial_number' => $normalizedData['serial_number'] ?? null,
+                'error' => 'Missing required fields: '.implode(', ', $missingFields),
+            ];
+        }
+
+        try {
+            Property::create($normalizedData);
+
+            return [
+                'processed' => true,
+                'duplicate' => false,
+                'serial_number' => $normalizedData['serial_number'],
+            ];
+        } catch (\Exception $e) {
+            Log::error('Failed to create property record', [
+                'error' => $e->getMessage(),
+                'serial_number' => $normalizedData['serial_number'] ?? null,
+                'data' => $normalizedData,
+            ]);
+
+            return [
+                'processed' => false,
+                'duplicate' => false,
+                'serial_number' => $normalizedData['serial_number'] ?? null,
+                'error' => $e->getMessage(),
+            ];
+        }
     }
 
     private function normalizePropertyData(array $data): array
     {
+        // 清理數據鍵名（移除 BOM 和空白字符）
+        $cleanedData = [];
+        foreach ($data as $key => $value) {
+            $cleanedKey = trim($key, "\xEF\xBB\xBF \t\n\r\0\x0B");
+            $cleanedData[$cleanedKey] = $value;
+        }
+        $data = $cleanedData;
+
+        // 嘗試多種可能的欄位名稱
+        $serialNumber = $data['編號'] ?? $data['序號'] ?? $data['serial_number'] ?? $data['編號 '] ?? null;
+        // 清理 serial_number：去除空白，如果為空則設為 null
+        $serialNumber = $serialNumber ? trim((string) $serialNumber) : null;
+        $serialNumber = $serialNumber === '' ? null : $serialNumber;
+
+        $city = $data['縣市'] ?? $data['city'] ?? $data['縣市 '] ?? null;
+        $city = $city ? trim((string) $city) : null;
+        $city = $city === '' ? null : $city;
+
+        $district = $data['鄉鎮市區'] ?? $data['district'] ?? $data['鄉鎮市區 '] ?? null;
+        $district = $district ? trim((string) $district) : null;
+        $district = $district === '' ? null : $district;
+
+        $rentalType = $data['出租型態'] ?? $data['租賃類型'] ?? $data['rental_type'] ?? $data['出租型態 '] ?? '住宅';
+        $totalRent = $this->parseNumber($data['總額元'] ?? $data['總租金'] ?? $data['total_rent'] ?? $data['總額元 '] ?? 0);
+        $rentPerPing = $this->parseNumber($data['每坪租金'] ?? $data['rent_per_ping'] ?? $data['每坪租金 '] ?? 0);
+        $rentDate = $this->parseDate($data['租賃年月日'] ?? $data['租賃日期'] ?? $data['rent_date'] ?? $data['租賃年月日 '] ?? null);
+        $buildingType = $data['建物型態'] ?? $data['建物類型'] ?? $data['building_type'] ?? $data['建物型態 '] ?? null;
+        $buildingType = $buildingType ? trim((string) $buildingType) : null;
+        $buildingType = $buildingType === '' ? null : $buildingType;
+
+        $areaPing = $this->parseNumber($data['面積坪'] ?? $data['area_ping'] ?? $data['面積坪 '] ?? 0);
+
         return [
-            'serial_number' => $data['編號'] ?? $data['序號'] ?? $data['serial_number'] ?? null,
-            'city' => $data['縣市'] ?? $data['city'] ?? null,
-            'district' => $data['鄉鎮市區'] ?? $data['district'] ?? null,
-            'rental_type' => $data['出租型態'] ?? $data['租賃類型'] ?? $data['rental_type'] ?? '住宅',
-            'total_rent' => $this->parseNumber($data['總額元'] ?? $data['總租金'] ?? $data['total_rent'] ?? 0),
-            'rent_per_ping' => $this->parseNumber($data['每坪租金'] ?? $data['rent_per_ping'] ?? 0),
-            'rent_date' => $this->parseDate($data['租賃年月日'] ?? $data['租賃日期'] ?? $data['rent_date'] ?? null),
-            'building_type' => $data['建物型態'] ?? $data['建物類型'] ?? $data['building_type'] ?? null,
-            'area_ping' => $this->parseNumber($data['面積坪'] ?? $data['area_ping'] ?? 0),
-            'building_age' => $this->parseNumber($data['建物年齡'] ?? $data['building_age'] ?? 0),
-            'bedrooms' => $this->parseNumber($data['臥室數'] ?? $data['bedrooms'] ?? 0),
-            'living_rooms' => $this->parseNumber($data['客廳數'] ?? $data['living_rooms'] ?? 0),
-            'bathrooms' => $this->parseNumber($data['衛浴數'] ?? $data['bathrooms'] ?? 0),
-            'has_elevator' => $this->parseBoolean($data['有無電梯'] ?? $data['has_elevator'] ?? false),
-            'has_management_organization' => $this->parseBoolean($data['有無管理組織'] ?? $data['has_management_organization'] ?? false),
-            'has_furniture' => $this->parseBoolean($data['有無傢俱'] ?? $data['has_furniture'] ?? false),
+            'serial_number' => $serialNumber,
+            'city' => $city,
+            'district' => $district,
+            'rental_type' => $rentalType ? (string) $rentalType : '住宅',
+            'total_rent' => $totalRent,
+            'rent_per_ping' => $rentPerPing,
+            'rent_date' => $rentDate,
+            'building_type' => $buildingType,
+            'area_ping' => $areaPing,
+            'building_age' => $this->parseNumber($data['建物年齡'] ?? $data['building_age'] ?? $data['建物年齡 '] ?? 0),
+            'bedrooms' => (int) $this->parseNumber($data['臥室數'] ?? $data['bedrooms'] ?? $data['臥室數 '] ?? 0),
+            'living_rooms' => (int) $this->parseNumber($data['客廳數'] ?? $data['living_rooms'] ?? $data['客廳數 '] ?? 0),
+            'bathrooms' => (int) $this->parseNumber($data['衛浴數'] ?? $data['bathrooms'] ?? $data['衛浴數 '] ?? 0),
+            'has_elevator' => $this->parseBoolean($data['有無電梯'] ?? $data['has_elevator'] ?? $data['有無電梯 '] ?? false),
+            'has_management_organization' => $this->parseBoolean($data['有無管理組織'] ?? $data['has_management_organization'] ?? $data['有無管理組織 '] ?? false),
+            'has_furniture' => $this->parseBoolean($data['有無傢俱'] ?? $data['has_furniture'] ?? $data['有無傢俱 '] ?? false),
             'is_geocoded' => false,
         ];
     }
