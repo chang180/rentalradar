@@ -51,6 +51,14 @@ interface UsersResponse {
     };
 }
 
+interface DashboardStats {
+    total_users: number;
+    admin_users: number;
+    regular_users: number;
+    verified_users: number;
+    new_users_this_month: number;
+}
+
 export default function AdminUsers() {
     const isAdmin = useAdminCheck();
     const [users, setUsers] = useState<User[]>([]);
@@ -63,6 +71,7 @@ export default function AdminUsers() {
         per_page: 15,
         total: 0,
     });
+    const [stats, setStats] = useState<DashboardStats | null>(null);
 
     // 載入使用者列表
     const loadUsers = async (page = 1, searchTerm = '', roleFilter = 'all') => {
@@ -86,9 +95,20 @@ export default function AdminUsers() {
         }
     };
 
+    // 載入全站使用者統計（管理員/一般使用者人數），不受目前分頁或篩選影響
+    const loadStats = async () => {
+        try {
+            const response = await adminApiRequest('/dashboard');
+            setStats(response.data.stats);
+        } catch (error) {
+            console.error('載入使用者統計失敗:', error);
+        }
+    };
+
     useEffect(() => {
         if (isAdmin) {
             loadUsers(1, search, role);
+            loadStats();
         }
     }, [isAdmin, search, role]);
 
@@ -98,6 +118,7 @@ export default function AdminUsers() {
             await adminApiRequest(`/users/${userId}/promote`, { method: 'POST' });
             // 重新載入使用者列表
             loadUsers(pagination.current_page, search, role);
+            loadStats();
         } catch (error) {
             console.error('提升使用者失敗:', error);
             alert('提升使用者失敗');
@@ -110,6 +131,7 @@ export default function AdminUsers() {
             await adminApiRequest(`/users/${userId}/demote`, { method: 'POST' });
             // 重新載入使用者列表
             loadUsers(pagination.current_page, search, role);
+            loadStats();
         } catch (error) {
             console.error('撤銷管理員權限失敗:', error);
             alert('撤銷管理員權限失敗');
@@ -126,6 +148,7 @@ export default function AdminUsers() {
             await adminApiRequest(`/users/${userId}`, { method: 'DELETE' });
             // 重新載入使用者列表
             loadUsers(pagination.current_page, search, role);
+            loadStats();
         } catch (error) {
             console.error('刪除使用者失敗:', error);
             alert('刪除使用者失敗');
@@ -177,7 +200,7 @@ export default function AdminUsers() {
                             <Users className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{pagination.total}</div>
+                            <div className="text-2xl font-bold">{stats?.total_users ?? pagination.total}</div>
                         </CardContent>
                     </Card>
 
@@ -188,7 +211,7 @@ export default function AdminUsers() {
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">
-                                {users.filter(user => user.is_admin).length}
+                                {stats?.admin_users ?? '—'}
                             </div>
                         </CardContent>
                     </Card>
@@ -200,7 +223,7 @@ export default function AdminUsers() {
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">
-                                {users.filter(user => !user.is_admin).length}
+                                {stats?.regular_users ?? '—'}
                             </div>
                         </CardContent>
                     </Card>
